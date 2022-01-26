@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
     hdf_create_file_r("test.h5",arr_r);
     hdf_create_file_r("test1.h5",arr_r1);
 
-
+    f;
     //now converting it back and dealiasing it
     fftw_r2c(arr_r_sq,arr_c);
     fftw_c2r(arr_c,arr_r_sq);
