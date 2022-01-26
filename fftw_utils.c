@@ -3,9 +3,8 @@
 //
 
 #include "fftw_utils.h"
-#include <mpi.h>
-#include <string.h>
-#include "mpi_utils.h"
+
+
 
 
 ptrdiff_t size_c[3];                            // full size of complex array

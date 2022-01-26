@@ -1,7 +1,7 @@
 //
-// Created by alcauchy on 07/12/2021.
+// Created by alcauchy on 26/01/2022.
 //
-#include "master.h"
+#include "array.h"
 struct array_size array_local_size;
 struct system_param parameters;
 
@@ -30,6 +30,3 @@ size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t 
            + il * array_local_size.ns
            + is;
 }
-
-
-

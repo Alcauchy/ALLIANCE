@@ -3,7 +3,7 @@
 //
 
 #include "hdf_utils.h"
-#include "mpi_utils.h"
+
 
 int hdf_rank = 6;
 hid_t complex_id;

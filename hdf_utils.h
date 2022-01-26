@@ -4,7 +4,12 @@
 
 #ifndef ALLIANCE_ALPHA_1_0_HDF_UTILS_H
 #define ALLIANCE_ALPHA_1_0_HDF_UTILS_H
-#include "master.h"
+#include <stdio.h> // standard C lib
+#include <stdlib.h> //Standard C lib
+#include <hdf5.h>
+#include <hdf5_hl.h>
+#include "mpi_utils.h"
+#include "array.h"
 
 void hdf_init();                                            // inits hdf5 environment
 void hdf_create_file_c(char *filename, COMPLEX *data);      // creates file with complex data

@@ -4,7 +4,11 @@
 
 #ifndef ALLIANCE_ALPHA_1_0_DIAGNOSTICS_H
 #define ALLIANCE_ALPHA_1_0_DIAGNOSTICS_H
-#include "master.h"
+
+#include <stdio.h> // standard C lib
+#include <stdlib.h> //Standard C lib
+#include <time.h>
+#include "array.h"
 
 void diag_multiply_ar(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret);        // multiply two complex 6d arrays, ar1 and ar2, and output the result to ret array.
 void diag_multiply_ar_r(double *ar1, double *ar2, double *ret);         // multiply two return 6d arrays, ar1 and ar2, and output the result to ret array.

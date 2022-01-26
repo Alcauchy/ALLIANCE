@@ -4,8 +4,6 @@
 #include "parameters_io.h"
 
 void read_parameters(char *filename){
-    MPI_Info info;
-    MPI_File handle;
     char string[60];
     char *tmp[15];
     FILE *fp;

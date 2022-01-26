@@ -1,4 +1,3 @@
-#include "master.h"
 #include "mpi_utils.h"
 #include "fftw_utils.h"
 #include "hdf_utils.h"
@@ -6,17 +5,6 @@
 #include "diagnostics.h"
 
 int main(int argc, char **argv) {
-/*
-    parameters.nkx =  64;
-    parameters.nky = 64;
-    parameters.nz = 64;
-    parameters.nkz = parameters.nz/2+1;
-    parameters.nm = 16;
-    parameters.nl = 2;
-    parameters.ns = 2;
-*/
-
-
     mpi_init();
     char *filename;
     if (argc<2){
@@ -66,7 +54,7 @@ int main(int argc, char **argv) {
     COMPLEX* big_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,array_local_size.nm,array_local_size.nl,array_local_size.ns);
     COMPLEX* minus_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,1,array_local_size.nl,array_local_size.ns);
     COMPLEX* plus_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,1,array_local_size.nl,array_local_size.ns);
-   //mpi_exchange_m_boundaries(big_array,plus_array,minus_array);
+    mpi_exchange_m_boundaries(big_array,plus_array,minus_array);
   //  arr_c[get_flat_c(0,0,0,1,0,0)] = 1.j;
     //fftw_r2c(arr_r,arr_c);
     COMPLEX *arr_c = malloc(array_local_size.nkx*array_local_size.nky*array_local_size.nkz*array_local_size.nm*array_local_size.nl*array_local_size.ns*sizeof(*arr_c));
@@ -104,7 +92,6 @@ int main(int argc, char **argv) {
     hdf_create_file_r("test.h5",arr_r);
     hdf_create_file_r("test1.h5",arr_r1);
 
-
     //now converting it back and dealiasing it
     fftw_r2c(arr_r_sq,arr_c);
     fftw_c2r(arr_c,arr_r_sq);
@@ -117,7 +104,6 @@ int main(int argc, char **argv) {
     hdf_create_file_r("test_deal.h5",arr_r_sq);
 
     fftw_normalise_data(arr_r);
-
     //hdf_create_file_r("test.h5",arr_r);
    // hdf_create_file_r("test_sq.h5",arr_r);
     //hdf_create_file_c("test1.h5",arr_c);

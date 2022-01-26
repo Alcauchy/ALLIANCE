@@ -4,7 +4,13 @@
 
 #ifndef ALLIANCE_ALPHA_1_0_MPI_UTILS_H
 #define ALLIANCE_ALPHA_1_0_MPI_UTILS_H
-#include "master.h"
+
+#include <stdio.h> // standard C lib
+#include <stdlib.h> //Standard C lib
+#include <mpi.h> // MPI
+#include "array.h"
+
+
 void mpi_init();                        //initialize mpi environment
 void mpi_kill();                        //finalize mpi environment
 void mpi_create_topology();             //create 2D topology
