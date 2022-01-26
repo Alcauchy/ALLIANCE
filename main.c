@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
             }
         }
     }
-    diag_fill_rand(arr_c);
+    fill_rand(arr_c);
     //printf("[MPI process %d] (%d,%d), m_local = %f\n",mpi_my_rank,mpi_my_coords[0],mpi_my_coords[1],arr_r[10]);
 
    // fftw_test_fill(arr_r,2.);
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
     fftw_c2r(arr_c1,arr_r1);
     //fftw_normalise_data(arr_r);
     //getting square from it
-    diag_multiply_ar_r(arr_r1,arr_r,arr_r_sq);
+    multiply_ar_r(arr_r1, arr_r, arr_r_sq);
     hdf_init();
     hdf_create_file_r("test.h5",arr_r);
     hdf_create_file_r("test1.h5",arr_r1);
