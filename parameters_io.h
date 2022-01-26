@@ -4,10 +4,12 @@
 
 #ifndef ALLIANCE_ALPHA_1_0_PARAMETERS_IO_C_H
 #define ALLIANCE_ALPHA_1_0_PARAMETERS_IO_C_H
-#include "master.h"
-#include <mpi.h>
+
+#include <stdio.h> // standard C lib
+#include <stdlib.h> //Standard C lib
 #include <string.h>
 #include "mpi_utils.h"
+#include "array.h"
 
 void read_parameters(char *filename);
 

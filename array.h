@@ -4,6 +4,10 @@
 
 #ifndef ALLIANCE_ALPHA_1_0_ARRAY_H
 #define ALLIANCE_ALPHA_1_0_ARRAY_H
+#include <stdio.h> // standard C lib
+#include <stdlib.h> //Standard C lib
+#include <complex.h>
+#include <fftw3-mpi.h>
 
 typedef fftw_complex COMPLEX;
 

@@ -4,7 +4,15 @@
 
 #ifndef ALLIANCE_ALPHA_1_0_FFTW_UTILS_H
 #define ALLIANCE_ALPHA_1_0_FFTW_UTILS_H
-#include "master.h"
+#include <stdio.h> // standard C lib
+#include <stdlib.h> //Standard C lib
+#include <math.h> //Math constants
+#include <complex.h> //Complex numbers
+#include <fftw3-mpi.h>
+#include <string.h>
+#include "mpi_utils.h"
+#include "array.h"
+
 
 void fftw_init(MPI_Comm communicator);                      // initializes fftw mpi environment
 void fftw_kill();                                           // kills environment
