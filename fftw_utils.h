@@ -16,7 +16,6 @@
 
 void fftw_init(MPI_Comm communicator);                      // initializes fftw mpi environment
 void fftw_kill();                                           // kills environment
-void fftw_dealiasing();                                     // dealiasing, yet to be implemented
 void fftw_r2c(double *data_r, COMPLEX *data_c);             // real to complex transform; copies data_r array to fftw buffer r_d, performs transform to complex and copies the resulting array to data_c array
 void fftw_c2r(COMPLEX *data_c, double *data_r);             // complex to real transform; copies data_c array to fftw buffer c_d, performs transform to complex and copies the resulting array to data_r array
 void fftw_copy_buffer_r(double *ar1, double *ar2);          // copies real array to another real array, function used in fftw_r2c/fftw_c2r to copy input array to buffer and/or back;
@@ -27,4 +26,5 @@ void dealiasing23(COMPLEX *data_c);                         // performs dealiasi
 double cosinus(double f,int ix);                            // returns cos(2*pi*f*ix)
 
 extern int *global_nkx_index;
+extern void (*fftw_dealiasing)(COMPLEX *);                  // pointer to the dealiasing function. Used to choose the dealiasing function user wants to use.
 #endif //ALLIANCE_ALPHA_1_0_FFTW_UTILS_H

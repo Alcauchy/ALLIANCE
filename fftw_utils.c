@@ -15,19 +15,20 @@ fftw_plan plan_c2r, plan_r2c;                   // plans needed to perform compl
 COMPLEX* c_d;                                   // complex data array buffer; used for out-of-place
 double* r_d;                                     // real data array buffer; used for out-of-place transform
 double fftw_norm;                               //normalization coefficient for backward fft transform
+void (*fftw_dealiasing)(COMPLEX*) = NULL;
 int *global_nkx_index;                           // array which stores the global position of nkx on the processor. Needed for dealiasing, in order to find Nkx/3 and 2*Nkx/3 and put all modes between those to zeros.
 void fftw_init(MPI_Comm communicator){
     fftw_mpi_init();
-    size_c[0] = parameters.nkx;
-    size_c[1] = parameters.nky;
-    size_c[2] = parameters.nkz;
-    size_r[0] = parameters.nkx;
-    size_r[1] = parameters.nky;
-    size_r[2] = parameters.nz;
+    size_c[0] = array_global_size.nkx;
+    size_c[1] = array_global_size.nky;
+    size_c[2] = array_global_size.nkz;
+    size_r[0] = array_global_size.nkx;
+    size_r[1] = array_global_size.nky;
+    size_r[2] = array_global_size.nz;
 
 
 
-    fftw_norm = 1./(parameters.nkx*parameters.nky*parameters.nz);
+    fftw_norm = 1./(array_global_size.nkx * array_global_size.nky * array_global_size.nz);
 
     howmany = array_local_size.nm * array_local_size.nl * array_local_size.ns;
     local_size = fftw_mpi_local_size_many(3,size_c, howmany, array_local_size.nkx, communicator, &local_n0, &local_0_start); // getting local size stored on each processor;
@@ -35,7 +36,7 @@ void fftw_init(MPI_Comm communicator){
 
     global_nkx_index = malloc(array_local_size.nkx * sizeof(global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
-        global_nkx_index[i] = parameters.nkx / mpi_dims[1] * mpi_my_row_rank + i;
+        global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_row_rank + i;
        // printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
     }
 
@@ -62,7 +63,7 @@ void fftw_r2c(double *data_r, COMPLEX *data_c){
 void fftw_c2r(COMPLEX *data_c, double *data_r){
     int start = MPI_Wtime();
     if (mpi_my_coords[1] == 0){
-    //    c_d[get_flat_c(0,0,0,1,0,0)] = parameters.nkx*parameters.nky*parameters.nkz;
+    //    c_d[get_flat_c(0,0,0,1,0,0)] = array_global_size.nkx*array_global_size.nky*array_global_size.nkz;
     }
 
     fftw_copy_buffer_c(c_d, data_c);
@@ -122,7 +123,7 @@ void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2){
 
 double cosinus(double f,int ix){
 
-    return cos((double)2.*M_PI*f/parameters.nkx*(local_0_start+ix));
+    return cos((double)2. * M_PI * f / array_global_size.nkx * (local_0_start + ix));
 }
 
 void fftw_test_fill(double *ar,double f){
@@ -161,7 +162,7 @@ void dealiasing23(COMPLEX *data_c){
                         for(size_t is = 0; is <array_local_size.ns; is++){
                             data_c[get_flat_c(is,il,im,ikx,iky,ikz)] =  (ikz>array_local_size.nkz*2/3)||
                                                                         ((iky>array_local_size.nky/3)&&(iky<array_local_size.nky*2/3))||
-                                                                        ((global_nkx_index[ikx]>parameters.nkx/3)&&(global_nkx_index[ikx]<parameters.nkx*2/3)) ? 0.j:data_c[get_flat_c(is,il,im,ikx,iky,ikz)];
+                                                                        ((global_nkx_index[ikx] > array_global_size.nkx / 3) && (global_nkx_index[ikx] < array_global_size.nkx * 2 / 3)) ? 0.j : data_c[get_flat_c(is, il, im, ikx, iky, ikz)];
                         }
                     }
                 }

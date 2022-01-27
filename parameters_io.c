@@ -2,6 +2,20 @@
 // Created by alcauchy on 27/12/2021.
 //
 #include "parameters_io.h"
+#include "fftw_utils.h"
+
+struct system_param parameters;
+enum DEALIASING {ALIASED, TWOTHIRDS};
+
+void init_global_size(){
+    array_global_size.nkx = parameters.nkx;
+    array_global_size.nky = parameters.nky;
+    array_global_size.nkz = parameters.nz / 2 + 1;
+    array_global_size.nz = parameters.nz;
+    array_global_size.nm = parameters.nm;
+    array_global_size.nl = parameters.nl;
+    array_global_size.ns = parameters.ns;
+};
 
 void read_parameters(char *filename){
     char string[60];
@@ -15,20 +29,20 @@ void read_parameters(char *filename){
             sscanf(string, "%s : %*s", tmp);
             if(strcmp(tmp,"nkx")==0){
                 sscanf(string, "%*s : %zu", &parameters.nkx);
-                printf("[MPI process %d] nkx = %zu\n", mpi_my_rank,  parameters.nkx);
+                printf("[MPI process %d] nkx = %zu\n", mpi_my_rank, parameters.nkx);
             }
             if(strcmp(tmp,"nky")==0){
                 sscanf(string, "%*s : %zu", &parameters.nky);
-                printf("[MPI process %d] nky = %zu\n", mpi_my_rank,  parameters.nky);
+                printf("[MPI process %d] nky = %zu\n", mpi_my_rank, parameters.nky);
             }
             if(strcmp(tmp,"nz")==0){
                 sscanf(string, "%*s : %zu", &parameters.nz);
-                printf("[MPI process %d] nz = %zu\n", mpi_my_rank,  parameters.nz);
-                parameters.nkz = parameters.nz/2+1;
+                printf("[MPI process %d] nz = %zu\n", mpi_my_rank, parameters.nz);
+
             }
             if(strcmp(tmp,"nm")==0){
                 sscanf(string, "%*s : %zu", &parameters.nm);
-                printf("[MPI process %d] nm = %zu\n", mpi_my_rank,  parameters.nm);
+                printf("[MPI process %d] nm = %zu\n", mpi_my_rank, parameters.nm);
             }
             if(strcmp(tmp,"nl")==0){
                 sscanf(string, "%*s : %zu", &parameters.nl);
@@ -38,8 +52,15 @@ void read_parameters(char *filename){
                 sscanf(string, "%*s : %zu", &parameters.ns);
                 printf("[MPI process %d] ns = %zu\n", mpi_my_rank, parameters.ns);
             }
+            if(strcmp(tmp,"dealiasing")==0){
+                sscanf(string, "%*s : %d", &parameters.dealiasing);
+                if (parameters.dealiasing == TWOTHIRDS){
+                    printf("[MPI process %d] dealiasing rule is %d\n", mpi_my_rank, parameters.dealiasing);
+                    fftw_dealiasing = dealiasing23;
+                }
+            }
         }
-
     }
-
+    init_global_size();
 }
+
