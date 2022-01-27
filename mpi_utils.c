@@ -47,19 +47,19 @@ void mpi_create_topology(){
 
 
 void mpi_get_local_array_size(){
-    array_local_size.nkx = parameters.nkx / mpi_dims[1];
-    array_local_size.nky = parameters.nky;
-    array_local_size.nkz = parameters.nkz;
-    array_local_size.nm = parameters.nm / mpi_dims[0];
-    array_local_size.nl = parameters.nl;
-    array_local_size.ns = parameters.ns;
-    array_local_size.nz = parameters.nz;
+    array_local_size.nkx = array_global_size.nkx / mpi_dims[1];
+    array_local_size.nky = array_global_size.nky;
+    array_local_size.nkz = array_global_size.nkz;
+    array_local_size.nm = array_global_size.nm / mpi_dims[0];
+    array_local_size.nl = array_global_size.nl;
+    array_local_size.ns = array_global_size.ns;
+    array_local_size.nz = array_global_size.nz;
     if(mpi_my_coords[0] == mpi_dims[0] - 1){
-        array_local_size.nm = parameters.nm- parameters.nm / mpi_dims[0] * (mpi_my_coords[0]);
+        array_local_size.nm = array_global_size.nm - array_global_size.nm / mpi_dims[0] * (mpi_my_coords[0]);
     }
 
     if(mpi_my_coords[1] == mpi_dims[1] - 1){
-        array_local_size.nkx = parameters.nkx- parameters.nkx / mpi_dims[1] * (mpi_my_coords[1]);
+        array_local_size.nkx = array_global_size.nkx - array_global_size.nkx / mpi_dims[1] * (mpi_my_coords[1]);
     }
     int total_size  = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.nm * array_local_size.nl * array_local_size.ns;
 

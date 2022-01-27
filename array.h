@@ -22,16 +22,7 @@ void multiply_ar_r(double *ar1, double *ar2, double *ret);                      
 void fill_rand(COMPLEX *ar1);                                                                   // fill 6D array ar1 with random values
 double sinus(int kx, int ky, int kz, double f);
 
-struct system_param {
-    size_t nkx;
-    size_t nky;
-    size_t nkz;
-    size_t nm;
-    size_t nl;
-    size_t ns;
-    size_t nz;
 
-};
 struct array_size {
     size_t nkx;
     size_t nky;
@@ -43,5 +34,5 @@ struct array_size {
 };
 
 extern struct array_size array_local_size;
-extern struct system_param parameters;
+extern struct array_size array_global_size;
 #endif //ALLIANCE_ALPHA_1_0_ARRAY_H

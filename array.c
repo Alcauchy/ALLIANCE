@@ -4,7 +4,7 @@
 #include "array.h"
 
 struct array_size array_local_size;
-struct system_param parameters;
+struct array_size array_global_size;
 
 double* alloc_double6D(size_t nkx, size_t nky, size_t nz, size_t nm, size_t nl, size_t ns){
     return malloc(nkx * nky * nz * nl * nm * ns * sizeof(double));

@@ -26,19 +26,19 @@ void complex_t_init(){
 
 void hdf_init(){
     complex_t_init();
-    dataspace_dims_r[0] = parameters.nkx;
-    dataspace_dims_r[1] = parameters.nky;
-    dataspace_dims_r[2] = parameters.nz+2;
-    dataspace_dims_r[3] = parameters.nm;
-    dataspace_dims_r[4] = parameters.nl;
-    dataspace_dims_r[5] = parameters.ns;
+    dataspace_dims_r[0] = array_global_size.nkx;
+    dataspace_dims_r[1] = array_global_size.nky;
+    dataspace_dims_r[2] = array_global_size.nz + 2;
+    dataspace_dims_r[3] = array_global_size.nm;
+    dataspace_dims_r[4] = array_global_size.nl;
+    dataspace_dims_r[5] = array_global_size.ns;
 
-    dataspace_dims_c[0] = parameters.nkx;
-    dataspace_dims_c[1] = parameters.nky;
-    dataspace_dims_c[2] = parameters.nkz;
-    dataspace_dims_c[3] = parameters.nm;
-    dataspace_dims_c[4] = parameters.nl;
-    dataspace_dims_c[5] = parameters.ns;
+    dataspace_dims_c[0] = array_global_size.nkx;
+    dataspace_dims_c[1] = array_global_size.nky;
+    dataspace_dims_c[2] = array_global_size.nkz;
+    dataspace_dims_c[3] = array_global_size.nm;
+    dataspace_dims_c[4] = array_global_size.nl;
+    dataspace_dims_c[5] = array_global_size.ns;
 
     chunk_dims_r[0] = array_local_size.nkx;
     chunk_dims_r[1] = array_local_size.nky;
