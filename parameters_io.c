@@ -4,8 +4,8 @@
 #include "parameters_io.h"
 #include "fftw_utils.h"
 
+
 struct system_param parameters;
-enum DEALIASING {ALIASED, TWOTHIRDS};
 
 void init_global_size(){
     array_global_size.nkx = parameters.nkx;
@@ -15,11 +15,23 @@ void init_global_size(){
     array_global_size.nm = parameters.nm;
     array_global_size.nl = parameters.nl;
     array_global_size.ns = parameters.ns;
+    array_global_size.total_comp = array_global_size.nkx *
+                              array_global_size.nky *
+                              array_global_size.nkz *
+                              array_global_size.nm *
+                              array_global_size.nl *
+                              array_global_size.ns;
+    array_global_size.total_real = array_global_size.nkx *
+                                   array_global_size.nky *
+                                   array_global_size.nz *
+                                   array_global_size.nm *
+                                   array_global_size.nl *
+                                   array_global_size.ns;
 };
 
 void read_parameters(char *filename){
     char string[60];
-    char *tmp[15];
+    char tmp[15];
     FILE *fp;
     fp = fopen(filename, "r");  /* open file for input */
     if (fp)  /* If no error occurred while opening file */

@@ -57,6 +57,7 @@ int main(int argc, char **argv) {
     mpi_exchange_m_boundaries(big_array,plus_array,minus_array);
   //  arr_c[get_flat_c(0,0,0,1,0,0)] = 1.j;
     //fftw_r2c(arr_r,arr_c);
+
     COMPLEX *arr_c = malloc(array_local_size.nkx*array_local_size.nky*array_local_size.nkz*array_local_size.nm*array_local_size.nl*array_local_size.ns*sizeof(*arr_c));
     COMPLEX *arr_c1 = malloc(array_local_size.nkx*array_local_size.nky*array_local_size.nkz*array_local_size.nm*array_local_size.nl*array_local_size.ns*sizeof(*arr_c1));
     double *arr_r = malloc(array_local_size.nkx*array_local_size.nky*(array_local_size.nz+2)*array_local_size.nm*array_local_size.nl*array_local_size.ns*sizeof(*arr_r));
@@ -74,33 +75,45 @@ int main(int argc, char **argv) {
     }
 
     // finding the wavevector closest to aliased modes
+    int probe_kx = 5;
     for (size_t ikx = 0; ikx<array_local_size.nkx;ikx++){
-        if(global_nkx_index[ikx] == 7){
-            arr_c[get_flat_c(0,0,0,ikx,0,0)] = (1.j+1);
+        if(global_nkx_index[ikx] == probe_kx){
+            arr_c[get_flat_c(0,0,0,ikx,0,0)] = (1);
         }
-        if(global_nkx_index[ikx] == 7){
-            arr_c1[get_flat_c(0,0,0,ikx,0,0)] = (1.j+1);
+        if(global_nkx_index[ikx] == array_global_size.nkx - probe_kx){
+            arr_c[get_flat_c(0,0,0,ikx,0,0)] = (1);
+        }
+
+        if(global_nkx_index[ikx] == probe_kx){
+            arr_c1[get_flat_c(0,0,0,ikx,0,0)] = (1);
+        }
+        if(global_nkx_index[ikx] == array_global_size.nkx - probe_kx){
+            arr_c1[get_flat_c(0,0,0,ikx,0,0)] = (1);
         }
     }
+
     // computing ifft from the complex array
     fftw_c2r(arr_c,arr_r);
     fftw_c2r(arr_c1,arr_r1);
     //fftw_normalise_data(arr_r);
     //getting square from it
     multiply_ar_r(arr_r1, arr_r, arr_r_sq);
+    fftw_normalise_data(arr_r_sq);
     hdf_init();
-    hdf_create_file_r("test.h5",arr_r);
-    hdf_create_file_r("test1.h5",arr_r1);
-
+    //hdf_create_file_r("test.h5",arr_r);
+    //hdf_create_file_r("test1.h5",arr_r1);
+    //hdf_create_file_r("test.h5",arr_c);
+    //hdf_create_file_r("test1.h5",arr_c1);
     //now converting it back and dealiasing it
     fftw_r2c(arr_r_sq,arr_c);
+   //hdf_create_file_c("test1.h5",arr_c);
     fftw_c2r(arr_c,arr_r_sq);
-    fftw_normalise_data(arr_r_sq);
-    hdf_create_file_r("test_non_deal.h5",arr_r_sq);
+
+   // hdf_create_file_r("test_non_deal.h5",arr_r_sq);
     fftw_dealiasing(arr_c);
-    //dealiasing23(arr_c);
+    hdf_create_file_c("test.h5",arr_c);
     fftw_c2r(arr_c,arr_r_sq);
-    fftw_normalise_data(arr_r_sq);
+    //fftw_normalise_data(arr_r_sq);
     printf("[process id %d]zero mode equal to %f+%f i\n",mpi_my_rank, creal(arr_r_sq[get_flat_r(0,0,0,0,0,0)]),cimag(arr_r_sq[get_flat_r(0,0,0,0,0,0)]));
     hdf_create_file_r("test_deal.h5",arr_r_sq);
 
@@ -118,5 +131,5 @@ int main(int argc, char **argv) {
     free(plus_array);
     fftw_kill();
     mpi_kill();
-    return 0;
+    exit(0);
 }

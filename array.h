@@ -31,8 +31,23 @@ struct array_size {
     size_t nl;
     size_t ns;
     size_t nz;
+    size_t total_real;
+    size_t total_comp;
+};
+
+struct offset_size {
+    size_t kx;
+    size_t ky;
+    size_t kz;
+    size_t x;
+    size_t y;
+    size_t z;
+    size_t m;
+    size_t l;
+    size_t s;
 };
 
 extern struct array_size array_local_size;
 extern struct array_size array_global_size;
+extern struct offset_size array_offset;
 #endif //ALLIANCE_ALPHA_1_0_ARRAY_H

@@ -18,7 +18,8 @@ void mpi_find_hermite_neighbours();     // finds neighbour processes in hermite 
 void mpi_split_in_rows();               // splits communicators in rows. needed for fftw transforms along kx direction of parallelization
 void mpi_init_m_exchange();             // used to define all the variables needed to prepare exchange of m+1 and m-1 Hermite moments between processors
 void mpi_exchange_m_boundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPLEX *minus_boundary);       // required to exchange the m+1 and m-1 Hermite moments between processes
-void mpi_get_local_array_size();
+void mpi_get_local_array_size();        //computes array sizes stored locally by each process
+void mpi_get_local_array_offsets();     //computes offsets for easy 6d indexing (see function get_flat_r)
 
 //from mpi_init.c file
 extern int mpi_my_rank;                // rank of the process for 2D MPI communicator
