@@ -118,7 +118,7 @@ void mpi_get_local_array_offsets(){
 
     array_offset.l = array_local_size.ns;
 
-    array_offset.s = 0;
+    array_offset.s = 1.0;
 
     array_offset.x = array_local_size.nky *
                      (array_local_size.nz + 2) *
