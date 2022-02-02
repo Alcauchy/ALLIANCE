@@ -24,7 +24,13 @@ struct system_param {
     size_t ns;
     size_t nz;
     int dealiasing;
-
+    int electromagnetic;
+    int adiabatic;
+    double beta;
+    double *mass;
+    double *density;
+    double *temperature;
+    double *charge;
 };
 
 
