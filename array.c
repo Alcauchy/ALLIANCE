@@ -6,6 +6,7 @@
 struct array_size array_local_size;
 struct array_size array_global_size;
 struct offset_size array_offset;
+struct offset_size array_offset3D;
 
 
 double *alloc_double6D(size_t nkx, size_t nky, size_t nz, size_t nm, size_t nl, size_t ns) {
@@ -32,6 +33,12 @@ size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t 
            im * array_offset.m +
            il * array_offset.l +
            is;
+}
+
+size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz){
+    return ix * array_offset3D.kx +
+           iy * array_offset3D.ky +
+           iz;
 }
 
 void multiply_ar_c(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret) {

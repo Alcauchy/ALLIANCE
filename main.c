@@ -3,6 +3,7 @@
 #include "hdf_utils.h"
 #include "parameters_io.h"
 #include "diagnostics.h"
+#include "space_config.h"
 
 int main(int argc, char **argv) {
     mpi_init();
@@ -50,11 +51,11 @@ int main(int argc, char **argv) {
 
    // fftw_test_fill(arr_r,2.);
      */
-    mpi_init_m_exchange();
+    //mpi_init_m_exchange();
     COMPLEX* big_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,array_local_size.nm,array_local_size.nl,array_local_size.ns);
     COMPLEX* minus_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,1,array_local_size.nl,array_local_size.ns);
     COMPLEX* plus_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,1,array_local_size.nl,array_local_size.ns);
-    mpi_exchange_m_boundaries(big_array,plus_array,minus_array);
+   // mpi_exchange_m_boundaries(big_array,plus_array,minus_array);
   //  arr_c[get_flat_c(0,0,0,1,0,0)] = 1.j;
     //fftw_r2c(arr_r,arr_c);
 
@@ -93,37 +94,37 @@ int main(int argc, char **argv) {
     }
 
     // computing ifft from the complex array
-    fftw_c2r(arr_c,arr_r);
-    fftw_c2r(arr_c1,arr_r1);
+    //fftw_c2r(arr_c,arr_r);
+    //fftw_c2r(arr_c1,arr_r1);
     //fftw_normalise_data(arr_r);
     //getting square from it
-    multiply_ar_r(arr_r1, arr_r, arr_r_sq);
-    fftw_normalise_data(arr_r_sq);
-    hdf_init();
+    //multiply_ar_r(arr_r1, arr_r, arr_r_sq);
+    //fftw_normalise_data(arr_r_sq);
+    //hdf_init();
     //hdf_create_file_r("test.h5",arr_r);
     //hdf_create_file_r("test1.h5",arr_r1);
     //hdf_create_file_r("test.h5",arr_c);
     //hdf_create_file_r("test1.h5",arr_c1);
     //now converting it back and dealiasing it
-    fftw_r2c(arr_r_sq,arr_c);
+    //fftw_r2c(arr_r_sq,arr_c);
    //hdf_create_file_c("test1.h5",arr_c);
-    fftw_c2r(arr_c,arr_r_sq);
+    //fftw_c2r(arr_c,arr_r_sq);
 
    // hdf_create_file_r("test_non_deal.h5",arr_r_sq);
-    fftw_dealiasing(arr_c);
-    hdf_create_file_c("test.h5",arr_c);
-    fftw_c2r(arr_c,arr_r_sq);
+    //fftw_dealiasing(arr_c);
+    //hdf_create_file_c("test.h5",arr_c);
+    //fftw_c2r(arr_c,arr_r_sq);
     //fftw_normalise_data(arr_r_sq);
-    printf("[process id %d]zero mode equal to %f+%f i\n",mpi_my_rank, creal(arr_r_sq[get_flat_r(0,0,0,0,0,0)]),cimag(arr_r_sq[get_flat_r(0,0,0,0,0,0)]));
-    hdf_create_file_r("test_deal.h5",arr_r_sq);
+    //printf("[process id %d]zero mode equal to %f+%f i\n",mpi_my_rank, creal(arr_r_sq[get_flat_r(0,0,0,0,0,0)]),cimag(arr_r_sq[get_flat_r(0,0,0,0,0,0)]));
+    //hdf_create_file_r("test_deal.h5",arr_r_sq);
 
-    fftw_normalise_data(arr_r);
+    //fftw_normalise_data(arr_r);
     //hdf_create_file_r("test.h5",arr_r);
    // hdf_create_file_r("test_sq.h5",arr_r);
     //hdf_create_file_c("test1.h5",arr_c);
     //
 
-
+    space_generateWaveSpace();
     free(arr_c);
     free(arr_r);
     free(big_array);
