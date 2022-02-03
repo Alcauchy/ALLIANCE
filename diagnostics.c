@@ -7,4 +7,9 @@
 //
 #include "diagnostics.h"
 
+void diag_computeSpectra(COMPLEX *data, double *spec){};
+
+double diag_computeFreeEnergy(COMPLEX *g,COMPLEX *h){};
+
+double double diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields){};
 
