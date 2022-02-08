@@ -4,13 +4,15 @@
 #include "parameters_io.h"
 #include "diagnostics.h"
 #include "space_config.h"
+#include "init.h"
 
 int main(int argc, char **argv) {
-    mpi_init();
+    //mpi_init();
     char *filename;
     if (argc<2){
         if(mpi_my_rank == 0){
             printf("OI! PROVIDE A FILENAME LAD!\n");
+            exit(1);
         }
 
 
@@ -18,10 +20,11 @@ int main(int argc, char **argv) {
     else{
         if (strcmp("-f", argv[1]) == 0){
             filename = argv[2];
-            read_parameters(filename);
+            //read_parameters(filename);
         }
     }
-
+    init_init(filename);
+/*
     mpi_get_local_array_size();
     int start = MPI_Wtime();
     fftw_init(mpi_row_comm);
@@ -50,7 +53,7 @@ int main(int argc, char **argv) {
     //printf("[MPI process %d] (%d,%d), m_local = %f\n",mpi_my_rank,mpi_my_coords[0],mpi_my_coords[1],arr_r[10]);
 
    // fftw_test_fill(arr_r,2.);
-     */
+
     //mpi_init_m_exchange();
     COMPLEX* big_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,array_local_size.nm,array_local_size.nl,array_local_size.ns);
     COMPLEX* minus_array = alloc_complex6D(array_local_size.nkx,array_local_size.nky,array_local_size.nkz,1,array_local_size.nl,array_local_size.ns);
@@ -125,11 +128,13 @@ int main(int argc, char **argv) {
     //
 
     space_generateWaveSpace();
-    free(arr_c);
-    free(arr_r);
-    free(big_array);
-    free(minus_array);
-    free(plus_array);
+    */
+   // free(arr_c);
+   // free(arr_r);
+   // free(big_array);
+   // free(minus_array);
+   // free(plus_array);
+    //free_wavespace();
     fftw_kill();
     mpi_kill();
     exit(0);

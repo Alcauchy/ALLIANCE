@@ -3,3 +3,5 @@
 //
 
 #include "solver.h"
+
+void solver_init(){};

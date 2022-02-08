@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include "mpi_utils.h"
 #include "array.h"
+void fields_init();
 void fields_getA();
 void fields_getB();
 void fields_getPhi();

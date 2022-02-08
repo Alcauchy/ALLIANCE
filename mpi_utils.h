@@ -13,6 +13,7 @@
 
 void mpi_init();                        //initialize mpi environment
 void mpi_kill();                        //finalize mpi environment
+void mpi_generateTopology();
 void mpi_create_topology();             //create 2D topology
 void mpi_find_hermite_neighbours();     // finds neighbour processes in hermite direction
 void mpi_split_in_rows();               // splits communicators in rows. needed for fftw transforms along kx direction of parallelization

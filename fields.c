@@ -5,6 +5,7 @@
 
 void (*fields_getChi)(void);
 
+void fields_init(){};
 
 void fields_getA(){};
 

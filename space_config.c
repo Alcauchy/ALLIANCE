@@ -2,6 +2,7 @@
 // Created by alcauchy on 03/02/2022.
 //
 #include "space_config.h"
+#include <complex.h>
 #define MINUS_I -1.j
 double space_Lx = 1.0;
 double space_Ly = 1.0;
@@ -10,8 +11,21 @@ double *space_kx;
 double *space_ky;
 double *space_kz;
 COMPLEX *space_iKx;
-COMPLEX *space_iKy;
+COMPLEX* space_iKy;
 COMPLEX *space_iKz;
+
+/*
+ * space_init():
+ * initializes wave space. Called in init_init() function.
+ *
+ *  args:
+ *
+ *  return:
+ *
+ */
+void space_init(){
+    space_generateWaveSpace();
+}
 
 /*
  * space_generateWaveSpace():
@@ -31,22 +45,22 @@ COMPLEX *space_iKz;
  */
 void space_generateWaveSpace() {
     space_kx = malloc(array_local_size.nkx *
-                      sizeof(space_kx));
+                      sizeof(*space_kx));
     space_ky = malloc(array_local_size.nky *
-                      sizeof(space_ky));
+                      sizeof(*space_ky));
     space_kz = malloc(array_local_size.nkz *
-                      sizeof(space_kz));
+                      sizeof(*space_kz));
 
     space_iKx = malloc(array_local_size.nkx *
-                      sizeof(space_iKx));
+                      sizeof(*space_iKx));
     space_iKy = malloc(array_local_size.nky *
-                      sizeof(space_iKy));
+                      sizeof(*space_iKy));
     space_iKz = malloc(array_local_size.nkz *
-                      sizeof(space_iKz));
+                      sizeof(*space_iKz));
 
     double deltaKx = M_PI / (array_global_size.nkx * space_Lx);
     double deltaKy = M_PI / (array_global_size.nky * space_Ly);
-    double deltaKz = 2 * M_PI / (array_global_size.nkz * space_Lz);
+    double deltaKz = 2. * M_PI / (array_global_size.nkz * space_Lz);
 
     for (size_t ix = 0; ix < array_local_size.nkx; ix++)
     {
@@ -58,9 +72,10 @@ void space_generateWaveSpace() {
         {
             space_kx[ix] = deltaKx * ((double)global_nkx_index[ix] - (double)array_global_size.nkx);
         }
-        space_iKx[ix] = MINUS_I * space_kx[ix];
-        printf("[MPI process %d] kx[%d] = %f\n",mpi_my_rank, ix, space_kx[ix]);
+        space_iKx[ix] = -1.j  * space_kx[ix];
+        //printf("[MPI process %d] kx[%d] = %f\n",mpi_my_rank, ix, space_kx[ix]);
     }
+    printf("[MPI process %d] kx generated \n",mpi_my_rank);
 
     for (size_t iy = 0; iy < array_global_size.nky; iy++)
     {
@@ -72,17 +87,18 @@ void space_generateWaveSpace() {
         {
             space_ky[iy] = deltaKy * (iy - array_global_size.nky);
         }
-        space_iKy[iy] = MINUS_I * space_ky[iy];
-        printf("[MPI process %d] ky[%d] = %f\n",mpi_my_rank, iy, space_ky[iy]);
+        space_iKy[iy] = -1.j  * space_ky[iy];
+        //printf("[MPI process %d] ky[%d] = %f\n",mpi_my_rank, iy, space_ky[iy]);
     }
-
+    //space_iKy[1] = (0,0);
+    printf("[MPI process %d] ky generated \n",mpi_my_rank);
     for (size_t iz = 0; iz < array_local_size.nkz; iz++)
     {
         space_kz[iz] = deltaKz * iz;
-        space_iKx[iz] = MINUS_I * space_kx[iz];
-        printf("[MPI process %d] kz[%d] = %f\n ",mpi_my_rank, iz, space_kz[iz]);
+        space_iKz[iz] =  space_kz[iz];
+        //printf("[MPI process %d] kz[%d] = %f\n ",mpi_my_rank, iz, space_kz[iz]);
     }
-
+    printf("[MPI process %d] kz generated \n",mpi_my_rank);
 };
 
 /*
@@ -180,3 +196,12 @@ void space_zGrad(COMPLEX *data) {
         }
     }
 };
+
+void free_wavespace(){
+    free(space_kx);
+    free(space_ky);
+    free(space_kz);
+    free(space_iKx);
+    free(space_iKy);
+    free(space_iKz);
+}

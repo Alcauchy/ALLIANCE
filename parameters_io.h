@@ -33,5 +33,6 @@ struct system_param {
     double *charge;
 };
 
+extern struct system_param parameters;
 
 #endif //ALLIANCE_ALPHA_1_0_PARAMETERS_IO_C_H

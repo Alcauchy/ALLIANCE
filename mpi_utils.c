@@ -10,7 +10,7 @@ int mpi_my_rank;                        // rank of the process for 2D MPI commun
 int mpi_size;                           // size of the communicator
 int mpi_my_row_rank;                    // rank of the process in a kx direction of parallelization
 int mpi_my_coords[2];                   // coordinates of the process in 2D topology
-int mpi_dims[] = {1, 0};                // size of the dimensions. {0,0} means there is no limits in defining the size.
+int mpi_dims[] = {0, 0};                // size of the dimensions. {0,0} means there is no limits in defining the size.
 int m_neighbour_ranks[2];               // ranks of the neighbours
 int mpi_sub_buf_size;                   // buffer size needed to exchange m+1 and m-1 Hermite moments
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
@@ -27,12 +27,13 @@ void mpi_init() {
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+}
+
+void mpi_generateTopology(){
     mpi_create_topology();
     mpi_find_hermite_neighbours();
     mpi_split_in_rows();
-
 }
-
 
 void mpi_kill() {
     MPI_Finalize();
@@ -97,7 +98,7 @@ void mpi_get_local_array_size() {
            array_local_size.total_comp);
 }
 
-void mpi_get_local_array_offsets(){
+void mpi_get_local_array_offsets() {
     array_offset.kx = array_local_size.nky *
                       array_local_size.nkz *
                       array_local_size.nm *
@@ -136,7 +137,7 @@ void mpi_get_local_array_offsets(){
                      array_local_size.ns;
 
     array_offset3D.kx = array_local_size.nky *
-                      array_local_size.nkz;
+                        array_local_size.nkz;
 
     array_offset3D.ky = array_local_size.nkz;
 

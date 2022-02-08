@@ -73,6 +73,7 @@ void fftw_init(MPI_Comm communicator){
     for (size_t ii = 0; ii<local_size; ii++){ c_d[ii] = 0.j; } // tests
     for (size_t ii = 0; ii<2*local_size; ii++){ r_d[ii] = 0.; }
 }
+
 void fftw_r2c(double *data_r, COMPLEX *data_c){
     int start = MPI_Wtime();
     fftw_copy_buffer_r(r_d,data_r);
