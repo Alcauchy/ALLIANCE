@@ -40,7 +40,7 @@ void fftw_init(MPI_Comm communicator){
                                           &local_0_start); // getting local size stored on each processor;
     printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
 
-    global_nkx_index = malloc(array_local_size.nkx * sizeof(global_nkx_index));
+    global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
         global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_row_rank + i;
        // printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);

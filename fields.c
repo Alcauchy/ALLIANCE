@@ -29,7 +29,17 @@ double *b_pot;
 double *c_pot;
 double *phiB_denom;
 
+int *global_nm_index;
+/* buffers to send and store g^0_{s0},g^1_{s0},g^0_{s1} to compute fields*/
+COMPLEX *g00;
+COMPLEX *g10;
+COMPLEX *g01;
+
 void fields_init() {
+    global_nm_index = malloc(array_local_size.nm * sizeof(*global_nm_index));
+    for (size_t i = 0; i < array_local_size.nm; i++){
+        global_nm_index[i] = array_global_size.nm / mpi_dims[0] * mpi_my_col_rank + i;
+    }
     switch (systemType)
     {
         case ELECTROSTATIC:
@@ -47,7 +57,16 @@ void fields_init() {
                                     sizeof(*fields_chi.phi));
             fields_chi.A = 0;
             fields_chi.B = 0;
+
+            g00 = malloc(array_local_size.nkx *
+                         array_local_size.nky *
+                         array_local_size.nkz *
+                         array_local_size.ns *
+                         sizeof(*g00));
+            g10 = 0;
+            g01 = 0;
             break;
+
         case ELECTROMAGNETIC:
             fields_fields.phi = malloc(array_local_size.nkx *
                                        array_local_size.nky *
@@ -77,6 +96,22 @@ void fields_init() {
                                     array_local_size.nkz *
                                     array_local_size.ns *
                                     sizeof(*fields_chi.B));
+
+            g00 = malloc(array_local_size.nkx *
+                         array_local_size.nky *
+                         array_local_size.nkz *
+                         array_local_size.ns *
+                         sizeof(*g00));
+            g10 = malloc(array_local_size.nkx *
+                         array_local_size.nky *
+                         array_local_size.nkz *
+                         array_local_size.ns *
+                         sizeof(*g10));
+            g01 = malloc(array_local_size.nkx *
+                               array_local_size.nky *
+                               array_local_size.nkz *
+                               array_local_size.ns *
+                               sizeof(*g01));
 
             /* preparing auxiliary data to compute A_parallel*/
             A_denom = malloc(array_local_size.nkx *
@@ -448,4 +483,68 @@ void fields_getChiA(){
         }
     }
 }
+
+void fields_sendG(COMPLEX *g){
+    /* fill buffers with data from processor which has required data */
+    size_t ind4D = 0;
+    int count = 0;
+    switch(systemType)
+    {
+        case ELECTROSTATIC:
+            break;
+        case ELECTROMAGNETIC:
+            for(size_t im = 0; im < array_local_size.nm; im++)
+            {
+                if (global_nm_index[im] == 0)
+                {
+                    for(size_t ix = 0; ix < array_local_size.nkx; ix++)
+                    {
+                        for(size_t iy = 0; iy < array_local_size.nky; iy++)
+                        {
+                            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
+                            {
+                                for(size_t is = 0; is < array_local_size.ns; is++)
+                                {
+                                    ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                            iy * array_local_size.nkz * array_local_size.ns +
+                                            iz * array_local_size.ns +
+                                            is;
+                                    g00[ind4D] = g[get_flat_c(is,0,im,ix,iy,iz)];
+                                    g01[ind4D] = g[get_flat_c(is,1,im,ix,iy,iz)];
+                                }
+                            }
+                        }
+                    }
+                    count = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns;
+                    MPI_Bcast(g00,count,MPI_DOUBLE_COMPLEX,mpi_my_col_rank,mpi_col_comm);
+                    MPI_Bcast(g01,count,MPI_DOUBLE_COMPLEX,mpi_my_col_rank,mpi_col_comm);
+                }
+                if (global_nm_index[im] == 1)
+                {
+                    for(size_t ix = 0; ix < array_local_size.nkx; ix++)
+                    {
+                        for(size_t iy = 0; iy < array_local_size.nky; iy++)
+                        {
+                            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
+                            {
+                                for(size_t is = 0; is < array_local_size.ns; is++)
+                                {
+                                    ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                            iy * array_local_size.nkz * array_local_size.ns +
+                                            iz * array_local_size.ns +
+                                            is;
+                                    g10[ind4D] = g[get_flat_c(is,0,im,ix,iy,iz)];
+                                }
+                            }
+                        }
+                    }
+                    count = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns;
+                    MPI_Bcast(g10,count,MPI_DOUBLE_COMPLEX,mpi_my_col_rank,mpi_col_comm);
+                }
+            }
+
+            break;
+    }
+
+};
 

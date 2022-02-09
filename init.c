@@ -16,7 +16,7 @@ void init_init(char *filename){
     fftw_init(mpi_row_comm);
     space_init();
     var_init();
-    //fields_init();
+    fields_init();
     //solver_init();
     init_printParameters();
 };

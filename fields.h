@@ -18,7 +18,7 @@ void fields_getChi();
 void fields_getChiPhi();
 void fields_getChiB();
 void fields_getChiA();
-
+void fields_sendG(COMPLEX *g);   // broadcasts g^0_{s0},g^1_{s0},g^0_{s1} to all the processes to compute fields locally
 
 struct fields_fields{
     COMPLEX *phi;
@@ -32,5 +32,8 @@ struct fields_chi{
     COMPLEX *B;
 };
 extern struct fields_fields fields_fields;
-
+extern int *global_nm_index;
+extern COMPLEX *g00;
+extern COMPLEX *g10;
+extern COMPLEX *g01;
 #endif //ALLIANCE_ALPHA_1_0_FIELDS_H
