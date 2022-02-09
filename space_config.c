@@ -10,6 +10,8 @@ double space_Lz = 1.0;
 double *space_kx;
 double *space_ky;
 double *space_kz;
+double *space_kPerp;
+double *space_kPerp2;
 COMPLEX *space_iKx;
 COMPLEX* space_iKy;
 COMPLEX *space_iKz;
@@ -58,6 +60,11 @@ void space_generateWaveSpace() {
     space_iKz = malloc(array_local_size.nkz *
                       sizeof(*space_iKz));
 
+    space_kPerp = malloc(array_local_size.nkx * array_local_size.nky *
+                         sizeof(*space_kPerp));
+    space_kPerp2 = malloc(array_local_size.nkx * array_local_size.nky *
+                         sizeof(*space_kPerp2));
+
     double deltaKx = M_PI / (array_global_size.nkx * space_Lx);
     double deltaKy = M_PI / (array_global_size.nky * space_Ly);
     double deltaKz = 2. * M_PI / (array_global_size.nkz * space_Lz);
@@ -99,6 +106,16 @@ void space_generateWaveSpace() {
         //printf("[MPI process %d] kz[%d] = %f\n ",mpi_my_rank, iz, space_kz[iz]);
     }
     printf("[MPI process %d] kz generated \n",mpi_my_rank);
+
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++)
+    {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++)
+        {
+            space_kPerp2[ix * array_local_size.nky + iy] = space_kx[ix] * space_kx[ix] + space_kx[iy] * space_kx[iy];
+            space_kPerp[ix * array_local_size.nky + iy] = sqrt(space_kPerp2[ix * array_local_size.nky + iy]);
+        }
+    }
+
 };
 
 /*

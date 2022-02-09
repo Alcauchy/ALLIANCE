@@ -14,6 +14,7 @@
 #include "equation.h"
 #include "space_config.h"
 #include "solver.h"
+#include "variables.h"
 
 enum electromagnetic{ELECTROSTATIC,ELECTROMAGNETIC};
 enum adiabatic{NONADIABATIC,ADIABATIC};
@@ -23,5 +24,6 @@ void init_init(char *filename);
 void init_printParameters();
 void init_initEnums();
 
-
+extern enum adiabatic kinetic;
+extern enum electromagnetic systemType;
 #endif //ALLIANCE_ALPHA_1_0_INIT_H

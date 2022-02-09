@@ -31,14 +31,14 @@ void init_global_size() {
 };
 
 void read_parameters(char *filename) {
-    char string[60];
-    char tmp[15];
+    char string[128];
+    char tmp[16];
     int particle_index;
     FILE *fp;
     fp = fopen(filename, "r");  /* open file for input */
     if (fp)  /* If no error occurred while opening file */
     {           /* input the data from the file. */
-        while (fgets(string, 60, fp))
+        while (fgets(string, 128, fp))
         {
             /* read the name from the file */
             sscanf(string, "%s : %*s", tmp);
@@ -130,6 +130,11 @@ void read_parameters(char *filename) {
             {
                 sscanf(string, "%*s : %d", &parameters.adiabatic);
                 printf("[MPI process %d] adiabatic = %d\n", mpi_my_rank, parameters.adiabatic);
+            }
+            if (strcmp(tmp, "beta") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.beta);
+                printf("[MPI process %d] plasma beta = %f\n", mpi_my_rank, parameters.beta);
             }
         }
     }

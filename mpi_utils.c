@@ -9,12 +9,14 @@
 int mpi_my_rank;                        // rank of the process for 2D MPI communicator
 int mpi_size;                           // size of the communicator
 int mpi_my_row_rank;                    // rank of the process in a kx direction of parallelization
+int mpi_my_col_rank;                    // rank of the process in Hermite direction of parallelization
 int mpi_my_coords[2];                   // coordinates of the process in 2D topology
 int mpi_dims[] = {0, 0};                // size of the dimensions. {0,0} means there is no limits in defining the size.
 int m_neighbour_ranks[2];               // ranks of the neighbours
 int mpi_sub_buf_size;                   // buffer size needed to exchange m+1 and m-1 Hermite moments
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
 MPI_Comm mpi_row_comm;                  // row communicator (kx direction)
+MPI_Comm mpi_col_comm;                  // column communicator
 MPI_Datatype mpi_subarray_type_plus;    // subarray type to perform the m+1 boundary exchange
 MPI_Datatype mpi_subarray_type_minus;   // subarray type to perform the m-1 boundary exchange
 enum DIRECTIONS {
@@ -33,6 +35,7 @@ void mpi_generateTopology(){
     mpi_create_topology();
     mpi_find_hermite_neighbours();
     mpi_split_in_rows();
+    mpi_split_in_cols();
 }
 
 void mpi_kill() {
@@ -160,11 +163,16 @@ void mpi_find_hermite_neighbours() {
     }
 }
 
-void mpi_split_in_rows() {
+void mpi_split_in_rows(){
     mpi_my_row_rank = mpi_my_coords[1];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
-    printf("[MPI process %d] I am from row %d with row rank %d\n", mpi_my_rank, mpi_my_coords[0], mpi_my_row_rank);
+    printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
 }
+void mpi_split_in_cols(){
+    mpi_my_col_rank = mpi_my_coords[0];
+    MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[1], mpi_my_col_rank, &mpi_col_comm);
+    printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_col_rank);
+};
 
 void mpi_init_m_exchange() {
     int dimensions_full[6] = {array_local_size.nkx,

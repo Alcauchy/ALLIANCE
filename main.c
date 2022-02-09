@@ -5,6 +5,7 @@
 #include "diagnostics.h"
 #include "space_config.h"
 #include "init.h"
+#include "fields.h"
 
 int main(int argc, char **argv) {
     //mpi_init();
@@ -20,7 +21,6 @@ int main(int argc, char **argv) {
     else{
         if (strcmp("-f", argv[1]) == 0){
             filename = argv[2];
-            //read_parameters(filename);
         }
     }
     init_init(filename);
@@ -134,7 +134,8 @@ int main(int argc, char **argv) {
    // free(big_array);
    // free(minus_array);
    // free(plus_array);
-    //free_wavespace();
+   fields_fields.phi;
+    free_wavespace();
     fftw_kill();
     mpi_kill();
     exit(0);

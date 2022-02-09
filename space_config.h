@@ -20,5 +20,6 @@ void space_yGrad(COMPLEX *data);    // computes gradient in y direction
 void space_zGrad(COMPLEX *data);    // computes gradient in z direction
 void free_wavespace();
 
-extern COMPLEX *space_iKz;
+extern double *space_kPerp2;
+extern double *space_kPerp;
 #endif //ALLIANCE_ALPHA_1_0_SPACE_CONFIG_H
