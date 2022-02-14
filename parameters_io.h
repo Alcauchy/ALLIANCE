@@ -11,6 +11,8 @@
 #include "mpi_utils.h"
 #include "array.h"
 
+enum DEALIASING {ALIASED, TWOTHIRDS};
+
 void read_parameters(char *filename);
 
 struct system_param {
@@ -22,7 +24,15 @@ struct system_param {
     size_t ns;
     size_t nz;
     int dealiasing;
-
+    int electromagnetic;
+    int adiabatic;
+    double beta;
+    double *mass;
+    double *density;
+    double *temperature;
+    double *charge;
 };
+
+extern struct system_param parameters;
 
 #endif //ALLIANCE_ALPHA_1_0_PARAMETERS_IO_C_H

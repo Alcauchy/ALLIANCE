@@ -3,7 +3,7 @@
 //
 
 #include "fftw_utils.h"
-
+#define FFTW_RANK 3
 
 
 
@@ -31,26 +31,49 @@ void fftw_init(MPI_Comm communicator){
     fftw_norm = 1./(array_global_size.nkx * array_global_size.nky * array_global_size.nz);
 
     howmany = array_local_size.nm * array_local_size.nl * array_local_size.ns;
-    local_size = fftw_mpi_local_size_many(3,size_c, howmany, array_local_size.nkx, communicator, &local_n0, &local_0_start); // getting local size stored on each processor;
+    local_size = fftw_mpi_local_size_many(FFTW_RANK,
+                                          size_c,
+                                          howmany,
+                                          array_local_size.nkx,
+                                          communicator,
+                                          &local_n0,
+                                          &local_0_start); // getting local size stored on each processor;
     printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
 
-    global_nkx_index = malloc(array_local_size.nkx * sizeof(global_nkx_index));
+    global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
         global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_row_rank + i;
        // printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
     }
 
     c_d = fftw_alloc_complex(local_size);
-    r_d = fftw_alloc_real(2*local_size);
+    r_d = fftw_alloc_real(2 * local_size);
 
-    plan_c2r = fftw_mpi_plan_many_dft_c2r(3,size_r, howmany,local_n0,FFTW_MPI_DEFAULT_BLOCK, (c_d), (r_d), communicator,FFTW_ESTIMATE);
-    plan_r2c = fftw_mpi_plan_many_dft_r2c(3,size_r,howmany,local_n0,FFTW_MPI_DEFAULT_BLOCK,(r_d), (c_d), communicator,FFTW_ESTIMATE);
+    plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
+                                          size_r,
+                                          howmany,
+                                          local_n0,
+                                          FFTW_MPI_DEFAULT_BLOCK,
+                                          c_d,
+                                          r_d,
+                                          communicator,
+                                          FFTW_ESTIMATE);
+    plan_r2c = fftw_mpi_plan_many_dft_r2c(FFTW_RANK,
+                                          size_r,
+                                          howmany,
+                                          local_n0,
+                                          FFTW_MPI_DEFAULT_BLOCK,
+                                          r_d,
+                                          c_d,
+                                          communicator,
+                                          FFTW_ESTIMATE);
 
 
 
     for (size_t ii = 0; ii<local_size; ii++){ c_d[ii] = 0.j; } // tests
     for (size_t ii = 0; ii<2*local_size; ii++){ r_d[ii] = 0.; }
 }
+
 void fftw_r2c(double *data_r, COMPLEX *data_c){
     int start = MPI_Wtime();
     fftw_copy_buffer_r(r_d,data_r);
@@ -115,7 +138,6 @@ void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2){
                         }
                     }
                 }
-
             }
         }
     }
@@ -137,19 +159,8 @@ void fftw_test_fill(double *ar,double f){
 }
 
 void fftw_normalise_data(double *data){
-    for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
-        for(size_t iky = 0; iky < array_local_size.nky; iky++){
-            for(size_t iz = 0; iz < array_local_size.nz+2; iz++){
-                for(size_t im = 0; im < array_local_size.nm; im++){
-                    for(size_t il = 0; il < array_local_size.nl; il++){
-                        for(size_t is = 0; is <array_local_size.ns; is++){
-                            data[get_flat_r(is,il,im,ikx,iky,iz)] *= fftw_norm;
-                        }
-                    }
-                }
-
-            }
-        }
+    for(size_t i = 0; i < array_local_size.total_real; i++) {
+        data[i] *= fftw_norm;
     }
 }
 

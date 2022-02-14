@@ -5,15 +5,22 @@
 #include "hdf_utils.h"
 
 
+
 int hdf_rank = 6;
+int hdf_rankFields = 3;
 hid_t complex_id;
 hsize_t dataspace_dims_r[6];
 hsize_t dataspace_dims_c[6];
+hsize_t dataspace_dimsFields[3];
 hsize_t chunk_dims_r[6];
 hsize_t chunk_dims_c[6];
+hsize_t chunk_dimsFields[3];
 hsize_t offset[6];
+hsize_t offsetFields[3];
 hsize_t count[6] = {1,1,1,1,1,1};
 hsize_t stride[6] = {1,1,1,1,1,1};
+hsize_t countFields[3] = {1,1,1};
+hsize_t strideFields[3] = {1,1,1};
 herr_t	status;
 MPI_Info info = MPI_INFO_NULL;
 complex_t tmp;  //used only to compute offsets
@@ -26,6 +33,7 @@ void complex_t_init(){
 
 void hdf_init(){
     complex_t_init();
+    hdf_initField();
     dataspace_dims_r[0] = array_global_size.nkx;
     dataspace_dims_r[1] = array_global_size.nky;
     dataspace_dims_r[2] = array_global_size.nz + 2;
@@ -130,3 +138,120 @@ void hdf_create_file_r(char *filename, double *data){
     H5Pclose(plist_id);
     H5Fclose(file_id);
 }
+
+void hdf_initField(){
+    dataspace_dimsFields[0] = array_global_size.nkx;
+    dataspace_dimsFields[1] = array_global_size.nky;
+    dataspace_dimsFields[2] = array_global_size.nkz;
+
+    chunk_dimsFields[0] = array_local_size.nkx;
+    chunk_dimsFields[1] = array_local_size.nky;
+    chunk_dimsFields[2] = array_local_size.nkz;
+    printf("[MPI process %d] %zu %zu %zu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
+
+    offsetFields[0] = array_local_size.nkx * mpi_my_coords[1];
+    offsetFields[1] = 0;
+    offsetFields[2] = 0;
+
+};
+void hdf_saveFieldA(char *filename){
+    // now we will create a file, and write a dataset into it.
+    hid_t file_id, dset_id;
+    hid_t file_space, memory_space;
+    hid_t plist_id; //property list id
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
+    printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
+    file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
+    printf("[process id %d] file created\n",mpi_my_rank);
+    H5Pclose(plist_id);
+    file_space = H5Screate_simple(hdf_rankFields, dataspace_dimsFields, NULL);
+    memory_space = H5Screate_simple(hdf_rankFields, chunk_dimsFields, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
+    H5Pset_chunk(plist_id, hdf_rankFields, chunk_dimsFields);
+    dset_id = H5Dcreate(file_id,"A", complex_id, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(file_space);
+
+    file_space = H5Dget_space(dset_id);
+    status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offsetFields, strideFields, countFields, chunk_dimsFields);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    status = H5Dwrite(dset_id, complex_id, memory_space, file_space,plist_id, fields_fields.A);
+
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Sclose(memory_space);
+    H5Pclose(plist_id);
+    H5Fclose(file_id);
+
+};
+
+void hdf_saveFieldB(char *filename){
+    // now we will create a file, and write a dataset into it.
+    hid_t file_id, dset_id;
+    hid_t file_space, memory_space;
+    hid_t plist_id; //property list id
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
+    printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
+    file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
+    printf("[process id %d] file created\n",mpi_my_rank);
+    H5Pclose(plist_id);
+    file_space = H5Screate_simple(hdf_rankFields, dataspace_dimsFields, NULL);
+    memory_space = H5Screate_simple(hdf_rankFields, chunk_dimsFields, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
+    H5Pset_chunk(plist_id, hdf_rankFields, chunk_dimsFields);
+    dset_id = H5Dcreate(file_id,"B", complex_id, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(file_space);
+
+    file_space = H5Dget_space(dset_id);
+    status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offsetFields, strideFields, countFields, chunk_dimsFields);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    status = H5Dwrite(dset_id, complex_id, memory_space, file_space,plist_id, fields_fields.B);
+
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Sclose(memory_space);
+    H5Pclose(plist_id);
+    H5Fclose(file_id);
+
+};
+
+void hdf_saveFieldPhi(char *filename){
+    // now we will create a file, and write a dataset into it.
+    hid_t file_id, dset_id;
+    hid_t file_space, memory_space;
+    hid_t plist_id; //property list id
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
+    printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
+    file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
+    printf("[process id %d] file created\n",mpi_my_rank);
+    H5Pclose(plist_id);
+    file_space = H5Screate_simple(hdf_rankFields, dataspace_dimsFields, NULL);
+    memory_space = H5Screate_simple(hdf_rankFields, chunk_dimsFields, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
+    H5Pset_chunk(plist_id, hdf_rankFields, chunk_dimsFields);
+    dset_id = H5Dcreate(file_id,"Phi", complex_id, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(file_space);
+
+    file_space = H5Dget_space(dset_id);
+    status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offsetFields, strideFields, countFields, chunk_dimsFields);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    status = H5Dwrite(dset_id, complex_id, memory_space, file_space,plist_id, fields_fields.phi);
+
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Sclose(memory_space);
+    H5Pclose(plist_id);
+    H5Fclose(file_id);
+
+};
