@@ -6,8 +6,9 @@
 #include "diagnostics.h"
 
 #define PRINT_A 0
-#define PRINT_B 1
+#define PRINT_B 0
 #define PRINT_PHI 0
+#define TOLERANCE 1e-12
 void vortexInit(COMPLEX *g){
     for(size_t ix = 0; ix < array_local_size.nkx; ix++)
     {
@@ -27,6 +28,7 @@ void test_fieldComputation(){
         g[i] = 0;
     }
     vortexInit(g);
+    init_conditions(g);
     fields_sendG(g);
     size_t ind4D;
     size_t ind2D;
@@ -131,8 +133,8 @@ void test_fieldComparison(){
 
     init_conditions(h);
     fields_sendG(h);
-    fields_getChi();
     fields_getFieldsFromH(g00, g10, g01);
+    fields_getChi();
     for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
     {
         phi_h[i] = fields_fields.phi[i];
@@ -144,15 +146,17 @@ void test_fieldComparison(){
     fields_getFields(g00, g10, g01);
     for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
     {
-        if(phi_h[i] != fields_fields.phi[i])
+        if(fabs(phi_h[i] - fields_fields.phi[i]) > TOLERANCE)
         {
-            printf("[MPI process %d] phi[%zu] not equal !!\n",mpi_my_rank, i);
+           printf("[MPI process %d] phi[%zu] not equal !!\n",mpi_my_rank, i);
         }
-        if(A_h[i] != fields_fields.A[i])
+
+        if(fabs(A_h[i]-fields_fields.A[i]) > TOLERANCE)
         {
             printf("[MPI process %d] A[%zu] not equal !!\n",mpi_my_rank, i);
         }
-        if(B_h[i] != fields_fields.B[i])
+
+        if(fabs(B_h[i] - fields_fields.B[i]) > TOLERANCE)
         {
             printf("[MPI process %d] B[%zu] not equal !!\n",mpi_my_rank, i);
         }

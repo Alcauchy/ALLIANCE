@@ -111,7 +111,7 @@ void space_generateWaveSpace() {
     {
         for (size_t iy = 0; iy < array_local_size.nky; iy++)
         {
-            space_kPerp2[ix * array_local_size.nky + iy] = space_kx[ix] * space_kx[ix] + space_kx[iy] * space_kx[iy];
+            space_kPerp2[ix * array_local_size.nky + iy] = space_kx[ix] * space_kx[ix] + space_ky[iy] * space_ky[iy];
             space_kPerp[ix * array_local_size.nky + iy] = sqrt(space_kPerp2[ix * array_local_size.nky + iy]);
         }
     }

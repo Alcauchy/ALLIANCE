@@ -18,5 +18,12 @@ double diag_computeFreeEnergy(COMPLEX *g,COMPLEX *h){
     return creal(freeEnergy);
 };
 
+void diag_computeKSpectrum(){
+
+};
+void diag_computeMSpectrum(){
+
+};
+
 double diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields){};
 

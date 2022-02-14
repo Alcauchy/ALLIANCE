@@ -621,7 +621,7 @@ void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
                                     iz * array_local_size.ns +
                                     is;
                             fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += var_var.n[is] * var_var.T[is] / var_var.B0 *
-                                                                                     var_J0[var_getJIndex(ix,iy,is)] *
+                                                                                     var_J1[var_getJIndex(ix,iy,is)] *
                                                                                      (h0[ind4D] + h1[ind4D]);
                         }
                         fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] *= - var_var.beta * 0.5;
@@ -639,6 +639,10 @@ void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
 void fields_getPhiFromH(const COMPLEX* h){
     size_t ind4D;
     double q2nT = 0;
+    for (size_t is = 0; is < array_local_size.ns; is++)
+    {
+        q2nT += var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is];
+    }
     switch(kinetic)
     {
         case ADIABATIC:
@@ -672,7 +676,6 @@ void fields_getPhiFromH(const COMPLEX* h){
                                     fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] += var_var.q[is] * var_var.n[is] *
                                                                                            var_J0[var_getJIndex(ix,iy,is)] *
                                                                                            h[ind4D];
-                                    q2nT += var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is];
                                 }
                                 fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] /= q2nT;
                             }

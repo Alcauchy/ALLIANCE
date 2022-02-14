@@ -25,8 +25,9 @@ int main(int argc, char **argv) {
         }
     }
     init_init(filename);
-    test_mainFunction();
+    //test_mainFunction();
     test_fieldComparison();
+    //test_fieldComputation();
     free_wavespace();
     fftw_kill();
     mpi_kill();
