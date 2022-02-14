@@ -26,11 +26,15 @@ struct system_param {
     int dealiasing;
     int electromagnetic;
     int adiabatic;
+    int initial;
     double beta;
     double *mass;
     double *density;
     double *temperature;
     double *charge;
+
+    double dt;
+    int Nt;
 };
 
 extern struct system_param parameters;

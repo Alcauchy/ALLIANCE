@@ -11,6 +11,9 @@
 #include "init.h"
 #include "hdf_utils.h"
 #include "fields.h"
+#include "distrib.h"
 void test_fieldComputation();
 void test_freeEnergyComputation();
+void test_mainFunction();
+void test_fieldComparison();
 #endif //ALLIANCE_ALPHA_1_0_TESTS_H

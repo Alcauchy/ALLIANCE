@@ -6,6 +6,7 @@
 
 enum adiabatic kinetic;
 enum electromagnetic systemType;
+enum initial initialConditions;
 void init_init(char *filename){
     mpi_init();
     read_parameters(filename);
@@ -18,7 +19,7 @@ void init_init(char *filename){
     var_init();
     fields_init();
     hdf_init();
-    //solver_init();
+    solver_init();
     init_printParameters();
 };
 
@@ -51,4 +52,21 @@ void init_printParameters(){
 void init_initEnums(){
    kinetic = parameters.adiabatic;
    systemType = parameters.electromagnetic;
+   initialConditions = parameters.initial;
+};
+
+void init_conditions(COMPLEX *data){
+    switch(initialConditions)
+    {
+        case RANDOM:
+            fill_rand(data);
+            break;
+
+        case FROMFILE:
+            break;
+
+        default:
+            printf("[MPI process %d] error with initial conditions! Aborting...",mpi_my_rank);
+            exit(1);
+    }
 };

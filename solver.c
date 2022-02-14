@@ -4,4 +4,11 @@
 
 #include "solver.h"
 
-void solver_init(){};
+
+struct solver solver;
+
+void solver_init(){
+    solver.dt = parameters.dt;
+    solver.Nt = parameters.Nt;
+};
+void solver_makeStep(){};

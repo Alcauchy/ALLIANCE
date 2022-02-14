@@ -131,10 +131,25 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.adiabatic);
                 printf("[MPI process %d] adiabatic = %d\n", mpi_my_rank, parameters.adiabatic);
             }
+            if (strcmp(tmp, "initial") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.initial);
+                printf("[MPI process %d] initial conditions set to %d\n", mpi_my_rank, parameters.initial);
+            }
             if (strcmp(tmp, "beta") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.beta);
                 printf("[MPI process %d] plasma beta = %f\n", mpi_my_rank, parameters.beta);
+            }
+            if (strcmp(tmp, "dt") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.dt);
+                printf("[MPI process %d] dt = %f\n", mpi_my_rank, parameters.dt);
+            }
+            if (strcmp(tmp, "timesteps") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.Nt);
+                printf("[MPI process %d] number of timesteps = %d\n", mpi_my_rank, parameters.Nt);
             }
         }
     }

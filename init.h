@@ -19,12 +19,15 @@
 
 enum electromagnetic{ELECTROSTATIC,ELECTROMAGNETIC};
 enum adiabatic{NONADIABATIC,ADIABATIC};
+enum initial{RANDOM, FROMFILE};
 
 void init_init(char *filename);
 
 void init_printParameters();
 void init_initEnums();
+void init_conditions(COMPLEX *data);
 
 extern enum adiabatic kinetic;
 extern enum electromagnetic systemType;
+extern enum initial initialConditions;
 #endif //ALLIANCE_ALPHA_1_0_INIT_H

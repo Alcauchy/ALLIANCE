@@ -3,6 +3,8 @@
 //
 
 #include "tests.h"
+#include "diagnostics.h"
+
 #define PRINT_A 0
 #define PRINT_B 1
 #define PRINT_PHI 0
@@ -97,3 +99,63 @@ void test_fieldComputation(){
     printf("[MPI process %d] FIELD COMPUTATION TEST PASSED\n",mpi_my_rank);
 };
 
+void test_mainFunction(){
+    COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
+    init_conditions(h);
+    fields_sendG(h);
+    fields_getFieldsFromH(g00, g10, g01);
+    fields_getChi();
+    distrib_getG(g, h);
+    for(int it = 0; it < solver.Nt; it++)
+    {
+        solver_makeStep();
+    }
+
+    fields_sendG(g);
+    fields_getFields(g00,g10,g01);
+    fields_getChi();
+    diag_computeFreeEnergy(g,h);
+    //diag_computeFreeEnergyFields();
+    //diag_computeKSpectrum();
+    //diag_computeMSpectrum();
+    //hdf_dumpToFile();
+};
+
+void test_fieldComparison(){
+    COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
+    COMPLEX* phi_h = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz * sizeof(*phi_h));
+    COMPLEX* A_h = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz * sizeof(*A_h));
+    COMPLEX* B_h = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz * sizeof(*B_h));
+
+    init_conditions(h);
+    fields_sendG(h);
+    fields_getChi();
+    fields_getFieldsFromH(g00, g10, g01);
+    for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
+    {
+        phi_h[i] = fields_fields.phi[i];
+        A_h[i] = fields_fields.A[i];
+        B_h[i] = fields_fields.B[i];
+    }
+    distrib_getG(g, h);
+    fields_sendG(g);
+    fields_getFields(g00, g10, g01);
+    for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
+    {
+        if(phi_h[i] != fields_fields.phi[i])
+        {
+            printf("[MPI process %d] phi[%zu] not equal !!\n",mpi_my_rank, i);
+        }
+        if(A_h[i] != fields_fields.A[i])
+        {
+            printf("[MPI process %d] A[%zu] not equal !!\n",mpi_my_rank, i);
+        }
+        if(B_h[i] != fields_fields.B[i])
+        {
+            printf("[MPI process %d] B[%zu] not equal !!\n",mpi_my_rank, i);
+        }
+    }
+
+}

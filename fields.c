@@ -549,6 +549,139 @@ void fields_sendG(COMPLEX *g){
 
             break;
     }
+};
+
+void fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01){
+    fields_getPhiFromH(h00);
+    fields_getBFromH(h00, h01);
+    fields_getAFromH(h10);
+};
+
+void fields_getAFromH(const COMPLEX* h){
+    size_t flatInd;
+    size_t flatInd2D;
+    switch(kinetic)
+    {
+        case ADIABATIC:
+            break;
+        case NONADIABATIC:
+            for(size_t ix = 0; ix < array_local_size.nkx; ix++)
+            {
+                for(size_t iy = 0; iy < array_local_size.nky; iy++)
+                {
+                    for(size_t iz = 0; iz < array_local_size.nkz; iz++)
+                    {
+                        fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] = 0.;
+                        for(size_t is = 0; is < array_local_size.ns; is++)
+                        {
+                            flatInd = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                      iy * array_local_size.nkz * array_local_size.ns + iz * array_local_size.ns + is;
+                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] += var_var.q[is] * var_var.n[is] *
+                                                                                 var_var.vT[is] * var_J0[var_getJIndex(ix,iy,is)] *
+                                                                                 sqrt(0.5) * h[flatInd];
+                        }
+                        flatInd2D = ix * array_local_size.nky + iy;
+                        if (fabs(space_kPerp2[flatInd2D]>1e-16))
+                        {
+                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= 0.5 * var_var.beta / space_kPerp2[flatInd2D];
+                        }
+                        else
+                        {
+                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= 0.0;
+                        }
+
+                    }
+                }
+            }
+            break;
+        default:
+            printf("[MPI process %d] Wrong call of get_A function! Aborting...",mpi_my_rank);
+            exit(1);
+    }
+};
+
+void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
+    size_t ind4D;
+    switch(kinetic)
+    {
+        case ADIABATIC:
+            break;
+        case NONADIABATIC:
+            for(size_t ix = 0; ix < array_local_size.nkx; ix++)
+            {
+                for(size_t iy = 0; iy < array_local_size.nky; iy++)
+                {
+                    for(size_t iz = 0; iz < array_local_size.nkz; iz++)
+                    {
+                        fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                        for(size_t is = 0; is < array_local_size.ns; is++)
+                        {
+                            ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                    iy * array_local_size.nkz * array_local_size.ns +
+                                    iz * array_local_size.ns +
+                                    is;
+                            fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += var_var.n[is] * var_var.T[is] / var_var.B0 *
+                                                                                     var_J0[var_getJIndex(ix,iy,is)] *
+                                                                                     (h0[ind4D] + h1[ind4D]);
+                        }
+                        fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] *= - var_var.beta * 0.5;
+                    }
+                }
+            }
+            break;
+        default:
+            printf("[MPI process %d] Wrong call of get_B function! Aborting...",mpi_my_rank);
+            exit(1);
+    }
+
+};
+
+void fields_getPhiFromH(const COMPLEX* h){
+    size_t ind4D;
+    double q2nT = 0;
+    switch(kinetic)
+    {
+        case ADIABATIC:
+            switch(systemType)
+            {
+                case ELECTROSTATIC:
+                    break;
+                case ELECTROMAGNETIC:
+                    break;
+            }
+            break;
+        case NONADIABATIC:
+            switch(systemType)
+            {
+                case ELECTROSTATIC:
+                    break;
+                case ELECTROMAGNETIC:
+                    for(size_t ix = 0; ix < array_local_size.nkx; ix++)
+                    {
+                        for(size_t iy = 0; iy < array_local_size.nky; iy++)
+                        {
+                            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
+                            {
+                                fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                                for(size_t is = 0; is < array_local_size.ns; is++)
+                                {
+                                    ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                            iy * array_local_size.nkz * array_local_size.ns +
+                                            iz * array_local_size.ns +
+                                            is;
+                                    fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] += var_var.q[is] * var_var.n[is] *
+                                                                                           var_J0[var_getJIndex(ix,iy,is)] *
+                                                                                           h[ind4D];
+                                    q2nT += var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is];
+                                }
+                                fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] /= q2nT;
+                            }
+                        }
+                    }
+                    break;
+            }
+            break;
+    }
 
 };
 
