@@ -6,6 +6,7 @@
 #include "space_config.h"
 #include "init.h"
 #include "fields.h"
+#include "tests.h"
 
 int main(int argc, char **argv) {
     //mpi_init();
@@ -24,6 +25,7 @@ int main(int argc, char **argv) {
         }
     }
     init_init(filename);
+    test_fieldComputation();
 /*
     mpi_get_local_array_size();
     int start = MPI_Wtime();

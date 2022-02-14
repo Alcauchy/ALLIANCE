@@ -19,7 +19,7 @@ void var_getJ0(){
     var_J0 = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.ns * sizeof(*var_J0));
     for (size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.ns; i++)
     {
-        var_J0[i] = exp(0.5 * var_var.b[i]);
+        var_J0[i] = exp(- 0.5 * var_var.b[i]);
     }
 }
 
@@ -27,13 +27,13 @@ void var_getJ1(){
     var_J1 = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.ns * sizeof(*var_J1));
     for (size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.ns; i++)
     {
-        if (fabs(var_var.b[i]) < 1e-16)
+        if (fabs(var_var.b[i]) > 1e-16)
         {
-            var_J1[i] = (1.0 - var_J0[i]) * 2.0 / var_var.b[i];
+            var_J1[i] = (1. - var_J0[i]) * 2./ var_var.b[i];
         }
         else
         {
-            var_J1[i] = 0.0;
+            var_J1[i] = 1.0;
         }
 
     }
@@ -58,12 +58,12 @@ void var_varInit(){
     var_var.B0 = 1.0;
     for(size_t i = 0; i < parameters.ns; i++)
     {
-        var_var.vT[i] = sqrt(2.* var_var.T[i]/var_var.m[i]);
-        var_var.rho[i] = sqrt(var_var.m[i]/var_var.m[0]);
         var_var.m[i] = parameters.mass[i];
         var_var.q[i] = parameters.charge[i];
         var_var.T[i] = parameters.temperature[i];
         var_var.n[i] = parameters.density[i];
+        var_var.vT[i] = sqrt(2.* var_var.T[i]/var_var.m[i]);
+        var_var.rho[i] = sqrt(var_var.m[i]/var_var.m[0]);
     }
 
     for(size_t ix = 0; ix < array_local_size.nkx; ix++)

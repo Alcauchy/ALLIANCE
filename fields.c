@@ -117,7 +117,7 @@ void fields_init() {
             A_denom = malloc(array_local_size.nkx *
                              array_local_size.nky * sizeof(*A_denom));
             qnvTsJ = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.ns * sizeof(*qnvTsJ));
-            size_t flatInd = 0;
+            size_t flatInd;
             double *sum = malloc(array_local_size.nkx * array_local_size.nky * sizeof(*sum));
             for(size_t ix  = 0 ; ix < array_local_size.nkx; ix++)
             {
@@ -134,6 +134,7 @@ void fields_init() {
                     }
                     sum[flatInd] *= var_var.beta/4.;
                     A_denom[flatInd] = 1.0/(space_kPerp2[flatInd] + sum[flatInd]);
+
                 }
             }
             for(size_t ix  = 0 ; ix < array_local_size.nkx; ix++)
@@ -154,7 +155,7 @@ void fields_init() {
             I_phi = malloc(array_local_size.nkx *
                             array_local_size.nky *
                             array_local_size.ns * sizeof(*I_phi));
-            size_t ind3D = 0;
+            size_t ind3D;
             for (size_t ix = 0; ix < array_local_size.nkx; ix++)
             {
                 for (size_t iy = 0; iy < array_local_size.nky; iy++)
@@ -196,21 +197,21 @@ void fields_init() {
                            array_local_size.nky * sizeof(*c_pot));
             phiB_denom = malloc(array_local_size.nkx *
                            array_local_size.nky * sizeof(*phiB_denom));
-            size_t ind2D = 0;
+            size_t ind2D;
             for (size_t ix = 0; ix < array_local_size.nkx; ix++)
             {
                 for (size_t iy = 0; iy < array_local_size.nky; iy++)
                 {
                     ind2D = ix * array_local_size.nky + iy;
                     a_pot[ind2D] = 0;
-                    b_pot[ind2D] = 1;
+                    b_pot[ind2D] = 1.;
                     c_pot[ind2D] = 0;
                     for (size_t is = 0; is < array_local_size.ns; is++)
                     {
                         a_pot[ind2D] += var_var.q[is] * var_var.q[is] *
                                         var_var.n[is] / var_var.T[is] *
                                         (1. - var_J0[var_getJIndex(ix,iy,is)] *
-                                              var_J0[var_getJIndex(ix,iy,is)]);
+                                             var_J0[var_getJIndex(ix,iy,is)]);
                         b_pot[ind2D] += var_var.beta * var_var.n[is] *
                                         var_var.T[is] / (var_var.B0 * var_var.B0) *
                                         var_J1[var_getJIndex(ix,iy,is)] * var_J1[var_getJIndex(ix,iy,is)];
@@ -231,8 +232,8 @@ void fields_init() {
 };
 
 void fields_getA(const COMPLEX *g) {
-    size_t flatInd = 0;
-    size_t flatInd2D = 0;
+    size_t flatInd;
+    size_t flatInd2D;
     switch(kinetic)
     {
         case ADIABATIC:
@@ -244,13 +245,13 @@ void fields_getA(const COMPLEX *g) {
                 {
                     for(size_t iz = 0; iz < array_local_size.nkz; iz++)
                     {
-                        fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                        fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] = 0.;
                         for(size_t is = 0; is < array_local_size.ns; is++)
                         {
                             flatInd = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
                                       iy * array_local_size.nkz * array_local_size.ns + iz * array_local_size.ns + is;
                             fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] += qnvTsJ[var_getJIndex(ix,iy,is)] *
-                                    g[flatInd];
+                                   g[flatInd];
                         }
                         flatInd2D = ix * array_local_size.nky + iy;
                         fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= A_denom[flatInd2D];
@@ -265,9 +266,9 @@ void fields_getA(const COMPLEX *g) {
 };
 
 void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
-    size_t ind2D = 0;
-    size_t ind3D = 0;
-    size_t ind4D = 0;
+    size_t ind2D;
+    size_t ind3D;
+    size_t ind4D;
     switch(kinetic)
     {
         case ADIABATIC:
@@ -297,6 +298,7 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
                                                                                      (g0[ind4D] + g1[ind4D]);
                                 fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += c_pot[ind2D] * I_phi[ind3D] *
                                                                                      g0[ind4D];
+
                             }
                             fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] *= - var_var.beta / phiB_denom[ind2D];
                         }
@@ -320,9 +322,9 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
 };
 
 void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
-    size_t ind2D = 0;
-    size_t ind3D = 0;
-    size_t ind4D = 0;
+    size_t ind2D;
+    size_t ind3D;
+    size_t ind4D;
     switch(kinetic)
     {
         case ADIABATIC:
@@ -486,8 +488,10 @@ void fields_getChiA(){
 
 void fields_sendG(COMPLEX *g){
     /* fill buffers with data from processor which has required data */
-    size_t ind4D = 0;
-    int count = 0;
+    size_t ind4D;
+    int count;
+    int broadcast_root0 = 0;
+    int broadcast_root1 = 0;
     switch(systemType)
     {
         case ELECTROSTATIC:
@@ -515,9 +519,7 @@ void fields_sendG(COMPLEX *g){
                             }
                         }
                     }
-                    count = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns;
-                    MPI_Bcast(g00,count,MPI_DOUBLE_COMPLEX,mpi_my_col_rank,mpi_col_comm);
-                    MPI_Bcast(g01,count,MPI_DOUBLE_COMPLEX,mpi_my_col_rank,mpi_col_comm);
+
                 }
                 if (global_nm_index[im] == 1)
                 {
@@ -538,10 +540,12 @@ void fields_sendG(COMPLEX *g){
                             }
                         }
                     }
-                    count = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns;
-                    MPI_Bcast(g10,count,MPI_DOUBLE_COMPLEX,mpi_my_col_rank,mpi_col_comm);
                 }
             }
+            count = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns;
+            MPI_Bcast(g00,count,MPI_DOUBLE_COMPLEX,broadcast_root0,mpi_col_comm);
+            MPI_Bcast(g01,count,MPI_DOUBLE_COMPLEX,broadcast_root0,mpi_col_comm);
+            MPI_Bcast(g10,count,MPI_DOUBLE_COMPLEX,broadcast_root0,mpi_col_comm);
 
             break;
     }

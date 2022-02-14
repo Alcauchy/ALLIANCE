@@ -103,7 +103,7 @@ void read_parameters(char *filename) {
                 printf("[MPI process %d] particle %d, density = %3lf\n", mpi_my_rank, particle_index,
                        parameters.density[particle_index]);
             }
-            if (strcmp(tmp, "temperature") == 0)
+            if (strcmp(tmp, "T") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.temperature[particle_index]);
                 printf("[MPI process %d] particle %d, temperature = %3lf\n", mpi_my_rank, particle_index,

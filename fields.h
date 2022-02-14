@@ -36,4 +36,5 @@ extern int *global_nm_index;
 extern COMPLEX *g00;
 extern COMPLEX *g10;
 extern COMPLEX *g01;
+extern double *A_denom;
 #endif //ALLIANCE_ALPHA_1_0_FIELDS_H

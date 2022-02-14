@@ -18,7 +18,7 @@ add_executable(Alliance_alpha_1_0
         array.h array.c
         solver.h solver.c
         fields.h fields.c
-        equation.h equation.c init.c init.h space_config.c space_config.h distrib.h distrib.c variables.h variables.c)
+        equation.h equation.c init.c init.h space_config.c space_config.h distrib.h distrib.c variables.h variables.c tests.h tests.c)
 target_link_libraries(Alliance_alpha_1_0 "/home/alcauchy/hdf5/hdf5/lib/libhdf5.so")
 target_link_libraries(Alliance_alpha_1_0 "/usr/local/lib/libfftw3_mpi.a")
 target_link_libraries(Alliance_alpha_1_0 "/usr/local/lib/libfftw3.a")

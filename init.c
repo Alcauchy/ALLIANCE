@@ -17,6 +17,7 @@ void init_init(char *filename){
     space_init();
     var_init();
     fields_init();
+    hdf_init();
     //solver_init();
     init_printParameters();
 };

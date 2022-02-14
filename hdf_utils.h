@@ -10,10 +10,15 @@
 #include <hdf5_hl.h>
 #include "mpi_utils.h"
 #include "array.h"
+#include "fields.h"
 
 void hdf_init();                                            // inits hdf5 environment
 void hdf_create_file_c(char *filename, COMPLEX *data);      // creates file with complex data
 void hdf_create_file_r(char *filename, double *data);       // creates file with real data
+void hdf_initField();
+void hdf_saveFieldA(char *filename);
+void hdf_saveFieldB(char *filename);
+void hdf_saveFieldPhi(char *filename);
 
 typedef struct {                                            // structure needed to define the custom complex datatype. This datatype is then used to write complex data into the file
     double re;   //real part

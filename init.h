@@ -10,6 +10,7 @@
 #include "array.h"
 #include "mpi_utils.h"
 #include "fftw_utils.h"
+#include "hdf_utils.h"
 #include "fields.h"
 #include "equation.h"
 #include "space_config.h"
