@@ -151,6 +151,41 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.Nt);
                 printf("[MPI process %d] number of timesteps = %d\n", mpi_my_rank, parameters.Nt);
             }
+            if (strcmp(tmp, "compute_k") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.compute_k);
+                printf("[MPI process %d] compute k spec = %d\n", mpi_my_rank, parameters.compute_k);
+            }
+            if (strcmp(tmp, "k_shells") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.k_shells);
+                printf("[MPI process %d] number of k shells = %d\n", mpi_my_rank, parameters.k_shells);
+            }
+            if (strcmp(tmp, "compute_m") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.compute_m);
+                printf("[MPI process %d] compute m spectra = %d\n", mpi_my_rank, parameters.compute_m);
+            }
+            if (strcmp(tmp, "compute_k_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.compute_k_every);
+                printf("[MPI process %d] compute k spectra every %d timesteps\n", mpi_my_rank, parameters.compute_k_every);
+            }
+            if (strcmp(tmp, "compute_m_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.compute_m_every);
+                printf("[MPI process %d] compute m spectra every %d timesteps\n", mpi_my_rank, parameters.compute_m_every);
+            }
+            if (strcmp(tmp, "first_shell") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.firstShell);
+                printf("[MPI process %d] first shell = %f\n", mpi_my_rank, parameters.firstShell);
+            }
+            if (strcmp(tmp, "last_shell") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.lastShell);
+                printf("[MPI process %d] last shell =  %f\n", mpi_my_rank, parameters.lastShell);
+            }
         }
     }
     init_global_size();

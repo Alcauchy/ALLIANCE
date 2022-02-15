@@ -163,3 +163,14 @@ void test_fieldComparison(){
     }
 
 }
+
+void test_kSpecComputations(){
+    COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
+    init_conditions(h);
+    fields_sendG(h);
+    fields_getFieldsFromH(g00, g10, g01);
+    fields_getChi();
+    distrib_getG(g, h);
+    diag_computeSpectra(g, h);
+}

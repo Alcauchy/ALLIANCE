@@ -35,6 +35,14 @@ struct system_param {
 
     double dt;
     int Nt;
+
+    int compute_k;
+    int compute_m;
+    int k_shells;
+    int compute_k_every;
+    int compute_m_every;
+    double firstShell;
+    double lastShell;
 };
 
 extern struct system_param parameters;

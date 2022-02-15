@@ -16,6 +16,7 @@
 #include "space_config.h"
 #include "solver.h"
 #include "variables.h"
+#include "diagnostics.h"
 
 enum electromagnetic{ELECTROSTATIC,ELECTROMAGNETIC};
 enum adiabatic{NONADIABATIC,ADIABATIC};

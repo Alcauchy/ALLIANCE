@@ -16,6 +16,7 @@ void init_init(char *filename){
     mpi_get_local_array_size();
     fftw_init(mpi_row_comm);
     space_init();
+    diag_initSpec();
     var_init();
     fields_init();
     hdf_init();
