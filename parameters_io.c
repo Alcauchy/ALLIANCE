@@ -32,7 +32,7 @@ void init_global_size() {
 
 void read_parameters(char *filename) {
     char string[128];
-    char tmp[16];
+    char tmp[32];
     int particle_index;
     FILE *fp;
     fp = fopen(filename, "r");  /* open file for input */
@@ -185,6 +185,61 @@ void read_parameters(char *filename) {
             {
                 sscanf(string, "%*s : %lf", &parameters.lastShell);
                 printf("[MPI process %d] last shell =  %f\n", mpi_my_rank, parameters.lastShell);
+            }
+            if (strcmp(tmp, "save_field_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_field_step);
+                printf("[MPI process %d] save field every %d timesteps\n", mpi_my_rank, parameters.save_field_step);
+            }
+            if (strcmp(tmp, "save_checkpoint_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_checkpoint_step);
+                printf("[MPI process %d] save checkpoint every %d timesteps\n", mpi_my_rank, parameters.save_checkpoint_step);
+            }
+            if (strcmp(tmp, "save_distribution_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_distrib_step);
+                printf("[MPI process %d] save distribution function every %d timesteps\n", mpi_my_rank, parameters.save_distrib_step);
+            }
+            if (strcmp(tmp, "save_k_spec_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_kSpec_step);
+                printf("[MPI process %d] save k spectrum every %d timesteps\n", mpi_my_rank, parameters.save_kSpec_step);
+            }
+            if (strcmp(tmp, "save_m_spec_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_mSpec_step);
+                printf("[MPI process %d] save m spectrum every %d timesteps\n", mpi_my_rank, parameters.save_mSpec_step);
+            }
+            if (strcmp(tmp, "save_energy_every") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_energy_step);
+                printf("[MPI process %d] save free energy every %d timesteps\n", mpi_my_rank, parameters.save_energy_step);
+            }
+            if (strcmp(tmp, "save_k_spec") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_kSpec);
+                printf("[MPI process %d] save k spectrum = %d \n", mpi_my_rank, parameters.save_kSpec);
+            }
+            if (strcmp(tmp, "save_m_spec") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_mSpec);
+                printf("[MPI process %d] save m spectrum = %d \n", mpi_my_rank, parameters.save_mSpec);
+            }
+            if (strcmp(tmp, "save_energy") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_energy);
+                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_energy);
+            }
+            if (strcmp(tmp, "save_energy") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_energy);
+                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_energy);
+            }
+            if (strcmp(tmp, "save_field") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_field);
+                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_field);
             }
         }
     }

@@ -9,26 +9,22 @@
 #include "tests.h"
 
 int main(int argc, char **argv) {
-    //mpi_init();
     char *filename;
     if (argc<2){
         if(mpi_my_rank == 0){
-            printf("OI! PROVIDE A FILENAME LAD!\n");
+            printf("provide a filename\n");
             exit(1);
         }
-
-
     }
     else{
         if (strcmp("-f", argv[1]) == 0){
             filename = argv[2];
         }
     }
+
     init_init(filename);
-    //test_mainFunction();
-    //test_fieldComparison();
-    //test_fieldComputation();
-    test_kSpecComputations();
+    hdf_createFiles();
+    test_mainFunction();
     free_wavespace();
     fftw_kill();
     mpi_kill();

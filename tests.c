@@ -112,12 +112,11 @@ void test_mainFunction(){
     for(int it = 0; it < solver.Nt; it++)
     {
         solver_makeStep();
+        //solver_updateDt();
+        diag_computeSpectra(g, h, it);
+        diag_computeFreeEnergy(g, h, it);
+        hdf_saveData(h, it);
     }
-
-    fields_sendG(g);
-    fields_getFields(g00,g10,g01);
-    fields_getChi();
-    diag_computeFreeEnergy(g,h);
     //diag_computeFreeEnergyFields();
     //diag_computeKSpectrum();
     //diag_computeMSpectrum();
@@ -172,5 +171,5 @@ void test_kSpecComputations(){
     fields_getFieldsFromH(g00, g10, g01);
     fields_getChi();
     distrib_getG(g, h);
-    diag_computeSpectra(g, h);
+    diag_computeSpectra(g, h,0);
 }

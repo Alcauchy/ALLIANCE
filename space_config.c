@@ -3,6 +3,7 @@
 //
 #include "space_config.h"
 #include <complex.h>
+
 #define MINUS_I -1.j
 double space_Lx = 1.0;
 double space_Ly = 1.0;
@@ -13,7 +14,7 @@ double *space_kz;
 double *space_kPerp;
 double *space_kPerp2;
 COMPLEX *space_iKx;
-COMPLEX* space_iKy;
+COMPLEX *space_iKy;
 COMPLEX *space_iKz;
 
 /*
@@ -25,7 +26,7 @@ COMPLEX *space_iKz;
  *  return:
  *
  */
-void space_init(){
+void space_init() {
     space_generateWaveSpace();
 }
 
@@ -54,63 +55,52 @@ void space_generateWaveSpace() {
                       sizeof(*space_kz));
 
     space_iKx = malloc(array_local_size.nkx *
-                      sizeof(*space_iKx));
+                       sizeof(*space_iKx));
     space_iKy = malloc(array_local_size.nky *
-                      sizeof(*space_iKy));
+                       sizeof(*space_iKy));
     space_iKz = malloc(array_local_size.nkz *
-                      sizeof(*space_iKz));
+                       sizeof(*space_iKz));
 
     space_kPerp = malloc(array_local_size.nkx * array_local_size.nky *
                          sizeof(*space_kPerp));
     space_kPerp2 = malloc(array_local_size.nkx * array_local_size.nky *
-                         sizeof(*space_kPerp2));
+                          sizeof(*space_kPerp2));
 
     double deltaKx = M_PI / (array_global_size.nkx * space_Lx);
     double deltaKy = M_PI / (array_global_size.nky * space_Ly);
     double deltaKz = 2. * M_PI / (array_global_size.nkz * space_Lz);
 
-    for (size_t ix = 0; ix < array_local_size.nkx; ix++)
-    {
-        if (global_nkx_index[ix] < array_global_size.nkx/2 + 1)
-        {
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        if (global_nkx_index[ix] < array_global_size.nkx / 2 + 1) {
             space_kx[ix] = deltaKx * global_nkx_index[ix];
+        } else {
+            space_kx[ix] = deltaKx * ((double) global_nkx_index[ix] - (double) array_global_size.nkx);
         }
-        else
-        {
-            space_kx[ix] = deltaKx * ((double)global_nkx_index[ix] - (double)array_global_size.nkx);
-        }
-        space_iKx[ix] = -1.j  * space_kx[ix];
+        space_iKx[ix] = -1.j * space_kx[ix];
         //printf("[MPI process %d] kx[%d] = %f\n",mpi_my_rank, ix, space_kx[ix]);
     }
-    printf("[MPI process %d] kx generated \n",mpi_my_rank);
+    printf("[MPI process %d] kx generated \n", mpi_my_rank);
 
-    for (size_t iy = 0; iy < array_global_size.nky; iy++)
-    {
-        if (iy < array_global_size.nky/2 + 1)
-        {
+    for (size_t iy = 0; iy < array_global_size.nky; iy++) {
+        if (iy < array_global_size.nky / 2 + 1) {
             space_ky[iy] = deltaKy * iy;
+        } else {
+            space_ky[iy] = deltaKy * ((double) iy - (double) array_global_size.nky);
         }
-        else
-        {
-            space_ky[iy] = deltaKy * (iy - array_global_size.nky);
-        }
-        space_iKy[iy] = -1.j  * space_ky[iy];
+        space_iKy[iy] = -1.j * space_ky[iy];
         //printf("[MPI process %d] ky[%d] = %f\n",mpi_my_rank, iy, space_ky[iy]);
     }
     //space_iKy[1] = (0,0);
-    printf("[MPI process %d] ky generated \n",mpi_my_rank);
-    for (size_t iz = 0; iz < array_local_size.nkz; iz++)
-    {
+    printf("[MPI process %d] ky generated \n", mpi_my_rank);
+    for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
         space_kz[iz] = deltaKz * iz;
-        space_iKz[iz] =  space_kz[iz];
+        space_iKz[iz] = space_kz[iz];
         //printf("[MPI process %d] kz[%d] = %f\n ",mpi_my_rank, iz, space_kz[iz]);
     }
-    printf("[MPI process %d] kz generated \n",mpi_my_rank);
+    printf("[MPI process %d] kz generated \n", mpi_my_rank);
 
-    for (size_t ix = 0; ix < array_local_size.nkx; ix++)
-    {
-        for (size_t iy = 0; iy < array_local_size.nky; iy++)
-        {
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
             space_kPerp2[ix * array_local_size.nky + iy] = space_kx[ix] * space_kx[ix] + space_ky[iy] * space_ky[iy];
             space_kPerp[ix * array_local_size.nky + iy] = sqrt(space_kPerp2[ix * array_local_size.nky + iy]);
         }
@@ -129,19 +119,13 @@ void space_generateWaveSpace() {
  *
  */
 void space_xGrad(COMPLEX *data) {
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++ )
-    {
-        for(size_t iy = 0; iy < array_local_size.nky; iy++)
-        {
-            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-            {
-                for(size_t im = 0; im < array_local_size.nm; im++)
-                {
-                    for(size_t il = 0; il < array_local_size.nl; il++)
-                    {
-                        for(size_t is = 0; is < array_local_size.ns; is++)
-                        {
-                            data[get_flat_c(is,il,im,ix,iy,iz)] *= space_iKx[ix];
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            data[get_flat_c(is, il, im, ix, iy, iz)] *= space_iKx[ix];
                         }
                     }
                 }
@@ -161,19 +145,13 @@ void space_xGrad(COMPLEX *data) {
  *
  */
 void space_yGrad(COMPLEX *data) {
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++ )
-    {
-        for(size_t iy = 0; iy < array_local_size.nky; iy++)
-        {
-            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-            {
-                for(size_t im = 0; im < array_local_size.nm; im++)
-                {
-                    for(size_t il = 0; il < array_local_size.nl; il++)
-                    {
-                        for(size_t is = 0; is < array_local_size.ns; is++)
-                        {
-                            data[get_flat_c(is,il,im,ix,iy,iz)] *= space_iKy[iy];
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            data[get_flat_c(is, il, im, ix, iy, iz)] *= space_iKy[iy];
                         }
                     }
                 }
@@ -193,19 +171,13 @@ void space_yGrad(COMPLEX *data) {
  *
  */
 void space_zGrad(COMPLEX *data) {
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++ )
-    {
-        for(size_t iy = 0; iy < array_local_size.nky; iy++)
-        {
-            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-            {
-                for(size_t im = 0; im < array_local_size.nm; im++)
-                {
-                    for(size_t il = 0; il < array_local_size.nl; il++)
-                    {
-                        for(size_t is = 0; is < array_local_size.ns; is++)
-                        {
-                            data[get_flat_c(is,il,im,ix,iy,iz)] *= space_iKz[iz];
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            data[get_flat_c(is, il, im, ix, iy, iz)] *= space_iKz[iz];
                         }
                     }
                 }
@@ -214,7 +186,7 @@ void space_zGrad(COMPLEX *data) {
     }
 };
 
-void free_wavespace(){
+void free_wavespace() {
     free(space_kx);
     free(space_ky);
     free(space_kz);

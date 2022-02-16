@@ -19,7 +19,8 @@ void hdf_initField();
 void hdf_saveFieldA(char *filename);
 void hdf_saveFieldB(char *filename);
 void hdf_saveFieldPhi(char *filename);
-
+void hdf_saveData(COMPLEX *h, int timestep);
+void hdf_createFiles();
 typedef struct {                                            // structure needed to define the custom complex datatype. This datatype is then used to write complex data into the file
     double re;   //real part
     double im;   //imaginary part

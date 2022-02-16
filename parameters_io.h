@@ -41,6 +41,18 @@ struct system_param {
     int k_shells;
     int compute_k_every;
     int compute_m_every;
+    int save_kSpec_step;
+    int save_mSpec_step;
+    int save_energy_step;
+    int save_field_step;
+    int save_checkpoint_step;
+    int save_distrib_step;
+    int save_kSpec;
+    int save_mSpec;
+    int save_energy;
+    int save_field;
+    int save_checkpoint;
+    int save_distrib;
     double firstShell;
     double lastShell;
 };

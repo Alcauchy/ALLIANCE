@@ -22,4 +22,7 @@ void free_wavespace();
 
 extern double *space_kPerp2;
 extern double *space_kPerp;
+extern double *space_kx;
+extern double *space_ky;
+extern double *space_kz;
 #endif //ALLIANCE_ALPHA_1_0_SPACE_CONFIG_H
