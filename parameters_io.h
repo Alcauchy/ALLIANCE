@@ -45,6 +45,7 @@ struct system_param {
     int save_mSpec_step;
     int save_energy_step;
     int save_field_step;
+    int checkpoints;
     int save_checkpoint_step;
     int save_distrib_step;
     int save_kSpec;

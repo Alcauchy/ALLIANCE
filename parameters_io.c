@@ -191,6 +191,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.save_field_step);
                 printf("[MPI process %d] save field every %d timesteps\n", mpi_my_rank, parameters.save_field_step);
             }
+            if (strcmp(tmp, "checkpoints") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.checkpoints);
+                printf("[MPI process %d] number of checkpoints = %d \n", mpi_my_rank, parameters.checkpoints);
+            }
             if (strcmp(tmp, "save_checkpoint_every") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.save_checkpoint_step);

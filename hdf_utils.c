@@ -3,12 +3,17 @@
 //
 
 #include "hdf_utils.h"
+#include <unistd.h>
 #define VERBOSE 1
-
+#define CHECKPOINT_ID_LEN 64
+#define CHECKPOINT_ROOT 0
 
 int hdf_rank = 6;
 int hdf_rankFields = 3;
 int hdf_freeEnergyCalls = 0;
+char **hdf_checkpointNames;
+char hdf_newCheckpointName[CHECKPOINT_ID_LEN];
+size_t hdf_checkpointCount = 0;
 hid_t complex_id;
 hsize_t dataspace_dims_r[6];
 hsize_t dataspace_dims_c[6];
@@ -35,6 +40,10 @@ void complex_t_init(){
 void hdf_init(){
     complex_t_init();
     hdf_initField();
+    if (parameters.checkpoints > 0)
+    {
+        hdf_initCheckpoints();
+    }
     dataspace_dims_r[0] = array_global_size.nkx;
     dataspace_dims_r[1] = array_global_size.nky;
     dataspace_dims_r[2] = array_global_size.nz + 2;
@@ -350,9 +359,9 @@ void hdf_saveData(COMPLEX *h, int timestep) {
     if (parameters.save_field && timestep % parameters.save_field_step == 0) {
         //hdf_saveFields();
     }
-    if (parameters.save_checkpoint && timestep % parameters.save_checkpoint_step == 0)
+    if (parameters.checkpoints && timestep % parameters.save_checkpoint_step == 0)
     {
-        //hdf_createCheckpoint();
+        hdf_createCheckpoint(h, timestep);
     }
     if (parameters.save_distrib && timestep % parameters.save_distrib_step == 0)
     {
@@ -650,16 +659,10 @@ void hdf_saveMSpec(int timestep){
     size[1] = dims[1];
     offset[0] = dims[0];
     offset[1] =  mpi_my_col_rank * parameters.nm / mpi_dims[0];
-    printf("offsets for rank %d =  %d,%d\n",mpi_my_rank,offset[0],offset[1]);
-    printf("dims size for rank %d =  %d,%d\n",mpi_my_rank,dims_ext_local[0],dims_ext_local[1]);
     H5Dset_extent(dset_id, size);
     /*write m spec to the file*/
     plist_id = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-    if (mpi_my_row_rank != 0)
-    {
-
-    }
     dspace_id = H5Dget_space(dset_id);
     H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
     memspace = H5Screate_simple(1,&dims_ext_local[1],&max_dims_local[1]);
@@ -667,26 +670,103 @@ void hdf_saveMSpec(int timestep){
     {
         H5Sselect_none(dspace_id);
         H5Sselect_none(memspace);
-        printf("my rank = %d\n",mpi_my_rank);
     }
-    //memspace = H5Screate_simple(1,&dims_ext_local[1],&max_dims_local[1]);
     H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, diag_mSpec);
     H5Sclose(memspace);
     H5Sclose(dspace_id);
-
-
-
-    //printf("%zu\n", memspace);
-
-
-
-
-
-    /*plist_id = H5Pcreate(H5P_DATASET_XFER);
-    H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsetKx, NULL, dims, NULL);
-    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, dspace_id, filespace, plist_id, space_kx);*/
-
     H5Pclose(plist_id);
     H5Dclose(dset_id);
+    H5Fclose(file_id);
+}
+
+void hdf_initCheckpoints(){
+    if (VERBOSE) printf("initialising checkpoints\n");
+    hdf_checkpointNames = malloc(parameters.checkpoints * sizeof(hdf_checkpointNames));
+    for (size_t i = 0; i < parameters.checkpoints; i++){
+        hdf_checkpointNames[i] = malloc(CHECKPOINT_ID_LEN * sizeof(*hdf_checkpointNames[i]));
+    }
+};
+
+void hdf_createCheckpoint(COMPLEX *h, int timestep) {
+    if (VERBOSE) printf("create checkpoint\n");
+    snprintf(hdf_newCheckpointName, CHECKPOINT_ID_LEN, "checkpoint_%d.h5", timestep);
+    if (VERBOSE) printf("checkpoint name is %s\n",hdf_newCheckpointName);
+    if (hdf_checkpointCount > parameters.checkpoints - 1)
+    {
+        if (VERBOSE) printf("condition checkpoint count > checkpoint reached!\n");
+        if (mpi_my_rank == CHECKPOINT_ROOT)
+        {
+            if (access(hdf_checkpointNames[0],F_OK) == 0)
+            {
+                if(VERBOSE) printf("file %s exists", hdf_checkpointNames[0]);
+                remove(hdf_checkpointNames[0]);
+            }
+        }
+        for(size_t i = 0; i < parameters.checkpoints - 1; i++){
+            strcpy(hdf_checkpointNames[i],hdf_checkpointNames[i + 1]);
+        }
+        strcpy(hdf_checkpointNames[parameters.checkpoints - 1], hdf_newCheckpointName);
+    }
+    else
+    {
+        strcpy(hdf_checkpointNames[hdf_checkpointCount], hdf_newCheckpointName);
+
+    }
+    hdf_dumpCheckpoint(h, timestep, hdf_newCheckpointName);
+    hdf_checkpointCount++;
+};
+
+void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename){
+    // now we will create a file, and write a dataset into it.
+    hid_t file_id, dset_id;
+    hid_t file_space, memory_space;
+    hid_t plist_id; //property list id
+    hid_t dims_timestep[1] = {1};
+    hid_t rank_timestep = 1;
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
+    /* creating the file */
+    if (VERBOSE) printf("[process id %d] trying to create a file\n",mpi_my_rank);
+    file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
+    if (VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
+    H5Pclose(plist_id);
+    /* create file space and memory space. Memory space holds each process' data, file space going to hold whole data */
+    file_space = H5Screate_simple(hdf_rank, dataspace_dims_c, NULL);
+    memory_space = H5Screate_simple(hdf_rank, chunk_dims_c, NULL);
+    /*creating h dataset */
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
+    H5Pset_chunk(plist_id, hdf_rank, chunk_dims_c);
+    dset_id = H5Dcreate(file_id,"h", complex_id, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(file_space);
+    /* writing dataset collectively */
+    file_space = H5Dget_space(dset_id);
+    status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset, stride, count, chunk_dims_c);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    status = H5Dwrite(dset_id, complex_id, memory_space, file_space,plist_id, h);
+    /*closing dataset identifier, memory space and file space*/
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Sclose(memory_space);
+    H5Pclose(plist_id);
+    /*writing timestep information*/
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    dset_id = H5Dcreate(file_id,"timestep", H5T_NATIVE_INT, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    H5Dwrite(dset_id,H5T_NATIVE_INT, memory_space, file_space, plist_id, &timestep);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
     H5Fclose(file_id);
 }

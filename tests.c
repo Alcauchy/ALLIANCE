@@ -117,13 +117,6 @@ void test_mainFunction(){
         diag_computeFreeEnergy(g, h, it);
         hdf_saveData(h, it);
     }
-    for(size_t i = 0; i < array_local_size.nm; i++){
-        if (mpi_my_row_rank == 0)
-        {
-            printf("[MPI process %d] row rank = %d spec_m[%zu] = %f\n", mpi_my_rank,mpi_my_row_rank,i,diag_mSpec[i]);
-        }
-        //printf("[MPI process %d] row rank = %d spec_m[%zu] = %f\n", mpi_my_rank,mpi_my_row_rank,i,diag_mSpec[i]);
-    }
     //diag_computeFreeEnergyFields();
     //diag_computeKSpectrum();
     //diag_computeMSpectrum();
