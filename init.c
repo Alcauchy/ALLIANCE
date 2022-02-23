@@ -64,6 +64,7 @@ void init_conditions(COMPLEX *data){
             break;
 
         case FROMFILE:
+            hdf_readData(parameters.from_simulationName,data);
             break;
 
         default:

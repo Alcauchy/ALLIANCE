@@ -135,7 +135,7 @@ void diag_getShells() {
     diag_shells = malloc((parameters.k_shells + 1) * sizeof(*diag_shells));
     for (size_t i = 0; i < parameters.k_shells + 1; i++) {
         diag_shells[i] = (parameters.lastShell - parameters.firstShell) / parameters.k_shells * i;
-        printf("[MPI process %d] shell[%d] = %f\n", mpi_my_rank, i, diag_shells[i]);
+        //printf("[MPI process %d] shell[%d] = %f\n", mpi_my_rank, i, diag_shells[i]);
     }
 
 }

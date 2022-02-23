@@ -8,12 +8,14 @@
 #include <stdio.h> // standard C lib
 #include <stdlib.h> //Standard C lib
 #include <string.h>
+#include "hdf_utils.h"
 #include "mpi_utils.h"
 #include "array.h"
 
 enum DEALIASING {ALIASED, TWOTHIRDS};
 
 void read_parameters(char *filename);
+void read_parametersFromFile(char *filename);
 
 struct system_param {
     size_t nkx;
@@ -27,6 +29,7 @@ struct system_param {
     int electromagnetic;
     int adiabatic;
     int initial;
+    char from_simulationName[128];
     double beta;
     double *mass;
     double *density;

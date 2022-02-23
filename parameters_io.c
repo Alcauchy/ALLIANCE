@@ -4,7 +4,7 @@
 
 #include "parameters_io.h"
 #include "fftw_utils.h"
-
+#define VERBOSE 0
 
 struct system_param parameters;
 
@@ -56,6 +56,7 @@ void read_parameters(char *filename) {
             {
                 sscanf(string, "%*s : %zu", &parameters.nz);
                 printf("[MPI process %d] nz = %zu\n", mpi_my_rank, parameters.nz);
+                parameters.nkz = parameters.nz / 2 + 1;
 
             }
             if (strcmp(tmp, "nm") == 0)
@@ -136,6 +137,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.initial);
                 printf("[MPI process %d] initial conditions set to %d\n", mpi_my_rank, parameters.initial);
             }
+            if (strcmp(tmp, "simulation_name") == 0)
+            {
+                sscanf(string, "%*s : %s", &parameters.from_simulationName);
+                printf("[MPI process %d] from simulation %s \n", mpi_my_rank, parameters.from_simulationName);
+            }
             if (strcmp(tmp, "beta") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.beta);
@@ -206,6 +212,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.save_distrib_step);
                 printf("[MPI process %d] save distribution function every %d timesteps\n", mpi_my_rank, parameters.save_distrib_step);
             }
+            if (strcmp(tmp, "save_distribution") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.save_distrib);
+                printf("[MPI process %d] save distribution = %d\n", mpi_my_rank, parameters.save_distrib);
+            }
             if (strcmp(tmp, "save_k_spec_every") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.save_kSpec_step);
@@ -249,5 +260,159 @@ void read_parameters(char *filename) {
         }
     }
     init_global_size();
+    if (parameters.initial == 1)
+    {
+        read_parametersFromFile(parameters.from_simulationName);
+    }
 }
 
+void read_parametersFromFile(char *filename){
+    hid_t dset_id, dspace_id, file_id, filespace, memspace;
+    hid_t plist_id; //property list id
+    MPI_Info info = MPI_INFO_NULL;
+    hid_t params_rank = 1;
+    hid_t param_dims[1] = {1};
+
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
+    /* open file to read */
+    file_id = H5Fopen(filename,H5F_ACC_RDONLY,plist_id);
+    H5Pclose(plist_id);
+    /* read beta parameter */
+    dset_id = H5Dopen2(file_id, "beta", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    memspace = H5Screate_simple(params_rank,param_dims,param_dims);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, &parameters.beta);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    H5Dclose(dset_id);
+
+    /* read nkx parameter */
+    dset_id = H5Dopen2(file_id, "nkx", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    memspace = H5Screate_simple(params_rank,param_dims,param_dims);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_INT, memspace, dspace_id, plist_id, &parameters.nkx);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    H5Dclose(dset_id);
+    if(VERBOSE) printf("[MPI process %d] READ nkx = %d \n", mpi_my_rank, parameters.nkx);
+
+    /* read nky parameter */
+    dset_id = H5Dopen2(file_id, "nky", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    memspace = H5Screate_simple(params_rank,param_dims,param_dims);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_INT, memspace, dspace_id, plist_id, &parameters.nky);
+    if(VERBOSE) printf("[MPI process %d] READ nky = %d \n", mpi_my_rank, parameters.nky);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    H5Dclose(dset_id);
+
+    /* read nkz parameter */
+    dset_id = H5Dopen2(file_id, "nkz", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    memspace = H5Screate_simple(params_rank,param_dims,param_dims);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_INT, memspace, dspace_id, plist_id, &parameters.nkz);
+    if(VERBOSE) printf("[MPI process %d] READ nkz = %d \n", mpi_my_rank, parameters.nkz);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    H5Dclose(dset_id);
+
+    /* read nm parameter */
+    dset_id = H5Dopen2(file_id, "nm", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    memspace = H5Screate_simple(params_rank,param_dims,param_dims);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_INT, memspace, dspace_id, plist_id, &parameters.nm);
+    if(VERBOSE) printf("[MPI process %d] READ nm = %d \n", mpi_my_rank, parameters.nm);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    H5Dclose(dset_id);
+
+    /* read nl parameter */
+    dset_id = H5Dopen2(file_id, "nl", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    memspace = H5Screate_simple(params_rank,param_dims,param_dims);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_INT, memspace, dspace_id, plist_id, &parameters.nl);
+    if(VERBOSE) printf("[MPI process %d] READ nl = %d \n", mpi_my_rank, parameters.nl);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    H5Dclose(dset_id);
+
+    /* read ns parameter */
+    dset_id = H5Dopen2(file_id, "ns", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    memspace = H5Screate_simple(params_rank,param_dims,param_dims);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_INT, memspace, dspace_id, plist_id, &parameters.ns);
+    if(VERBOSE) printf("[MPI process %d] READ ns = %d \n", mpi_my_rank, parameters.ns);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    H5Dclose(dset_id);
+
+    /*read particle parameters*/
+    int rank_particle = 1;
+    hsize_t dims_particle[1] = {parameters.ns};
+    /* read charge information */
+    dspace_id = H5Screate_simple(rank_particle, dims_particle, NULL);
+    dset_id = H5Dopen2(file_id, "charge", H5P_DEFAULT);
+    memspace = H5Screate_simple(rank_particle, dims_particle, NULL);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, parameters.charge);
+    if(VERBOSE)
+    {
+        for(size_t i = 0; i < parameters.ns; i++) printf("[MPI process %d] READ q[%d] = %f \n", mpi_my_rank, i, parameters.charge[i]);
+    }
+    H5Dclose(dset_id);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+    /* read temperature information */
+    dspace_id = H5Screate_simple(rank_particle, dims_particle, NULL);
+    dset_id = H5Dopen2(file_id, "temperature", H5P_DEFAULT);
+    memspace = H5Screate_simple(rank_particle, dims_particle, NULL);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, parameters.temperature);
+    if(VERBOSE)
+    {
+        for(size_t i = 0; i < parameters.ns; i++) printf("[MPI process %d] READ T[%d] = %f \n", mpi_my_rank, i, parameters.temperature[i]);
+    }
+    H5Dclose(dset_id);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+
+    /* read mass information */
+    dspace_id = H5Screate_simple(rank_particle, dims_particle, NULL);
+    dset_id = H5Dopen2(file_id, "mass", H5P_DEFAULT);
+    memspace = H5Screate_simple(rank_particle, dims_particle, NULL);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, parameters.mass);
+    if(VERBOSE)
+    {
+        for(size_t i = 0; i < parameters.ns; i++) printf("[MPI process %d] READ m[%d] = %f \n", mpi_my_rank, i, parameters.mass[i]);
+    }
+    H5Dclose(dset_id);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+
+    /* read density information */
+    dspace_id = H5Screate_simple(rank_particle, dims_particle, NULL);
+    dset_id = H5Dopen2(file_id, "density", H5P_DEFAULT);
+    memspace = H5Screate_simple(rank_particle, dims_particle, NULL);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dread(dset_id,H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, parameters.density);
+    if(VERBOSE)
+    {
+        for(size_t i = 0; i < parameters.ns; i++) printf("[MPI process %d] READ n[%d] = %f \n", mpi_my_rank, i, parameters.density[i]);
+    }
+    H5Dclose(dset_id);
+    H5Sclose(dspace_id);
+    H5Sclose(memspace);
+
+    H5Fclose(file_id);
+
+
+};
