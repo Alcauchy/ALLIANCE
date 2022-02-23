@@ -25,6 +25,7 @@ int main(int argc, char **argv) {
     init_init(filename);
     hdf_createFiles();
     test_mainFunction();
+    //test_kSpecComputations();
     free_wavespace();
     fftw_kill();
     mpi_kill();

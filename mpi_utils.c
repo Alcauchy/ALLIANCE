@@ -16,7 +16,7 @@ int m_neighbour_ranks[2];               // ranks of the neighbours
 int mpi_sub_buf_size;                   // buffer size needed to exchange m+1 and m-1 Hermite moments
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
 MPI_Comm mpi_row_comm;                  // row communicator (kx direction)
-MPI_Comm mpi_col_comm;                  // column communicator
+MPI_Comm mpi_col_comm;                  // column communicator (Hermite direction)
 MPI_Datatype mpi_subarray_type_plus;    // subarray type to perform the m+1 boundary exchange
 MPI_Datatype mpi_subarray_type_minus;   // subarray type to perform the m-1 boundary exchange
 enum DIRECTIONS {
