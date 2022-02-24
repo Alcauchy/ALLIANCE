@@ -2,13 +2,13 @@
 // Created by alcauchy on 16/12/2021.
 //
 
-#ifndef ALLIANCE_ALPHA_1_0_HDF_UTILS_H
-#define ALLIANCE_ALPHA_1_0_HDF_UTILS_H
+#ifndef ALLIANCE_ALPHA_1_0_UTILS_HDF_H
+#define ALLIANCE_ALPHA_1_0_UTILS_HDF_H
 #include <stdio.h> // standard C lib
 #include <stdlib.h> //Standard C lib
 #include <hdf5.h>
 #include <hdf5_hl.h>
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 #include "array.h"
 #include "fields.h"
 #include "init.h"
@@ -31,6 +31,7 @@ void hdf_initCheckpoints();
 void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename);
 void hdf_readData(char *filename, COMPLEX *h);
 void hdf_saveDistrib(COMPLEX* h, int timestep);
+void hdf_createSaveDirs();
 typedef struct {                                            // structure needed to define the custom complex datatype. This datatype is then used to write complex data into the file
     double re;   //real part
     double im;   //imaginary part
@@ -41,4 +42,4 @@ typedef struct {                                            // structure needed 
 
 
 
-#endif //ALLIANCE_ALPHA_1_0_HDF_UTILS_H
+#endif //ALLIANCE_ALPHA_1_0_UTILS_HDF_H

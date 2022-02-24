@@ -10,7 +10,7 @@
 #include <complex.h> //Complex numbers
 #include <fftw3-mpi.h>
 #include <string.h>
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 #include "array.h"
 
 

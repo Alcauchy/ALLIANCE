@@ -6,7 +6,7 @@
 #define ALLIANCE_ALPHA_1_0_FIELDS_H
 #include <stdio.h>
 #include <stdlib.h>
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 #include "array.h"
 #include "init.h"
 void fields_init();

@@ -8,8 +8,8 @@
 #include <stdio.h> // standard C lib
 #include <stdlib.h> //Standard C lib
 #include <string.h>
-#include "hdf_utils.h"
-#include "mpi_utils.h"
+#include "utils_hdf.h"
+#include "utils_mpi.h"
 #include "array.h"
 
 enum DEALIASING {ALIASED, TWOTHIRDS};
@@ -30,6 +30,7 @@ struct system_param {
     int adiabatic;
     int initial;
     char from_simulationName[128];
+    char save_dir[128];
     double beta;
     double *mass;
     double *density;

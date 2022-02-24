@@ -117,10 +117,6 @@ void test_mainFunction(){
         diag_computeFreeEnergy(g, h, it);
         hdf_saveData(h, it);
     }
-    //diag_computeFreeEnergyFields();
-    //diag_computeKSpectrum();
-    //diag_computeMSpectrum();
-    //hdf_dumpToFile();
 };
 
 void test_fieldComparison(){

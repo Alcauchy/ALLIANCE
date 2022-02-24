@@ -2,8 +2,8 @@
 // Created by alcauchy on 06/12/2021.
 //
 
-#ifndef ALLIANCE_ALPHA_1_0_MPI_UTILS_H
-#define ALLIANCE_ALPHA_1_0_MPI_UTILS_H
+#ifndef ALLIANCE_ALPHA_1_0_UTILS_MPI_H
+#define ALLIANCE_ALPHA_1_0_UTILS_MPI_H
 
 #include <stdio.h> // standard C lib
 #include <stdlib.h> //Standard C lib
@@ -34,5 +34,5 @@ extern MPI_Comm mpi_cube_comm;         // 2D topology communicator
 extern MPI_Comm mpi_row_comm;          // row communicator (kx direction)
 extern MPI_Comm mpi_col_comm;          // column communicator (Hermite direction)
 
-#endif //ALLIANCE_ALPHA_1_0_MPI_UTILS_H
+#endif //ALLIANCE_ALPHA_1_0_UTILS_MPI_H
 

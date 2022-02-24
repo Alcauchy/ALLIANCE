@@ -9,7 +9,7 @@
 #include <complex.h>
 #include <math.h>
 #include "fftw3-mpi.h"
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 #include "array.h"
 #include "fftw_utils.h"
 

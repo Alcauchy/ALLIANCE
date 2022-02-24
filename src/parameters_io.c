@@ -257,6 +257,12 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.save_field);
                 printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_field);
             }
+
+            if (strcmp(tmp, "save_directory") == 0)
+            {
+                sscanf(string, "%*s : %s", &parameters.save_dir);
+                printf("[MPI process %d] save to %s directory \n", mpi_my_rank, parameters.save_dir);
+            }
         }
     }
     init_global_size();

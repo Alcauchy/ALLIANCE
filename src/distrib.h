@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include "parameters_io.h"
 #include "array.h"
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 #include "fftw_utils.h"
-#include "hdf_utils.h"
+#include "utils_hdf.h"
 #include "fields.h"
 #include "equation.h"
 #include "space_config.h"

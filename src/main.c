@@ -1,6 +1,6 @@
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 #include "fftw_utils.h"
-#include "hdf_utils.h"
+#include "utils_hdf.h"
 #include "parameters_io.h"
 #include "diagnostics.h"
 #include "space_config.h"

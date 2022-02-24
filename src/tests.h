@@ -6,10 +6,10 @@
 #define ALLIANCE_ALPHA_1_0_TESTS_H
 #include <stdio.h>
 #include <stdlib.h>
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 #include "array.h"
 #include "init.h"
-#include "hdf_utils.h"
+#include "utils_hdf.h"
 #include "fields.h"
 #include "distrib.h"
 void test_fieldComputation();

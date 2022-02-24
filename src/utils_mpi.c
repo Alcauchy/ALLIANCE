@@ -1,7 +1,7 @@
 //
 // Created by alcauchy on 06/12/2021.
 //
-#include "mpi_utils.h"
+#include "utils_mpi.h"
 
 #define SUBARRAY_COUNT 1
 #define SUBARRAY_M_SIZE 1

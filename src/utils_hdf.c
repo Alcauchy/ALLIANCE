@@ -2,17 +2,33 @@
 // Created by alcauchy on 16/12/2021.
 //
 
-#include "hdf_utils.h"
+#include "utils_hdf.h"
 #include <unistd.h>
+#include <sys/stat.h>
+
+#define BASE_DIR ".."
+#define WORK_DIR "wrk"
+#define CHCK_DIR "checkpoint"
+#if defined(WIN32) || defined(_WIN32)
+#define PATH_SEPARATOR "\\"
+#else
+#define PATH_SEPARATOR "/"
+#endif
 #define VERBOSE 1
-#define CHECKPOINT_ID_LEN 64
+#define FILENAME_ID_LEN 128
 #define CHECKPOINT_ROOT 0
+#define PATH_LEN 128
 
 int hdf_rank = 6;
 int hdf_rankFields = 3;
 int hdf_freeEnergyCalls = 0;
 char **hdf_checkpointNames;
-char hdf_newCheckpointName[CHECKPOINT_ID_LEN];
+char hdf_newCheckpointName[FILENAME_ID_LEN];
+char SIMULATION_PATH[PATH_LEN];
+char CHECKPOINT_PATH[PATH_LEN];
+char PARAMETER_FILENAME[FILENAME_ID_LEN];
+char DISTRIBUTION_FILENAME[FILENAME_ID_LEN];
+char FIELD_FILENAME[FILENAME_ID_LEN];
 size_t hdf_checkpointCount = 0;
 hid_t complex_id;
 hsize_t dataspace_dims_r[6];
@@ -37,9 +53,15 @@ void complex_t_init(){
     H5Tinsert(complex_id, "i", HOFFSET(complex_t,im), H5T_NATIVE_DOUBLE);
 }
 
+/***************************
+ *
+ *  INITIALIZE HDF5
+ *
+ * *************************/
 void hdf_init(){
     complex_t_init();
     hdf_initField();
+    hdf_createSaveDirs();
     if (parameters.checkpoints > 0)
     {
         hdf_initCheckpoints();
@@ -105,6 +127,38 @@ void hdf_init(){
            chunk_dims_c[3],
            chunk_dims_c[4],
            chunk_dims_c[5]);
+};
+
+void hdf_createSaveDirs() {
+    sprintf(SIMULATION_PATH, "%s%s%s%s%s%s", BASE_DIR,PATH_SEPARATOR,WORK_DIR,PATH_SEPARATOR,parameters.save_dir,PATH_SEPARATOR);
+    sprintf(CHECKPOINT_PATH, "%s%s%s%s%s%s%s%s", BASE_DIR,PATH_SEPARATOR,WORK_DIR,PATH_SEPARATOR,parameters.save_dir,PATH_SEPARATOR,CHCK_DIR,PATH_SEPARATOR);
+    sprintf(PARAMETER_FILENAME, "%s%s", SIMULATION_PATH,"parameters.h5");
+    if (VERBOSE) printf("SIMULATION PATH = %s\n",SIMULATION_PATH);
+    if (VERBOSE) printf("CHECKPOINT PATH = %s\n",CHECKPOINT_PATH);
+    if (VERBOSE) printf("PARAMETER FILENAME = %s\n",PARAMETER_FILENAME);
+    if(mpi_my_rank == CHECKPOINT_ROOT)
+    {
+        if (access(SIMULATION_PATH, F_OK) == 0)
+        {
+            //printf("directory %s already exists, please ensure you don't need it and delete it manually. Aborting...\n",SIMULATION_PATH);
+            //exit(1);
+        }
+        else
+        {
+            mkdir(SIMULATION_PATH,0777);
+            mkdir(CHECKPOINT_PATH,0777);
+        }
+    }
+    if(parameters.save_field)
+    {
+        sprintf(FIELD_FILENAME, "%s%s", SIMULATION_PATH,"fields.h5");
+        if (VERBOSE) printf("FIELD FILENAME = %s\n",FIELD_FILENAME);
+    }
+    if(parameters.save_distrib)
+    {
+        sprintf(DISTRIBUTION_FILENAME, "%s%s", SIMULATION_PATH,"h_");
+        if (VERBOSE) printf("H FILENAME = %s\n",DISTRIBUTION_FILENAME);
+    }
 };
 
 void hdf_create_file_c(char *filename, COMPLEX *data){
@@ -300,7 +354,7 @@ void hdf_saveEnergy(int timestep)
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
     /* open file to read and write */
-    file_id = H5Fopen("parameters.h5",H5F_ACC_RDWR,plist_id);
+    file_id = H5Fopen(PARAMETER_FILENAME,H5F_ACC_RDWR,plist_id);
     H5Pclose(plist_id);
     /*opening a group and a dataset*/
     /*opening a group*/
@@ -389,7 +443,7 @@ void hdf_createParamFile()
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
 
     /* create a new file */
-    file_id = H5Fcreate("parameters.h5",
+    file_id = H5Fcreate(PARAMETER_FILENAME,
                         H5F_ACC_TRUNC,
                         H5P_DEFAULT,
                         plist_id);
@@ -585,7 +639,7 @@ void hdf_saveKSpec(int timestep) {
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
     /* open file to read and write */
-    file_id = H5Fopen("parameters.h5",H5F_ACC_RDWR,plist_id);
+    file_id = H5Fopen(PARAMETER_FILENAME,H5F_ACC_RDWR,plist_id);
     H5Pclose(plist_id);
     /*opening a group and a dataset*/
     /*opening a group*/
@@ -649,7 +703,7 @@ void hdf_saveMSpec(int timestep){
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
     /* open file to read and write */
-    file_id = H5Fopen("parameters.h5",H5F_ACC_RDWR,plist_id);
+    file_id = H5Fopen(PARAMETER_FILENAME,H5F_ACC_RDWR,plist_id);
     H5Pclose(plist_id);
     /*opening a group and a dataset*/
     /*opening a group*/
@@ -697,13 +751,13 @@ void hdf_initCheckpoints(){
     if (VERBOSE) printf("initialising checkpoints\n");
     hdf_checkpointNames = malloc(parameters.checkpoints * sizeof(hdf_checkpointNames));
     for (size_t i = 0; i < parameters.checkpoints; i++){
-        hdf_checkpointNames[i] = malloc(CHECKPOINT_ID_LEN * sizeof(*hdf_checkpointNames[i]));
+        hdf_checkpointNames[i] = malloc(FILENAME_ID_LEN * sizeof(*hdf_checkpointNames[i]));
     }
 };
 
 void hdf_createCheckpoint(COMPLEX *h, int timestep) {
     if (VERBOSE) printf("create checkpoint\n");
-    snprintf(hdf_newCheckpointName, CHECKPOINT_ID_LEN, "checkpoint_%d.h5", timestep);
+    sprintf(hdf_newCheckpointName, "%scheckpoint_%d.h5", CHECKPOINT_PATH,timestep);
     if (VERBOSE) printf("checkpoint name is %s\n",hdf_newCheckpointName);
     if (hdf_checkpointCount > parameters.checkpoints - 1)
     {
@@ -989,8 +1043,8 @@ void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename){
 }
 
 void hdf_saveDistrib(COMPLEX* h, int timestep){
-    char distrib_name[CHECKPOINT_ID_LEN];
-    snprintf(distrib_name, CHECKPOINT_ID_LEN, "distribution_%d.h5", timestep);
+    char distrib_name[FILENAME_ID_LEN];
+    sprintf(distrib_name, "%s%d.h5", DISTRIBUTION_FILENAME, timestep);
     hdf_dumpCheckpoint(h,  timestep, distrib_name);
 };
 
@@ -1018,7 +1072,7 @@ void hdf_createFieldFile(){
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
 
     /* create a new file */
-    file_id = H5Fcreate("fields.h5",
+    file_id = H5Fcreate(FIELD_FILENAME,
                         H5F_ACC_TRUNC,
                         H5P_DEFAULT,
                         plist_id);
@@ -1164,7 +1218,7 @@ void hdf_saveFields(int timestep){
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
     /* open file to read and write */
-    file_id = H5Fopen("fields.h5",H5F_ACC_RDWR,plist_id);
+    file_id = H5Fopen(FIELD_FILENAME,H5F_ACC_RDWR,plist_id);
     H5Pclose(plist_id);
 
     if (systemType == ELECTROSTATIC)
