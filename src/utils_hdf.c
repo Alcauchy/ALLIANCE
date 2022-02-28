@@ -58,6 +58,10 @@ void complex_t_init(){
  *  INITIALIZE HDF5
  *
  * *************************/
+
+/***************************
+ *  hdf_init
+ * *************************/
 void hdf_init(){
     complex_t_init();
     hdf_initField();
@@ -129,6 +133,9 @@ void hdf_init(){
            chunk_dims_c[5]);
 };
 
+/***************************
+ *  hdf_createSaveDirs
+ * *************************/
 void hdf_createSaveDirs() {
     sprintf(SIMULATION_PATH, "%s%s%s%s%s%s", BASE_DIR,PATH_SEPARATOR,WORK_DIR,PATH_SEPARATOR,parameters.save_dir,PATH_SEPARATOR);
     sprintf(CHECKPOINT_PATH, "%s%s%s%s%s%s%s%s", BASE_DIR,PATH_SEPARATOR,WORK_DIR,PATH_SEPARATOR,parameters.save_dir,PATH_SEPARATOR,CHCK_DIR,PATH_SEPARATOR);
@@ -161,6 +168,9 @@ void hdf_createSaveDirs() {
     }
 };
 
+/***************************
+ *  hdf_create_file_c
+ * *************************/
 void hdf_create_file_c(char *filename, COMPLEX *data){
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -194,6 +204,9 @@ void hdf_create_file_c(char *filename, COMPLEX *data){
     H5Fclose(file_id);
 }
 
+/***************************
+ *  hdf_create_file_r
+ * *************************/
 void hdf_create_file_r(char *filename, double *data){
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -227,6 +240,9 @@ void hdf_create_file_r(char *filename, double *data){
     H5Fclose(file_id);
 }
 
+/***************************
+ *  hdf_initField
+ * *************************/
 void hdf_initField(){
     dataspace_dimsFields[0] = array_global_size.nkx;
     dataspace_dimsFields[1] = array_global_size.nky;
@@ -242,6 +258,10 @@ void hdf_initField(){
     offsetFields[2] = 0;
 
 };
+
+/***************************
+ *  hdf_saveFieldA
+ * *************************/
 void hdf_saveFieldA(char *filename){
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -276,6 +296,9 @@ void hdf_saveFieldA(char *filename){
 
 };
 
+/***************************
+ *  hdf_saveFieldB
+ * *************************/
 void hdf_saveFieldB(char *filename){
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -310,6 +333,9 @@ void hdf_saveFieldB(char *filename){
 
 };
 
+/***************************
+ *  hdf_saveFieldPhi
+ * *************************/
 void hdf_saveFieldPhi(char *filename){
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -344,6 +370,9 @@ void hdf_saveFieldPhi(char *filename){
 
 };
 
+/***************************
+ *  hdf_saveEnergy
+ * *************************/
 void hdf_saveEnergy(int timestep)
 {
     hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
@@ -400,6 +429,10 @@ void hdf_saveEnergy(int timestep)
     H5Dclose(dset_id);
     H5Fclose(file_id);
 }
+
+/***************************
+ *  hdf_saveData
+ * *************************/
 void hdf_saveData(COMPLEX *h, int timestep) {
     if (parameters.save_kSpec == 1 && timestep % parameters.save_kSpec_step == 0) {
         hdf_saveKSpec(timestep);
@@ -429,6 +462,10 @@ void hdf_saveData(COMPLEX *h, int timestep) {
  * PARAMETER FILE
  *
  *
+ * *************************/
+
+/***************************
+ *  hdf_createParamFile
  * *************************/
 void hdf_createParamFile()
 {
@@ -618,6 +655,9 @@ void hdf_createParamFile()
     H5Fclose(file_id);
 }
 
+/***************************
+ *  hdf_createFiles
+ * *************************/
 void hdf_createFiles(){
     hdf_createParamFile();
     if (parameters.save_distrib)
@@ -630,6 +670,9 @@ void hdf_createFiles(){
     }
 }
 
+/***************************
+ *  hdf_saveKSpec
+ * *************************/
 void hdf_saveKSpec(int timestep) {
     hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
     hid_t plist_id; //property list id
@@ -689,6 +732,9 @@ void hdf_saveKSpec(int timestep) {
     H5Fclose(file_id);
 };
 
+/***************************
+ *  hdf_saveMSpec
+ * *************************/
 void hdf_saveMSpec(int timestep){
     hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
     hid_t plist_id; //property list id
@@ -747,6 +793,10 @@ void hdf_saveMSpec(int timestep){
  *
  *
  * *************************/
+
+/***************************
+ *  hdf_initCheckpoints
+ * *************************/
 void hdf_initCheckpoints(){
     if (VERBOSE) printf("initialising checkpoints\n");
     hdf_checkpointNames = malloc(parameters.checkpoints * sizeof(hdf_checkpointNames));
@@ -755,6 +805,9 @@ void hdf_initCheckpoints(){
     }
 };
 
+/***************************
+ *  hdf_createCheckpoint
+ * *************************/
 void hdf_createCheckpoint(COMPLEX *h, int timestep) {
     if (VERBOSE) printf("create checkpoint\n");
     sprintf(hdf_newCheckpointName, "%scheckpoint_%d.h5", CHECKPOINT_PATH,timestep);
@@ -784,6 +837,9 @@ void hdf_createCheckpoint(COMPLEX *h, int timestep) {
     hdf_checkpointCount++;
 };
 
+/***************************
+ *  hdf_dumpCheckpoint
+ * *************************/
 void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename){
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -1055,6 +1111,10 @@ void hdf_saveDistrib(COMPLEX* h, int timestep){
  *
  *
  * *************************/
+
+/***************************
+ *  hdf_createFieldFile
+ * *************************/
 void hdf_createFieldFile(){
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id,dspace_id,filespace;
@@ -1203,6 +1263,9 @@ void hdf_createFieldFile(){
     H5Fclose(file_id);
 };
 
+/***************************
+ *  hdf_saveFields
+ * *************************/
 void hdf_saveFields(int timestep){
     hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
     hid_t plist_id; //property list id
@@ -1373,6 +1436,10 @@ void hdf_saveFields(int timestep){
  * READ FILE
  *
  *
+ * *************************/
+
+/***************************
+ *  hdf_readData
  * *************************/
 void hdf_readData(char *filename, COMPLEX *h) {
     // now we will create a file, and write a dataset into it.

@@ -17,7 +17,7 @@ COMPLEX *space_iKx;
 COMPLEX *space_iKy;
 COMPLEX *space_iKz;
 
-/*
+/***************************************
  * space_init():
  * initializes wave space. Called in init_init() function.
  *
@@ -25,12 +25,12 @@ COMPLEX *space_iKz;
  *
  *  return:
  *
- */
+ ***************************************/
 void space_init() {
     space_generateWaveSpace();
 }
 
-/*
+/***************************************
  * space_generateWaveSpace():
  *  generates wave number arrays space_kx, space_ky, space_kz
  *  of lengths nkx,nky,nkz for a numerical box of size [lx, ly, lz]
@@ -45,7 +45,7 @@ void space_init() {
  *
  *  return:
  *
- */
+ ***************************************/
 void space_generateWaveSpace() {
     space_kx = malloc(array_local_size.nkx *
                       sizeof(*space_kx));
@@ -108,7 +108,7 @@ void space_generateWaveSpace() {
 
 };
 
-/*
+/***************************************
  * space_xGrad(COMPLEX *data):
  *  Computes gradient in kx direction as following:
  *  grad(f) = -2 * pi * i * kx * f
@@ -117,7 +117,7 @@ void space_generateWaveSpace() {
  *
  *  return:
  *
- */
+ ***************************************/
 void space_xGrad(COMPLEX *data) {
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
@@ -134,7 +134,7 @@ void space_xGrad(COMPLEX *data) {
     }
 };
 
-/*
+/***************************************
  * space_yGrad(COMPLEX *data):
  *  Computes gradient in ky direction as following:
  *  grad(f) = -2 * pi * i * ky * f
@@ -143,7 +143,7 @@ void space_xGrad(COMPLEX *data) {
  *
  *  return:
  *
- */
+ ***************************************/
 void space_yGrad(COMPLEX *data) {
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
@@ -160,7 +160,7 @@ void space_yGrad(COMPLEX *data) {
     }
 };
 
-/*
+/***************************************
  * space_zGrad(COMPLEX *data):
  *  Computes gradient in kz direction as following:
  *  grad(f) = -2 * pi * i * kz * f
@@ -169,7 +169,7 @@ void space_yGrad(COMPLEX *data) {
  *
  *  return:
  *
- */
+ ***************************************/
 void space_zGrad(COMPLEX *data) {
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
@@ -186,6 +186,9 @@ void space_zGrad(COMPLEX *data) {
     }
 };
 
+/***************************************
+ * free_wavespace()
+ ***************************************/
 void free_wavespace() {
     free(space_kx);
     free(space_ky);

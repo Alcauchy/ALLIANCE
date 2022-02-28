@@ -8,6 +8,9 @@
 
 struct system_param parameters;
 
+/***************************************
+ * init_global_size():
+ ***************************************/
 void init_global_size() {
     array_global_size.nkx = parameters.nkx;
     array_global_size.nky = parameters.nky;
@@ -30,6 +33,9 @@ void init_global_size() {
                                    array_global_size.ns;
 };
 
+/***************************************
+ * read_parameters(char *filename):
+ ***************************************/
 void read_parameters(char *filename) {
     char string[128];
     char tmp[32];
@@ -272,6 +278,9 @@ void read_parameters(char *filename) {
     }
 }
 
+/***************************************
+ * read_parametersFromFile(char *filename):
+ ***************************************/
 void read_parametersFromFile(char *filename){
     hid_t dset_id, dspace_id, file_id, filespace, memspace;
     hid_t plist_id; //property list id

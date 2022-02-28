@@ -24,27 +24,37 @@ enum DIRECTIONS {
 };           // minus and plus neighbours in m direction
 
 
-
+/***************************
+ *  mpi_init
+ * *************************/
 void mpi_init() {
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 }
 
+/***************************
+ *  mpi_generateTopology
+ * *************************/
 void mpi_generateTopology(){
-    mpi_create_topology();
-    mpi_find_hermite_neighbours();
-    mpi_split_in_rows();
-    mpi_split_in_cols();
+    mpi_createTopology();
+    mpi_findHermiteNeighbours();
+    mpi_splitInRows();
+    mpi_splitInCols();
 }
 
+/***************************
+ *  mpi_kill
+ * *************************/
 void mpi_kill() {
     MPI_Finalize();
     fftw_mpi_cleanup();
 }
 
-
-void mpi_create_topology() {
+/***************************
+ *  mpi_createTopology
+ * *************************/
+void mpi_createTopology() {
     int ndims = 2;
     int periods = {0, 0};
     int reorder = 1;
@@ -56,8 +66,10 @@ void mpi_create_topology() {
     }
 }
 
-
-void mpi_get_local_array_size() {
+/***************************
+ *  mpi_getLocalArraySize
+ * *************************/
+void mpi_getLocalArraySize() {
     array_local_size.nkx = array_global_size.nkx / mpi_dims[1];
     array_local_size.nky = array_global_size.nky;
     array_local_size.nkz = array_global_size.nkz;
@@ -86,7 +98,7 @@ void mpi_get_local_array_size() {
                                   array_local_size.nl *
                                   array_local_size.ns;
 
-    mpi_get_local_array_offsets();
+    mpi_getLocalArrayOffsets();
 
     printf("[MPI process %d] my coordinates = (%d,%d), local array size = (%d,%d,%d,%d,%d,%d), total size is %d\n",
            mpi_my_rank,
@@ -101,7 +113,10 @@ void mpi_get_local_array_size() {
            array_local_size.total_comp);
 }
 
-void mpi_get_local_array_offsets() {
+/***************************
+ *  mpi_getLocalArrayOffsets
+ * *************************/
+void mpi_getLocalArrayOffsets() {
     array_offset.kx = array_local_size.nky *
                       array_local_size.nkz *
                       array_local_size.nm *
@@ -148,8 +163,10 @@ void mpi_get_local_array_offsets() {
 
 };
 
-
-void mpi_find_hermite_neighbours() {
+/***************************
+ *  mpi_findHermiteNeighbours
+ * *************************/
+void mpi_findHermiteNeighbours() {
     char *neighbour_names[2] = {"minus", "plus"};
     //performing shift in cartesian coordinates and finding plus and minus neighbours
     MPI_Cart_shift(mpi_cube_comm, 0, 1, &m_neighbour_ranks[MINUS], &m_neighbour_ranks[PLUS]);
@@ -163,18 +180,28 @@ void mpi_find_hermite_neighbours() {
     }
 }
 
-void mpi_split_in_rows(){
+/***************************
+ *  mpi_splitInRows
+ * *************************/
+void mpi_splitInRows(){
     mpi_my_row_rank = mpi_my_coords[1];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
     printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
 }
-void mpi_split_in_cols(){
+
+/***************************
+ *  mpi_splitInCols
+ * *************************/
+void mpi_splitInCols(){
     mpi_my_col_rank = mpi_my_coords[0];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[1], mpi_my_col_rank, &mpi_col_comm);
     printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_col_rank);
 };
 
-void mpi_init_m_exchange() {
+/***************************
+ *  mpi_initMExchange
+ * *************************/
+void mpi_initMExchange() {
     int dimensions_full[6] = {array_local_size.nkx,
                               array_local_size.nky,
                               array_local_size.nkz,
@@ -213,7 +240,10 @@ void mpi_init_m_exchange() {
 
 }
 
-void mpi_exchange_m_boundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPLEX *minus_boundary) {
+/***************************
+ *  mpi_exchangeMBoundaries
+ * *************************/
+void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPLEX *minus_boundary) {
     double start;
     double end;
     start = MPI_Wtime();

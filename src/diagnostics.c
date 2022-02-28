@@ -12,6 +12,9 @@ double *diag_mSpec = 0;
 double *diag_shells = 0;
 double diag_freeEnergy;
 
+/***************************************
+ * diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep)
+ ***************************************/
 void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
     if (parameters.compute_k && timestep % parameters.compute_k_every == 0) {
         diag_computeKSpectrum(g, h, diag_kSpec);
@@ -21,6 +24,9 @@ void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
     }
 };
 
+/***************************************
+ * diag_initSpec()
+ ***************************************/
 void diag_initSpec() {
     if (parameters.compute_k) {
         diag_kSpec = malloc(parameters.k_shells * sizeof(*diag_kSpec));
@@ -39,6 +45,9 @@ void diag_initSpec() {
     }
 };
 
+/***************************************
+ * diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h, int it)
+ ***************************************/
 void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h, int it) {
     if (parameters.save_energy && it % parameters.save_energy_step == 0) {
         COMPLEX sum = 0;
@@ -52,6 +61,9 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h, int it) {
 
 };
 
+/***************************************
+ * diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec)
+ ***************************************/
 void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
     COMPLEX *sum = malloc(parameters.k_shells * sizeof(*sum));
     COMPLEX *buf = malloc(parameters.k_shells * sizeof(*buf));
@@ -100,6 +112,9 @@ void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
     }
 };
 
+/***************************************
+ * diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec)
+ ***************************************/
 void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
     COMPLEX *sum = malloc(array_local_size.nm * sizeof(*sum));
     COMPLEX *buf = malloc(array_local_size.nm * sizeof(*buf));
@@ -131,6 +146,9 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
 
 };
 
+/***************************************
+ * diag_getShells()
+ ***************************************/
 void diag_getShells() {
     diag_shells = malloc((parameters.k_shells + 1) * sizeof(*diag_shells));
     for (size_t i = 0; i < parameters.k_shells + 1; i++) {

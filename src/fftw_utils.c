@@ -17,6 +17,10 @@ double* r_d;                                     // real data array buffer; used
 double fftw_norm;                               //normalization coefficient for backward fft transform
 void (*fftw_dealiasing)(COMPLEX*) = NULL;
 int *global_nkx_index;                           // array which stores the global position of nkx on the processor. Needed for dealiasing, in order to find Nkx/3 and 2*Nkx/3 and put all modes between those to zeros.
+
+/***************************************
+ * fftw_init(MPI_Comm communicator)
+ ***************************************/
 void fftw_init(MPI_Comm communicator){
     fftw_mpi_init();
     size_c[0] = array_global_size.nkx;
@@ -74,6 +78,9 @@ void fftw_init(MPI_Comm communicator){
     for (size_t ii = 0; ii<2*local_size; ii++){ r_d[ii] = 0.; }
 }
 
+/***************************************
+ * fftw_r2c(double *data_r, COMPLEX *data_c)
+ ***************************************/
 void fftw_r2c(double *data_r, COMPLEX *data_c){
     int start = MPI_Wtime();
     fftw_copy_buffer_r(r_d,data_r);
@@ -83,6 +90,10 @@ void fftw_r2c(double *data_r, COMPLEX *data_c){
 
 
 };
+
+/***************************************
+ * fftw_c2r(COMPLEX *data_c, double *data_r)
+ ***************************************/
 void fftw_c2r(COMPLEX *data_c, double *data_r){
     int start = MPI_Wtime();
     if (mpi_my_coords[1] == 0){
@@ -102,6 +113,9 @@ void fftw_c2r(COMPLEX *data_c, double *data_r){
     }
 }
 
+/***************************************
+ * fftw_kill()
+ ***************************************/
 void fftw_kill(){
     fftw_destroy_plan(plan_c2r);
     fftw_destroy_plan(plan_r2c);
@@ -110,6 +124,9 @@ void fftw_kill(){
     fftw_mpi_cleanup();
 }
 
+/***************************************
+ * fftw_copy_buffer_r(double *ar1, double *ar2)
+ ***************************************/
 void fftw_copy_buffer_r(double *ar1, double *ar2){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
         for(size_t iky = 0; iky < array_local_size.nky; iky++){
@@ -127,6 +144,9 @@ void fftw_copy_buffer_r(double *ar1, double *ar2){
     }
 }
 
+/***************************************
+ * fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2)
+ ***************************************/
 void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
         for(size_t iky = 0; iky < array_local_size.nky; iky++){
@@ -143,11 +163,17 @@ void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2){
     }
 }
 
+/***************************************
+ * cosinus(double f,int ix)
+ ***************************************/
 double cosinus(double f,int ix){
 
     return cos((double)2. * M_PI * f / array_global_size.nkx * (local_0_start + ix));
 }
 
+/***************************************
+ * fftw_test_fill(double *ar,double f)
+ ***************************************/
 void fftw_test_fill(double *ar,double f){
     for(int i = 0; i<local_n0;i++){
         for(int j = 0; j<array_local_size.nky;j++){
@@ -158,12 +184,18 @@ void fftw_test_fill(double *ar,double f){
     }
 }
 
+/***************************************
+ * fftw_normalise_data(double *data)
+ ***************************************/
 void fftw_normalise_data(double *data){
     for(size_t i = 0; i < array_local_size.total_real; i++) {
         data[i] *= fftw_norm;
     }
 }
 
+/***************************************
+ * dealiasing23(COMPLEX *data_c)
+ ***************************************/
 void dealiasing23(COMPLEX *data_c){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
         for(size_t iky = 0; iky < array_local_size.nky; iky++){

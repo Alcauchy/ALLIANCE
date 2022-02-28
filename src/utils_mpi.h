@@ -14,14 +14,14 @@
 void mpi_init();                        //initialize mpi environment
 void mpi_kill();                        //finalize mpi environment
 void mpi_generateTopology();
-void mpi_create_topology();             //create 2D topology
-void mpi_find_hermite_neighbours();     // finds neighbour processes in hermite direction
-void mpi_split_in_rows();               // splits communicators in rows. needed for fftw transforms along kx direction of parallelization
-void mpi_split_in_cols();               // splits communicator in columns. Needed to send data to compute fields for each process.
-void mpi_init_m_exchange();             // used to define all the variables needed to prepare exchange of m+1 and m-1 Hermite moments between processors
-void mpi_exchange_m_boundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPLEX *minus_boundary);       // required to exchange the m+1 and m-1 Hermite moments between processes
-void mpi_get_local_array_size();        //computes array sizes stored locally by each process
-void mpi_get_local_array_offsets();     //computes offsets for easy 6d indexing (see function get_flat_r)
+void mpi_createTopology();             //create 2D topology
+void mpi_findHermiteNeighbours();     // finds neighbour processes in hermite direction
+void mpi_splitInRows();               // splits communicators in rows. needed for fftw transforms along kx direction of parallelization
+void mpi_splitInCols();               // splits communicator in columns. Needed to send data to compute fields for each process.
+void mpi_initMExchange();             // used to define all the variables needed to prepare exchange of m+1 and m-1 Hermite moments between processors
+void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPLEX *minus_boundary);       // required to exchange the m+1 and m-1 Hermite moments between processes
+void mpi_getLocalArraySize();        //computes array sizes stored locally by each process
+void mpi_getLocalArrayOffsets();     //computes offsets for easy 6d indexing (see function get_flat_r)
 
 //from mpi_init.c file
 extern int mpi_my_rank;                // rank of the process for 2D MPI communicator

@@ -13,7 +13,7 @@ void init_init(char *filename){
 
     init_initEnums();
     mpi_generateTopology();
-    mpi_get_local_array_size();
+    mpi_getLocalArraySize();
     fftw_init(mpi_row_comm);
     space_init();
     diag_initSpec();

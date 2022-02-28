@@ -9,12 +9,18 @@ struct phys_params var_var;
 double *var_J0;
 double *var_J1;
 
+/***************************
+ *  var_init()
+ * *************************/
 void var_init(){
     var_varInit();
     var_getJ0();
     var_getJ1();
 };
 
+/***************************
+ *  var_getJ0()
+ * *************************/
 void var_getJ0(){
     var_J0 = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.ns * sizeof(*var_J0));
     for (size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.ns; i++)
@@ -23,6 +29,9 @@ void var_getJ0(){
     }
 }
 
+/***************************
+ *  var_getJ1()
+ * *************************/
 void var_getJ1(){
     var_J1 = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.ns * sizeof(*var_J1));
     for (size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.ns; i++)
@@ -39,12 +48,18 @@ void var_getJ1(){
     }
 }
 
+/***************************
+ *  var_getJIndex()
+ * *************************/
 size_t var_getJIndex(size_t ikx, size_t iky, size_t is){
     return ikx * array_local_size.nky * array_local_size.ns +
            iky * array_local_size.ns +
            is;
 };
 
+/***************************
+ *  var_varInit()
+ * *************************/
 void var_varInit(){
     var_var.m = malloc(parameters.ns * sizeof(*var_var.m));
     var_var.q = malloc(parameters.ns * sizeof(*var_var.q));

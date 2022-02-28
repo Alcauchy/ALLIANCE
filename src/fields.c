@@ -35,6 +35,9 @@ COMPLEX *g00;
 COMPLEX *g10;
 COMPLEX *g01;
 
+/***************************************
+ * fields_init():
+ ***************************************/
 void fields_init() {
     global_nm_index = malloc(array_local_size.nm * sizeof(*global_nm_index));
     for (size_t i = 0; i < array_local_size.nm; i++){
@@ -231,6 +234,9 @@ void fields_init() {
     }
 };
 
+/***************************************
+ * fields_init():
+ ***************************************/
 void fields_getA(const COMPLEX *g) {
     size_t flatInd;
     size_t flatInd2D;
@@ -265,6 +271,9 @@ void fields_getA(const COMPLEX *g) {
     }
 };
 
+/***************************************
+ * fields_getB():
+ ***************************************/
 void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
     size_t ind2D;
     size_t ind3D;
@@ -321,6 +330,9 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
     }
 };
 
+/***************************************
+ * fields_getPhi():
+ ***************************************/
 void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
     size_t ind2D;
     size_t ind3D;
@@ -389,12 +401,18 @@ void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
     }
 };
 
+/***************************************
+ * fields_getFields():
+ ***************************************/
 void fields_getFields(COMPLEX *g00, COMPLEX *g10, COMPLEX *g01) {
     fields_getPhi(g00,g10);
     fields_getB(g00,g01);
     fields_getA(g10);
 };
 
+/***************************************
+ * fields_getChi():
+ ***************************************/
 void fields_getChi() {
     switch (systemType)
     {
@@ -409,6 +427,9 @@ void fields_getChi() {
     }
 };
 
+/***************************************
+ * fields_getChiPhi():
+ ***************************************/
 void fields_getChiPhi(){
     size_t ind3D = 0;
     size_t ind4D = 0;
@@ -434,6 +455,9 @@ void fields_getChiPhi(){
     }
 }
 
+/***************************************
+ * fields_getChiB():
+ ***************************************/
 void fields_getChiB(){
     size_t ind3D = 0;
     size_t ind4D = 0;
@@ -461,6 +485,9 @@ void fields_getChiB(){
     }
 }
 
+/***************************************
+ * fields_getChiA():
+ ***************************************/
 void fields_getChiA(){
     size_t ind3D = 0;
     size_t ind4D = 0;
@@ -486,6 +513,9 @@ void fields_getChiA(){
     }
 }
 
+/***************************************
+ * fields_sendG(COMPLEX *g):
+ ***************************************/
 void fields_sendG(COMPLEX *g){
     /* fill buffers with data from processor which has required data */
     size_t ind4D;
@@ -551,12 +581,18 @@ void fields_sendG(COMPLEX *g){
     }
 };
 
+/***************************************
+ * fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01):
+ ***************************************/
 void fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01){
     fields_getPhiFromH(h00);
     fields_getBFromH(h00, h01);
     fields_getAFromH(h10);
 };
 
+/***************************************
+ * fields_getAFromH(const COMPLEX* h)
+ ***************************************/
 void fields_getAFromH(const COMPLEX* h){
     size_t flatInd;
     size_t flatInd2D;
@@ -600,6 +636,9 @@ void fields_getAFromH(const COMPLEX* h){
     }
 };
 
+/***************************************
+ * fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1)
+ ***************************************/
 void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
     size_t ind4D;
     switch(kinetic)
@@ -636,6 +675,9 @@ void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
 
 };
 
+/***************************************
+ * fields_getPhiFromH(const COMPLEX* h)
+ ***************************************/
 void fields_getPhiFromH(const COMPLEX* h){
     size_t ind4D;
     double q2nT = 0;

@@ -3,6 +3,7 @@
 //
 #include "distrib.h"
 
+
 void distrib_getH(COMPLEX *h, const COMPLEX *g) {
     size_t ind6D;
     size_t ind4D;

@@ -7,8 +7,15 @@
 
 struct solver solver;
 
+/***************************************
+ * solver_init():
+ ***************************************/
 void solver_init(){
     solver.dt = parameters.dt;
     solver.Nt = parameters.Nt;
 };
+
+/***************************************
+ * solver_makeStep():
+ ***************************************/
 void solver_makeStep(){};
