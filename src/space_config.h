@@ -11,13 +11,10 @@
 #include "fftw3-mpi.h"
 #include "utils_mpi.h"
 #include "array.h"
-#include "fftw_utils.h"
+#include "utils_fftw.h"
 
 void space_init();
 void space_generateWaveSpace();     // generates wave vector space
-void space_xGrad(COMPLEX *data);    // computes gradient in x direction
-void space_yGrad(COMPLEX *data);    // computes gradient in y direction
-void space_zGrad(COMPLEX *data);    // computes gradient in z direction
 void free_wavespace();
 
 extern double *space_kPerp2;
@@ -25,4 +22,7 @@ extern double *space_kPerp;
 extern double *space_kx;
 extern double *space_ky;
 extern double *space_kz;
+extern COMPLEX *space_iKx;
+extern COMPLEX *space_iKy;
+extern COMPLEX *space_iKz;
 #endif //ALLIANCE_ALPHA_1_0_SPACE_CONFIG_H

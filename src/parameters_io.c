@@ -3,7 +3,7 @@
 //
 
 #include "parameters_io.h"
-#include "fftw_utils.h"
+#include "utils_fftw.h"
 #define VERBOSE 0
 
 struct system_param parameters;
@@ -178,16 +178,6 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.compute_m);
                 printf("[MPI process %d] compute m spectra = %d\n", mpi_my_rank, parameters.compute_m);
             }
-            if (strcmp(tmp, "compute_k_every") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.compute_k_every);
-                printf("[MPI process %d] compute k spectra every %d timesteps\n", mpi_my_rank, parameters.compute_k_every);
-            }
-            if (strcmp(tmp, "compute_m_every") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.compute_m_every);
-                printf("[MPI process %d] compute m spectra every %d timesteps\n", mpi_my_rank, parameters.compute_m_every);
-            }
             if (strcmp(tmp, "first_shell") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.firstShell);
@@ -198,76 +188,50 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.lastShell);
                 printf("[MPI process %d] last shell =  %f\n", mpi_my_rank, parameters.lastShell);
             }
-            if (strcmp(tmp, "save_field_every") == 0)
+            if (strcmp(tmp, "iter_EMfield") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_field_step);
-                printf("[MPI process %d] save field every %d timesteps\n", mpi_my_rank, parameters.save_field_step);
+                sscanf(string, "%*s : %d", &parameters.iter_EMfield);
+                printf("[MPI process %d] save field every %d timesteps\n", mpi_my_rank, parameters.iter_EMfield);
             }
             if (strcmp(tmp, "checkpoints") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.checkpoints);
                 printf("[MPI process %d] number of checkpoints = %d \n", mpi_my_rank, parameters.checkpoints);
             }
-            if (strcmp(tmp, "save_checkpoint_every") == 0)
+            if (strcmp(tmp, "iter_checkpoint") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_checkpoint_step);
-                printf("[MPI process %d] save checkpoint every %d timesteps\n", mpi_my_rank, parameters.save_checkpoint_step);
+                sscanf(string, "%*s : %d", &parameters.iter_checkpoint);
+                printf("[MPI process %d] save checkpoint every %d timesteps\n", mpi_my_rank, parameters.iter_checkpoint);
             }
-            if (strcmp(tmp, "save_distribution_every") == 0)
+            if (strcmp(tmp, "iter_distribution") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_distrib_step);
-                printf("[MPI process %d] save distribution function every %d timesteps\n", mpi_my_rank, parameters.save_distrib_step);
+                sscanf(string, "%*s : %d", &parameters.iter_distribution);
+                printf("[MPI process %d] save distribution function every %d timesteps\n", mpi_my_rank, parameters.iter_distribution);
             }
             if (strcmp(tmp, "save_distribution") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.save_distrib);
                 printf("[MPI process %d] save distribution = %d\n", mpi_my_rank, parameters.save_distrib);
             }
-            if (strcmp(tmp, "save_k_spec_every") == 0)
+            if (strcmp(tmp, "iter_diagnostics") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_kSpec_step);
-                printf("[MPI process %d] save k spectrum every %d timesteps\n", mpi_my_rank, parameters.save_kSpec_step);
+                sscanf(string, "%*s : %d", &parameters.iter_diagnostics);
+                printf("[MPI process %d] save free energy every %d timesteps\n", mpi_my_rank, parameters.iter_diagnostics);
             }
-            if (strcmp(tmp, "save_m_spec_every") == 0)
+            if (strcmp(tmp, "save_diagnostics") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_mSpec_step);
-                printf("[MPI process %d] save m spectrum every %d timesteps\n", mpi_my_rank, parameters.save_mSpec_step);
-            }
-            if (strcmp(tmp, "save_energy_every") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.save_energy_step);
-                printf("[MPI process %d] save free energy every %d timesteps\n", mpi_my_rank, parameters.save_energy_step);
-            }
-            if (strcmp(tmp, "save_k_spec") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.save_kSpec);
-                printf("[MPI process %d] save k spectrum = %d \n", mpi_my_rank, parameters.save_kSpec);
-            }
-            if (strcmp(tmp, "save_m_spec") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.save_mSpec);
-                printf("[MPI process %d] save m spectrum = %d \n", mpi_my_rank, parameters.save_mSpec);
+                sscanf(string, "%*s : %d", &parameters.save_diagnostics);
+                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_diagnostics);
             }
             if (strcmp(tmp, "save_energy") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_energy);
-                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_energy);
+                sscanf(string, "%*s : %d", &parameters.save_diagnostics);
+                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_diagnostics);
             }
-            if (strcmp(tmp, "save_energy") == 0)
+            if (strcmp(tmp, "save_EMfield") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_energy);
-                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_energy);
-            }
-            if (strcmp(tmp, "save_field") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.save_field);
-                printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_field);
-            }
-
-            if (strcmp(tmp, "save_directory") == 0)
-            {
-                sscanf(string, "%*s : %s", &parameters.save_dir);
-                printf("[MPI process %d] save to %s directory \n", mpi_my_rank, parameters.save_dir);
+                sscanf(string, "%*s : %d", &parameters.save_EMfield);
+                printf("[MPI process %d] save electromagnetic fields = %d \n", mpi_my_rank, parameters.save_EMfield);
             }
         }
     }

@@ -9,7 +9,7 @@
 #include "parameters_io.h"
 #include "array.h"
 #include "utils_mpi.h"
-#include "fftw_utils.h"
+#include "utils_fftw.h"
 #include "utils_hdf.h"
 #include "fields.h"
 #include "equation.h"

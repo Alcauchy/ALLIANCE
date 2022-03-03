@@ -6,9 +6,10 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#define BASE_DIR ".."
-#define WORK_DIR "wrk"
+#define BASE_DIR "."
+#define WORK_DIR "."
 #define CHCK_DIR "checkpoint"
+#define CHCK_NAME "chk"
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR "\\"
 #else
@@ -137,26 +138,26 @@ void hdf_init(){
  *  hdf_createSaveDirs
  * *************************/
 void hdf_createSaveDirs() {
-    sprintf(SIMULATION_PATH, "%s%s%s%s%s%s", BASE_DIR,PATH_SEPARATOR,WORK_DIR,PATH_SEPARATOR,parameters.save_dir,PATH_SEPARATOR);
-    sprintf(CHECKPOINT_PATH, "%s%s%s%s%s%s%s%s", BASE_DIR,PATH_SEPARATOR,WORK_DIR,PATH_SEPARATOR,parameters.save_dir,PATH_SEPARATOR,CHCK_DIR,PATH_SEPARATOR);
+    sprintf(SIMULATION_PATH, "%s%s", BASE_DIR,PATH_SEPARATOR);
+    sprintf(CHECKPOINT_PATH, "%s%s%s%s", BASE_DIR,PATH_SEPARATOR,CHCK_DIR,PATH_SEPARATOR);
     sprintf(PARAMETER_FILENAME, "%s%s", SIMULATION_PATH,"parameters.h5");
     if (VERBOSE) printf("SIMULATION PATH = %s\n",SIMULATION_PATH);
     if (VERBOSE) printf("CHECKPOINT PATH = %s\n",CHECKPOINT_PATH);
     if (VERBOSE) printf("PARAMETER FILENAME = %s\n",PARAMETER_FILENAME);
     if(mpi_my_rank == CHECKPOINT_ROOT)
     {
-        if (access(SIMULATION_PATH, F_OK) == 0)
+        if (access(CHECKPOINT_PATH, F_OK) == 0)
         {
             //printf("directory %s already exists, please ensure you don't need it and delete it manually. Aborting...\n",SIMULATION_PATH);
             //exit(1);
         }
         else
         {
-            mkdir(SIMULATION_PATH,0777);
+           // mkdir(SIMULATION_PATH,0777);
             mkdir(CHECKPOINT_PATH,0777);
         }
     }
-    if(parameters.save_field)
+    if(parameters.save_EMfield)
     {
         sprintf(FIELD_FILENAME, "%s%s", SIMULATION_PATH,"fields.h5");
         if (VERBOSE) printf("FIELD FILENAME = %s\n",FIELD_FILENAME);
@@ -434,23 +435,14 @@ void hdf_saveEnergy(int timestep)
  *  hdf_saveData
  * *************************/
 void hdf_saveData(COMPLEX *h, int timestep) {
-    if (parameters.save_kSpec == 1 && timestep % parameters.save_kSpec_step == 0) {
-        hdf_saveKSpec(timestep);
-    }
-    if (parameters.save_mSpec && timestep % parameters.save_mSpec_step == 0) {
-        hdf_saveMSpec(timestep);
-    }
-    if (parameters.save_energy && timestep % parameters.save_energy_step == 0) {
-        hdf_saveEnergy(timestep);
-    }
-    if (parameters.save_field && timestep % parameters.save_field_step == 0) {
+    if (parameters.save_EMfield && timestep % parameters.iter_EMfield == 0) {
         hdf_saveFields(timestep);
     }
-    if (parameters.checkpoints && timestep % parameters.save_checkpoint_step == 0)
+    if (parameters.checkpoints && timestep % parameters.iter_checkpoint == 0)
     {
         hdf_createCheckpoint(h, timestep);
     }
-    if (parameters.save_distrib && timestep % parameters.save_distrib_step == 0)
+    if (parameters.save_distrib && timestep % parameters.iter_distribution == 0)
     {
         hdf_saveDistrib(h,timestep);
     }
@@ -531,7 +523,7 @@ void hdf_createParamFile()
     H5Gclose(group_id);
 
     /*creating a group to save spectra*/
-    if(parameters.save_mSpec || parameters.save_kSpec)
+    if(parameters.save_diagnostics || parameters.compute_k)
     {
         group_id = H5Gcreate2(file_id, "/spectra", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         H5Gclose(group_id);
@@ -562,7 +554,7 @@ void hdf_createParamFile()
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
-        if(parameters.save_kSpec)
+        if(parameters.compute_k)
         {
             /* creating shells dataset */
             plist_id = H5Pcreate(H5P_DATASET_CREATE);
@@ -592,7 +584,7 @@ void hdf_createParamFile()
             H5Dclose(dset_id);
             H5Pclose(plist_id);
         }
-        if(parameters.save_mSpec)
+        if(parameters.save_diagnostics)
         {
             /*creating an mSpec dataset*/
             plist_id   = H5Pcreate(H5P_DATASET_CREATE);
@@ -612,7 +604,7 @@ void hdf_createParamFile()
     }
 
     /*creating a group to save free energy*/
-    if(parameters.save_energy)
+    if(parameters.save_diagnostics)
     {
         group_id = H5Gcreate2(file_id, "/freeEnergy", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         H5Gclose(group_id);
@@ -660,11 +652,7 @@ void hdf_createParamFile()
  * *************************/
 void hdf_createFiles(){
     hdf_createParamFile();
-    if (parameters.save_distrib)
-    {
-        //hdf_createDistribFile();
-    }
-    if (parameters.save_field)
+    if (parameters.save_EMfield)
     {
         hdf_createFieldFile();
     }
@@ -810,7 +798,7 @@ void hdf_initCheckpoints(){
  * *************************/
 void hdf_createCheckpoint(COMPLEX *h, int timestep) {
     if (VERBOSE) printf("create checkpoint\n");
-    sprintf(hdf_newCheckpointName, "%scheckpoint_%d.h5", CHECKPOINT_PATH,timestep);
+    sprintf(hdf_newCheckpointName, "%s%s_%d.h5", CHECKPOINT_PATH,CHCK_NAME,timestep);
     if (VERBOSE) printf("checkpoint name is %s\n",hdf_newCheckpointName);
     if (hdf_checkpointCount > parameters.checkpoints - 1)
     {

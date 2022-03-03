@@ -2,7 +2,7 @@
 // Created by alcauchy on 09/02/2022.
 //
 
-#include "tests.h"
+#include "utils_tests.h"
 #include "diagnostics.h"
 
 #define PRINT_A 0
@@ -113,8 +113,10 @@ void test_mainFunction(){
     {
         solver_makeStep();
         //solver_updateDt();
-        diag_computeSpectra(g, h, it);
-        diag_computeFreeEnergy(g, h, it);
+        if(parameters.save_diagnostics && it % parameters.iter_diagnostics == 0)
+        {
+            diag_compute(g, h, it);
+        }
         hdf_saveData(h, it);
     }
 };

@@ -11,7 +11,7 @@ set(CMAKE_C_FLAGS_RELEASE "-O3")
 add_executable(Alliance_alpha_1_0
         src/main.c
         src/utils_mpi.h src/utils_mpi.c
-        src/fftw_utils.c src/fftw_utils.h
+        src/utils_fftw.c src/utils_fftw.h
         src/utils_hdf.h src/utils_hdf.c
         src/parameters_io.c src/parameters_io.h
         src/diagnostics.h src/diagnostics.c
@@ -23,7 +23,7 @@ add_executable(Alliance_alpha_1_0
         src/space_config.c src/space_config.h
         src/distrib.h src/distrib.c
         src/variables.h src/variables.c
-        src/tests.h src/tests.c)
+        src/utils_tests.h src/utils_tests.c)
 target_link_libraries(Alliance_alpha_1_0 "/home/hdf5/lib/libhdf5.so")
 target_link_libraries(Alliance_alpha_1_0 "/usr/local/lib/libfftw3_mpi.a")
 target_link_libraries(Alliance_alpha_1_0 "/usr/local/lib/libfftw3.a")

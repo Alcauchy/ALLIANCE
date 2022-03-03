@@ -16,10 +16,10 @@ double diag_freeEnergy;
  * diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep)
  ***************************************/
 void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
-    if (parameters.compute_k && timestep % parameters.compute_k_every == 0) {
+    if (parameters.compute_k && timestep % parameters.iter_diagnostics == 0) {
         diag_computeKSpectrum(g, h, diag_kSpec);
     }
-    if (parameters.compute_m && timestep % parameters.compute_m_every == 0) {
+    if (parameters.compute_m && timestep % parameters.iter_diagnostics == 0) {
         diag_computeMSpectrum(g, h, diag_mSpec);
     }
 };
@@ -33,12 +33,9 @@ void diag_initSpec() {
         diag_getShells();
     }
     if (parameters.compute_m) {
-        if (mpi_my_row_rank == 0)
-        {
+        if (mpi_my_row_rank == 0) {
             diag_mSpec = malloc(array_local_size.nm * sizeof(*diag_mSpec));
-        }
-        else
-        {
+        } else {
             diag_mSpec = 0;
         }
 
@@ -46,18 +43,16 @@ void diag_initSpec() {
 };
 
 /***************************************
- * diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h, int it)
+ * diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h)
  ***************************************/
-void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h, int it) {
-    if (parameters.save_energy && it % parameters.save_energy_step == 0) {
-        COMPLEX sum = 0;
-        COMPLEX freeEnergy = 0;
-        for (size_t i = 0; i < array_local_size.total_comp; i++) {
-            sum += g[i] * conj(h[i]);
-        }
-        MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-        diag_freeEnergy = creal(freeEnergy);
+void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
+    COMPLEX sum = 0;
+    COMPLEX freeEnergy = 0;
+    for (size_t i = 0; i < array_local_size.total_comp; i++) {
+        sum += g[i] * conj(h[i]);
     }
+    MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+    diag_freeEnergy = creal(freeEnergy);
 
 };
 
@@ -96,15 +91,11 @@ void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
     }
     MPI_Reduce(sum, buf, parameters.k_shells, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
     MPI_Reduce(norm, total_norm, parameters.k_shells, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-    if (mpi_my_rank == TO_ROOT)
-    {
-        for (size_t i = 0; i < parameters.k_shells; i++){
-            if (total_norm[i])
-            {
-                diag_kSpec[i] = creal(buf[i]/total_norm[i]);
-            }
-            else
-            {
+    if (mpi_my_rank == TO_ROOT) {
+        for (size_t i = 0; i < parameters.k_shells; i++) {
+            if (total_norm[i]) {
+                diag_kSpec[i] = creal(buf[i] / total_norm[i]);
+            } else {
                 diag_kSpec[i] = 0;
             }
 
@@ -119,14 +110,14 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
     COMPLEX *sum = malloc(array_local_size.nm * sizeof(*sum));
     COMPLEX *buf = malloc(array_local_size.nm * sizeof(*buf));
     size_t ind6D;
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
-        for(size_t iy = 0; iy < array_local_size.nky; iy++){
-            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
-                for(size_t im = 0; im < array_local_size.nm; im++){
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
                     sum[im] = 0;
-                    for(size_t il = 0; il < array_local_size.nl; il++){
-                        for(size_t is = 0; is < array_local_size.ns; is++){
-                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            ind6D = get_flat_c(is, il, im, ix, iy, iz);
                             sum[im] += g[ind6D] * conj(h[ind6D]);
                         }
                     }
@@ -135,13 +126,11 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
         }
     }
     MPI_Reduce(sum, buf, array_local_size.nm, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, mpi_row_comm);
-    if(mpi_my_row_rank == TO_ROOT)
-    {
-        for (size_t i = 0; i < array_local_size.nm; i++){
+    if (mpi_my_row_rank == TO_ROOT) {
+        for (size_t i = 0; i < array_local_size.nm; i++) {
             diag_mSpec[i] = creal(buf[i]);
         }
     }
-
 
 
 };
@@ -158,5 +147,23 @@ void diag_getShells() {
 
 }
 
+/***************************************
+ * diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields)
+ ***************************************/
 double diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields) {};
 
+/***************************************
+ * diag_compute(int iter)
+ ***************************************/
+void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
+    diag_computeFreeEnergy(g, h);
+    hdf_saveEnergy(timestep);
+    if (parameters.compute_k) {
+        diag_computeKSpectrum(g, h, diag_kSpec);
+        hdf_saveKSpec(timestep);
+    }
+    if (parameters.compute_m) {
+        diag_computeMSpectrum(g, h, diag_mSpec);
+        hdf_saveMSpec(timestep);
+    }
+}

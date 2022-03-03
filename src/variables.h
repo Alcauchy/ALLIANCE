@@ -11,7 +11,7 @@
 #include "fftw3-mpi.h"
 #include "utils_mpi.h"
 #include "array.h"
-#include "fftw_utils.h"
+#include "utils_fftw.h"
 #include "parameters_io.h"
 #include "space_config.h"
 

@@ -1,12 +1,12 @@
 #include "utils_mpi.h"
-#include "fftw_utils.h"
+#include "utils_fftw.h"
 #include "utils_hdf.h"
 #include "parameters_io.h"
 #include "diagnostics.h"
 #include "space_config.h"
 #include "init.h"
 #include "fields.h"
-#include "tests.h"
+#include "utils_tests.h"
 
 int main(int argc, char **argv) {
     char *filename;

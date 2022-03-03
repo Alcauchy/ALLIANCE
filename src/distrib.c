@@ -88,3 +88,81 @@ void distrib_getG(COMPLEX *g, const COMPLEX *h) {
     }
 
 };
+
+/***************************************
+ * distrib_getXGrad(COMPLEX *data):
+ *  Computes gradient in kx direction as following:
+ *  grad(f) = -2 * pi * i * kx * f
+ *  args:
+ *  COMPLEX *data : 6D data array gradient of which is going to be taken
+ *
+ *  return:
+ *
+ ***************************************/
+void distrib_getXGrad(COMPLEX *data) {
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            data[get_flat_c(is, il, im, ix, iy, iz)] *= space_iKx[ix];
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
+
+/***************************************
+ * distrib_getYGrad(COMPLEX *data):
+ *  Computes gradient in ky direction as following:
+ *  grad(f) = -2 * pi * i * ky * f
+ *  args:
+ *  COMPLEX *data : 6D data array gradient of which is going to be taken
+ *
+ *  return:
+ *
+ ***************************************/
+void distrib_getYGrad(COMPLEX *data) {
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            data[get_flat_c(is, il, im, ix, iy, iz)] *= space_iKy[iy];
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
+
+/***************************************
+ * distrib_getZGrad(COMPLEX *data):
+ *  Computes gradient in kz direction as following:
+ *  grad(f) = -2 * pi * i * kz * f
+ *  args:
+ *  COMPLEX *data : 6D data array gradient of which is going to be taken
+ *
+ *  return:
+ *
+ ***************************************/
+void distrib_getZGrad(COMPLEX *data) {
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            data[get_flat_c(is, il, im, ix, iy, iz)] *= space_iKz[iz];
+                        }
+                    }
+                }
+            }
+        }
+    }
+};

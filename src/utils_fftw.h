@@ -2,8 +2,8 @@
 // Created by alcauchy on 08/12/2021.
 //
 
-#ifndef ALLIANCE_ALPHA_1_0_FFTW_UTILS_H
-#define ALLIANCE_ALPHA_1_0_FFTW_UTILS_H
+#ifndef ALLIANCE_ALPHA_1_0_UTILS_FFTW_H
+#define ALLIANCE_ALPHA_1_0_UTILS_FFTW_H
 #include <stdio.h> // standard C lib
 #include <stdlib.h> //Standard C lib
 #include <math.h> //Math constants
@@ -27,4 +27,4 @@ double cosinus(double f,int ix);                            // returns cos(2*pi*
 
 extern int *global_nkx_index;
 extern void (*fftw_dealiasing)(COMPLEX *);                  // pointer to the dealiasing function. Used to choose the dealiasing function user wants to use.
-#endif //ALLIANCE_ALPHA_1_0_FFTW_UTILS_H
+#endif //ALLIANCE_ALPHA_1_0_UTILS_FFTW_H
