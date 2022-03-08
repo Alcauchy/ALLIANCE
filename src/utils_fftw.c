@@ -1,6 +1,20 @@
+////////////////////////////////////////////////////////////////////////////////
+// 08/12/2021 created by Gene Gorbunov
+//                                   FFTW UTILITIES
 //
-// Created by alcauchy on 08/12/2021.
+//  fftw_init
+//  fftw_kill
+//  fftw_r2c
+//  fftw_c2r
+//  fftw_copy_buffer_r
+//  fftw_copy_buffer_c
+//  fftw_normalise_data
+//  fftw_test_fill
+//  dealiasing23
+//  cosinus
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 
 #include "utils_fftw.h"
 #define FFTW_RANK 3

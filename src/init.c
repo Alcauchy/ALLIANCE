@@ -1,13 +1,25 @@
+////////////////////////////////////////////////////////////////////////////////
+// 03/02/2022 created by Gene Gorbunov
+//                                   INITIALIZATION
 //
-// Created by alcauchy on 03/02/2022.
+// init_start
+// init_printParameters
+// init_initEnums
+// init_conditions
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 #include "init.h"
 #define RANK_IO 0
 
 enum adiabatic kinetic;
 enum electromagnetic systemType;
 enum initial initialConditions;
-void init_init(char *filename){
+
+/***************************************
+ * init_start(char *filename)
+ ***************************************/
+void init_start(char *filename){
     mpi_init();
     read_parameters(filename);
 
@@ -24,6 +36,9 @@ void init_init(char *filename){
     init_printParameters();
 };
 
+/***************************************
+ * init_printParameters()
+ ***************************************/
 void init_printParameters(){
     if (mpi_my_rank == RANK_IO)
     {
@@ -50,12 +65,18 @@ void init_printParameters(){
 
 };
 
+/***************************************
+ * init_initEnums()
+ ***************************************/
 void init_initEnums(){
    kinetic = parameters.adiabatic;
    systemType = parameters.electromagnetic;
    initialConditions = parameters.initial;
 };
 
+/***************************************
+ * init_conditions(COMPLEX *data)
+ ***************************************/
 void init_conditions(COMPLEX *data){
     switch(initialConditions)
     {

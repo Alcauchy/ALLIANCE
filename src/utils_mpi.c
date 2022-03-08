@@ -1,6 +1,21 @@
+////////////////////////////////////////////////////////////////////////////////
+// 06/12/2021 created by Gene Gorbunov
+//                                   MPI UTILITIES
 //
-// Created by alcauchy on 06/12/2021.
+// mpi_init
+// mpi_kill
+// mpi_generateTopology
+// mpi_createTopology
+// mpi_findHermiteNeighbours
+// mpi_splitInRows
+// mpi_splitInCols
+// mpi_initMExchange
+// mpi_exchangeMBoundaries
+// mpi_getLocalArraySize
+// mpi_getLocalArrayOffsets
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 #include "utils_mpi.h"
 
 #define SUBARRAY_COUNT 1

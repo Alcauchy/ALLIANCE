@@ -1,7 +1,3 @@
-//
-// Created by alcauchy on 08/02/2022.
-//
-
 #ifndef ALLIANCE_ALPHA_1_0_VARIABLES_H
 #define ALLIANCE_ALPHA_1_0_VARIABLES_H
 #include <stdlib.h>

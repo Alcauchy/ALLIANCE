@@ -1,9 +1,20 @@
+////////////////////////////////////////////////////////////////////////////////
+// 03/02/2022 created by Gene Gorbunov
+//                                   DISTRIBUTION
 //
-// Created by alcauchy on 03/02/2022.
+// distrib_getH
+// distrib_getG
+// distrib_getXGrad
+// distrib_getYGrad
+// distrib_getZGrad
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 #include "distrib.h"
 
-
+/***************************************
+ * distrib_getH(COMPLEX *h, const COMPLEX *g)
+ ***************************************/
 void distrib_getH(COMPLEX *h, const COMPLEX *g) {
     size_t ind6D;
     size_t ind4D;
@@ -40,6 +51,9 @@ void distrib_getH(COMPLEX *h, const COMPLEX *g) {
     }
 };
 
+/***************************************
+ * distrib_getG(COMPLEX *g, const COMPLEX *h)
+ ***************************************/
 void distrib_getG(COMPLEX *g, const COMPLEX *h) {
     size_t ind6D;
     size_t ind4D;

@@ -1,6 +1,24 @@
+////////////////////////////////////////////////////////////////////////////////
+// 26/01/2022 created by Gene Gorbunov
+//                                   FIELDS
 //
-// Created by alcauchy on 26/01/2022.
+// fields_init
+// fields_getA
+// fields_getB
+// fields_getPhi
+// fields_getFields
+// fields_getChi
+// fields_getChiPhi
+// fields_getChiB
+// fields_getChiA
+// fields_sendG
+// fields_getFieldsFromH
+// fields_getAFromH
+// fields_getBFromH
+// fields_getPhiFromH
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 #include "fields.h"
 
 struct fields_fields fields_fields;

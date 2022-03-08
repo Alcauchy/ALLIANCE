@@ -1,7 +1,3 @@
-//
-// Created by alcauchy on 26/01/2022.
-//
-
 #ifndef ALLIANCE_ALPHA_1_0_ARRAY_H
 #define ALLIANCE_ALPHA_1_0_ARRAY_H
 #include <stdio.h> // standard C lib

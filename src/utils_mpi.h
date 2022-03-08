@@ -1,7 +1,3 @@
-//
-// Created by alcauchy on 06/12/2021.
-//
-
 #ifndef ALLIANCE_ALPHA_1_0_UTILS_MPI_H
 #define ALLIANCE_ALPHA_1_0_UTILS_MPI_H
 

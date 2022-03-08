@@ -1,6 +1,19 @@
+////////////////////////////////////////////////////////////////////////////////
+// 20/01/2022 created by Gene Gorbunov
+//                                   DIAGNOSTICS
 //
-// Created by alcauchy on 20/01/2022.
+// diag_computeSpectra
+// diag_computeFreeEnergy
+// diag_computeFreeEnergyFields
+// diag_initSpec
+// diag_computeKSpectrum
+// diag_computeMSpectrum
+// diag_initSpec
+// diag_getShells
+// diag_compute
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 #include "diagnostics.h"
 #include "parameters_io.h"
 

@@ -1,7 +1,3 @@
-//
-// Created by alcauchy on 16/12/2021.
-//
-
 #ifndef ALLIANCE_ALPHA_1_0_UTILS_HDF_H
 #define ALLIANCE_ALPHA_1_0_UTILS_HDF_H
 #include <stdio.h> // standard C lib

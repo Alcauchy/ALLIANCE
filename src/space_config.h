@@ -1,7 +1,3 @@
-//
-// Created by alcauchy on 03/02/2022.
-//
-
 #ifndef ALLIANCE_ALPHA_1_0_SPACE_CONFIG_H
 #define ALLIANCE_ALPHA_1_0_SPACE_CONFIG_H
 #include <stdlib.h>

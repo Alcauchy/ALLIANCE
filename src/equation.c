@@ -1,7 +1,15 @@
+////////////////////////////////////////////////////////////////////////////////
+// 26/01/2022 created by Gene Gorbunov
+//                                   EQUATION
 //
-// Created by alcauchy on 26/01/2022.
+// equation_getLinearTerm
+// equation_getNonlinearElectromagnetic
+// equation_getNonlinearElectrostatic
+// equation_getNonlinearTerm
+// equation_getRHS
 //
-
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 #include "equation.h"
 
 /***************************************

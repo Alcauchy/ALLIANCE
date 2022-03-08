@@ -22,8 +22,7 @@ enum electromagnetic{ELECTROSTATIC,ELECTROMAGNETIC};
 enum adiabatic{NONADIABATIC,ADIABATIC};
 enum initial{RANDOM, FROMFILE};
 
-void init_init(char *filename);
-
+void init_start(char *filename);
 void init_printParameters();
 void init_initEnums();
 void init_conditions(COMPLEX *data);

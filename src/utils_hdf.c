@@ -1,6 +1,30 @@
+////////////////////////////////////////////////////////////////////////////////
+// 16/12/2021 created by Gene Gorbunov
+//                                   HDF5 UTILITIES
 //
-// Created by alcauchy on 16/12/2021.
+// hdf_init
+// hdf_create_file_c
+// hdf_create_file_r
+// hdf_initField
+// hdf_saveFieldA
+// hdf_saveFieldB
+// hdf_saveFieldPhi
+// hdf_saveData
+// hdf_createFiles
+// hdf_saveEnergy
+// hdf_saveKSpec
+// hdf_saveMSpec
+// hdf_createFieldFile
+// hdf_saveFields
+// hdf_createCheckpoint
+// hdf_initCheckpoints
+// hdf_dumpCheckpoint
+// hdf_readData
+// hdf_saveDistrib
+// hdf_createSaveDirs
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 
 #include "utils_hdf.h"
 #include <unistd.h>
@@ -105,7 +129,7 @@ void hdf_init(){
     offset[4] = 0;
     offset[5] = 0;
 
-    printf("[MPI process %d] my coords are (%d, %d), offsets are (%d,%d,%d,%d,%d,%d)\n",mpi_my_rank,
+    printf("[MPI process %d] my coords are (%d, %d), offsets are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
            offset[0],
@@ -114,7 +138,7 @@ void hdf_init(){
            offset[3],
            offset[4],
            offset[5]);
-    printf("[MPI process %d] my coords are (%d, %d), chunk dims for real are (%d,%d,%d,%d,%d,%d)\n",mpi_my_rank,
+    printf("[MPI process %d] my coords are (%d, %d), chunk dims for real are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
            chunk_dims_r[0],
@@ -123,7 +147,7 @@ void hdf_init(){
            chunk_dims_r[3],
            chunk_dims_r[4],
            chunk_dims_r[5]);
-    printf("[MPI process %d] my coords are (%d, %d), chunk dims for complex are (%d,%d,%d,%d,%d,%d)\n",mpi_my_rank,
+    printf("[MPI process %d] my coords are (%d, %d), chunk dims for complex are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
            chunk_dims_c[0],
@@ -252,7 +276,7 @@ void hdf_initField(){
     chunk_dimsFields[0] = array_local_size.nkx;
     chunk_dimsFields[1] = array_local_size.nky;
     chunk_dimsFields[2] = array_local_size.nkz;
-    printf("[MPI process %d] %zu %zu %zu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
+    printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
 
     offsetFields[0] = array_local_size.nkx * mpi_my_coords[1];
     offsetFields[1] = 0;

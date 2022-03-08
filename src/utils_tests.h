@@ -1,7 +1,3 @@
-//
-// Created by alcauchy on 09/02/2022.
-//
-
 #ifndef ALLIANCE_ALPHA_1_0_UTILS_TESTS_H
 #define ALLIANCE_ALPHA_1_0_UTILS_TESTS_H
 #include <stdio.h>

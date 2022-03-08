@@ -1,6 +1,15 @@
+////////////////////////////////////////////////////////////////////////////////
+// 09/02/2022 created by Gene Gorbunov
+//                                   TEST UTILITIES
 //
-// Created by alcauchy on 09/02/2022.
+// test_freeEnergyComputation
+// test_mainFunction
+// test_fieldComputation
+// test_fieldComparison
+// test_kSpecComputations
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 
 #include "utils_tests.h"
 #include "diagnostics.h"
@@ -9,6 +18,10 @@
 #define PRINT_B 0
 #define PRINT_PHI 0
 #define TOLERANCE 1e-12
+
+/***************************
+ *  vortexInit(COMPLEX *g)
+ * *************************/
 void vortexInit(COMPLEX *g){
     for(size_t ix = 0; ix < array_local_size.nkx; ix++)
     {
@@ -21,6 +34,9 @@ void vortexInit(COMPLEX *g){
     }
 }
 
+/***************************
+ *  test_fieldComputation()
+ * *************************/
 void test_fieldComputation(){
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     for(size_t i = 0; i < array_local_size.total_comp; i++)
@@ -101,6 +117,9 @@ void test_fieldComputation(){
     printf("[MPI process %d] FIELD COMPUTATION TEST PASSED\n",mpi_my_rank);
 };
 
+/***************************
+ *  test_mainFunction()
+ * *************************/
 void test_mainFunction(){
     COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
@@ -121,6 +140,9 @@ void test_mainFunction(){
     }
 };
 
+/***************************
+ *  test_fieldComparison()
+ * *************************/
 void test_fieldComparison(){
     COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
@@ -161,6 +183,9 @@ void test_fieldComparison(){
 
 }
 
+/***************************
+ *  test_kSpecComputations()
+ * *************************/
 void test_kSpecComputations(){
     COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));

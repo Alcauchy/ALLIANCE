@@ -1,6 +1,14 @@
+////////////////////////////////////////////////////////////////////////////////
+// 03/02/2022 created by Gene Gorbunov
+//                                   SPACE CONFIGURATION
 //
-// Created by alcauchy on 03/02/2022.
+// space_init
+// space_generateWaveSpace
+// free_wavespace
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
+
 #include "space_config.h"
 #include <complex.h>
 
@@ -19,7 +27,7 @@ COMPLEX *space_iKz;
 
 /***************************************
  * space_init():
- * initializes wave space. Called in init_init() function.
+ * initializes wave space. Called in init_start() function.
  *
  *  args:
  *

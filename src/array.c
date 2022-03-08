@@ -1,6 +1,19 @@
+////////////////////////////////////////////////////////////////////////////////
+// 26/01/2022 created by Gene Gorbunov
+//                                   ARRAY
 //
-// Created by alcauchy on 26/01/2022.
+// alloc_double6D
+// alloc_complex6D
+// get_flat_c
+// get_flat_r
+// get_flatIndexComplex3D
+// multiply_ar_c
+// multiply_ar_r
+// fill_rand
+// sinus
 //
+// VERSION 1.0
+////////////////////////////////////////////////////////////////////////////////
 #include "array.h"
 
 struct array_size array_local_size;
@@ -49,7 +62,7 @@ size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t 
 /***************************************
  * get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz)
  ***************************************/
-size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz){
+size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz) {
     return ix * array_offset3D.kx +
            iy * array_offset3D.ky +
            iz;
@@ -59,8 +72,7 @@ size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz){
  * multiply_ar_c(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret)
  ***************************************/
 void multiply_ar_c(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret) {
-    for (size_t i = 0; i < array_local_size.total_comp; i++)
-    {
+    for (size_t i = 0; i < array_local_size.total_comp; i++) {
         ret[i] = ar1[i] * ar2[i];
     }
 }
@@ -68,9 +80,8 @@ void multiply_ar_c(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret) {
 /***************************************
  * multiply_ar_r(const double *ar1, const double *ar2, double *ret)
  ***************************************/
-void multiply_ar_r(const double *ar1, const double *ar2, double *ret){
-    for (size_t i = 0; i < array_local_size.total_real; i++)
-    {
+void multiply_ar_r(const double *ar1, const double *ar2, double *ret) {
+    for (size_t i = 0; i < array_local_size.total_real; i++) {
         ret[i] = ar1[i] * ar2[i];
     }
 }
@@ -80,8 +91,7 @@ void multiply_ar_r(const double *ar1, const double *ar2, double *ret){
  ***************************************/
 void fill_rand(COMPLEX *ar1) {
     srand(time(NULL));
-    for (size_t i = 0; i < array_local_size.total_comp; i++)
-    {
+    for (size_t i = 0; i < array_local_size.total_comp; i++) {
         ar1[i] = (0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j;
     }
 }
