@@ -130,7 +130,7 @@ void test_mainFunction(){
     distrib_getG(g, h);
     for(int it = 0; it < solver.Nt; it++)
     {
-        solver_makeStep();
+        solver_makeStep(g);
         //solver_updateDt();
         if(parameters.save_diagnostics && it % parameters.iter_diagnostics == 0)
         {

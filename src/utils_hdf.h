@@ -29,6 +29,7 @@ void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename);
 void hdf_readData(char *filename, COMPLEX *h);
 void hdf_saveDistrib(COMPLEX* h, int timestep);
 void hdf_createSaveDirs();
+void hdf_createParamFile();
 typedef struct {                                            // structure needed to define the custom complex datatype. This datatype is then used to write complex data into the file
     double re;   //real part
     double im;   //imaginary part

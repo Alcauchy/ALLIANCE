@@ -26,6 +26,7 @@ void init_start(char *filename){
     init_initEnums();
     mpi_generateTopology();
     mpi_getLocalArraySize();
+    mpi_initMExchange();
     fftw_init(mpi_row_comm);
     space_init();
     diag_initSpec();
@@ -82,6 +83,7 @@ void init_conditions(COMPLEX *data){
     {
         case RANDOM:
             fill_rand(data);
+            //fill_randM0(data);
             break;
 
         case FROMFILE:

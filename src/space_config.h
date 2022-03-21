@@ -12,13 +12,17 @@
 void space_init();
 void space_generateWaveSpace();     // generates wave vector space
 void free_wavespace();
+void space_generateMSpace();
 
 extern double *space_kPerp2;
 extern double *space_kPerp;
 extern double *space_kx;
 extern double *space_ky;
 extern double *space_kz;
+extern double *space_sqrtM;
 extern COMPLEX *space_iKx;
 extern COMPLEX *space_iKy;
 extern COMPLEX *space_iKz;
+extern size_t *space_globalMIndex;
+
 #endif //ALLIANCE_ALPHA_1_0_SPACE_CONFIG_H

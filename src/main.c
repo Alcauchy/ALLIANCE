@@ -31,13 +31,22 @@ int main(int argc, char **argv) {
     fields_getFieldsFromH(g00, g10, g01);
     fields_getChi();
     distrib_getG(g, h);
+    COMPLEX a = g[100];
+    COMPLEX b;
     for (int it = 0; it < solver.Nt; it++) {
-        solver_makeStep();
+        if(it%10 == 0) printf("it = %d\n", it);
+        solver_makeStep(g);
+        b = g[100];
+        //printf("a-b = %f\n", cabs(a-b));
         //solver_updateDt();
         if (parameters.save_diagnostics && it % parameters.iter_diagnostics == 0) {
+            fields_sendG(g);
+            fields_getFields(g00, g10, g01);
+            fields_getChi();
+            distrib_getH(h, g);
             diag_compute(g, h, it);
         }
-        hdf_saveData(h, it);
+        hdf_saveData(g, it);
     }
     free_wavespace();
     fftw_kill();

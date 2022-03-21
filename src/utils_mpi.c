@@ -17,7 +17,7 @@
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
 #include "utils_mpi.h"
-
+#define VERBOSE 0
 #define SUBARRAY_COUNT 1
 #define SUBARRAY_M_SIZE 1
 #define SUBARRAY_DIMS 6
@@ -275,13 +275,13 @@ void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPL
              0,
              mpi_cube_comm,
              MPI_STATUS_IGNORE);
-    printf("[MPI process %d] received plus, t = %.2fs.! buf_size = %d\n", mpi_my_rank, MPI_Wtime() - start,
+    if (VERBOSE)  printf("[MPI process %d] received plus, t = %.2fs.! buf_size = %d\n", mpi_my_rank, MPI_Wtime() - start,
            mpi_sub_buf_size);
     start = MPI_Wtime();
     MPI_Send(input_array, 1, mpi_subarray_type_plus, m_neighbour_ranks[PLUS], 1, mpi_cube_comm);
     MPI_Recv(minus_boundary, mpi_sub_buf_size, MPI_C_DOUBLE_COMPLEX, m_neighbour_ranks[MINUS], 1, mpi_cube_comm,
              MPI_STATUS_IGNORE);
-    printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d\n", mpi_my_rank,
+    if (VERBOSE) printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d\n", mpi_my_rank,
            MPI_Wtime() - start,
            mpi_sub_buf_size);
 }
