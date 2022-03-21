@@ -82,8 +82,8 @@ void init_conditions(COMPLEX *data){
     switch(initialConditions)
     {
         case RANDOM:
-            fill_rand(data);
-            //fill_randM0(data);
+            //fill_rand(data);
+            fill_randM0(data);
             break;
 
         case FROMFILE:

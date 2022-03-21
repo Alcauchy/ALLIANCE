@@ -112,6 +112,8 @@ void fill_randM0(COMPLEX *ar1) {
                     for (size_t is = 0; is < array_local_size.ns; is++){
                         ind6D = get_flat_c(is,il,0,ix,iy,iz);
                         ar1[ind6D] = (0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j;
+                        ind6D = get_flat_c(is,il,1,ix,iy,iz);
+                        ar1[ind6D] = (0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j;
                     }
                 }
             }

@@ -21,7 +21,7 @@ struct rk4 rk4;
  ***************************************/
 void solver_init() {
     solver.dt = parameters.dt;
-    solver.dt = 0.1;
+    solver.dt = 0.01;
     solver.Nt = parameters.Nt;
     solverType = SOLVERTYPE;
     if (solverType == RK4) {
