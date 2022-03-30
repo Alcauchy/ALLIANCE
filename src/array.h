@@ -17,6 +17,7 @@ void multiply_ar_c(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret);                   
 void multiply_ar_r(const double *ar1, const double *ar2, double *ret);                                      // multiply two return 6d arrays, ar1 and ar2, and output the result to ret array.
 void fill_rand(COMPLEX *ar1);                                                                   // fill 6D array ar1 with random values
 void fill_randM0(COMPLEX *ar1);
+void fill_randSingleKM(COMPLEX *ar1);
 double sinus(int kx, int ky, int kz, double f);
 
 

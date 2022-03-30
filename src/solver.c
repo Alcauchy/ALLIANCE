@@ -57,7 +57,7 @@ void solver_makeStep(COMPLEX *g) {
             }
             equation_getRHS(rk4.buf, rk4.K3);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
-                rk4.buf[i] = g[i] + solver.dt * 0.5 * rk4.K3[i];
+                rk4.buf[i] = g[i] + solver.dt * rk4.K3[i];
             }
             equation_getRHS(rk4.buf, rk4.K4);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {

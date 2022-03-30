@@ -10,11 +10,15 @@
 // multiply_ar_c
 // multiply_ar_r
 // fill_rand
+// fill_randM0
+// fill_randSingleKM
 // sinus
 //
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
 #include "array.h"
+#include "utils_fftw.h"
+#include "space_config.h"
 
 struct array_size array_local_size;
 struct array_size array_global_size;
@@ -106,14 +110,50 @@ void fill_randM0(COMPLEX *ar1) {
         ar1[i] = 0.;
     }
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
-        for (size_t iy = 0; iy < array_local_size.nky; iy++){
-            for (size_t iz = 0; iz < array_local_size.nkz; iz++){
-                for (size_t il = 0; il < array_local_size.nl; il++){
-                    for (size_t is = 0; is < array_local_size.ns; is++){
-                        ind6D = get_flat_c(is,il,0,ix,iy,iz);
-                        ar1[ind6D] = (0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j;
-                        ind6D = get_flat_c(is,il,1,ix,iy,iz);
-                        ar1[ind6D] = (0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j;
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t il = 0; il < array_local_size.nl; il++) {
+                    for (size_t im = 0; im < array_local_size.nm; im++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            if (space_globalMIndex[im] == 0) {
+                                //printf("%d\n",im);
+                                ind6D = get_flat_c(is, il, im, ix, iy, iz);
+                                ar1[ind6D] = (0.5 - (double) rand() / (double) (RAND_MAX)) +
+                                             (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j;
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/***************************************
+ * fill_randSingleKM(COMPLEX *ar1)
+ ***************************************/
+void fill_randSingleKM(COMPLEX *ar1) {
+    srand(time(NULL));
+    size_t ind6D;
+    for (size_t i = 0; i < array_local_size.total_comp; i++) {
+        ar1[i] = 0.;
+    }
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        printf("ix = %zu, %d\n", ix, global_nkx_index[ix]);
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            if (space_globalMIndex[im] == 1) {
+                                printf("%d\n", im);
+                                printf("%f\n", space_kz[2]);
+                                ind6D = get_flat_c(is, il, im, 10, 10, 2);
+                                ar1[ind6D] = 10.* ((0.5 - (double) rand() / (double) (RAND_MAX)) +
+                                             (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j);
+                            };
+                        }
                     }
                 }
             }

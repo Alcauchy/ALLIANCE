@@ -202,3 +202,21 @@ void test_kSpecComputations(){
         printf("[MPI process %d] spec_m[%zu] = %f\n", mpi_my_rank,i,diag_mSpec[i]);
     }
 }
+
+/***************************
+ *  test_linearRHS()
+ * *************************/
+ void test_linearRHS(){
+    COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
+    COMPLEX* rhs = malloc(array_local_size.total_comp * sizeof(*rhs));
+    init_conditions(h);
+    fields_sendG(h);
+    fields_getFieldsFromH(g00, g10, g01);
+    fields_getChi();
+    distrib_getG(g, h);
+    diag_computeSpectra(g, h,0);
+    equation_getRHS(g, rhs);
+    hdf_create_file_c("h.h5",h);
+    hdf_create_file_c("rhs.h5",rhs);
+ }

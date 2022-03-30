@@ -13,4 +13,5 @@ void test_freeEnergyComputation();
 void test_mainFunction();
 void test_fieldComparison();
 void test_kSpecComputations();
+void test_linearRHS();
 #endif //ALLIANCE_ALPHA_1_0_UTILS_TESTS_H

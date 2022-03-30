@@ -6,7 +6,7 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 #find_package(HDF5 REQUIRED)
 #set(HDF5_PREFER_PARALLEL TRUE)
-include_directories("/home/hdf5/include")
+include_directories("/home/alcauchy/hdf5/hdf5/include")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 add_executable(Alliance_alpha_1_0
         src/main.c
@@ -24,7 +24,7 @@ add_executable(Alliance_alpha_1_0
         src/distrib.h src/distrib.c
         src/variables.h src/variables.c
         src/utils_tests.h src/utils_tests.c)
-target_link_libraries(Alliance_alpha_1_0 "/home/hdf5/lib/libhdf5.so")
+target_link_libraries(Alliance_alpha_1_0 "/home/alcauchy/hdf5/hdf5/lib/libhdf5.so")
 target_link_libraries(Alliance_alpha_1_0 "/usr/local/lib/libfftw3_mpi.a")
 target_link_libraries(Alliance_alpha_1_0 "/usr/local/lib/libfftw3.a")
 target_link_libraries(Alliance_alpha_1_0 fftw3_mpi)

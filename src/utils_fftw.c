@@ -17,6 +17,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "utils_fftw.h"
+
+
 #define FFTW_RANK 3
 
 
@@ -61,7 +63,7 @@ void fftw_init(MPI_Comm communicator){
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
         global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_row_rank + i;
-       // printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
+        printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
     }
 
     c_d = fftw_alloc_complex(local_size);

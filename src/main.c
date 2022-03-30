@@ -31,11 +31,14 @@ int main(int argc, char **argv) {
     fields_getFieldsFromH(g00, g10, g01);
     fields_getChi();
     distrib_getG(g, h);
+    hdf_create_file_c("g.h5",g);
+    hdf_create_file_c("h.h5",h);
     COMPLEX a = g[100];
     COMPLEX b;
     for (int it = 0; it < solver.Nt; it++) {
+        hdf_saveData(g, it);
         if(it%10 == 0) printf("it = %d\n", it);
-        solver_makeStep(g);
+
         b = g[100];
         //printf("a-b = %f\n", cabs(a-b));
         //solver_updateDt();
@@ -45,9 +48,15 @@ int main(int argc, char **argv) {
             fields_getChi();
             distrib_getH(h, g);
             diag_compute(g, h, it);
+            char name[64];
+            sprintf(name, "%s%s%s%d%s", ".","/","g_",it,".h5");
+            hdf_create_file_c(name,g);
+            sprintf(name, "%s%s%s%d%s", ".","/","h_",it,".h5");
+            hdf_create_file_c(name,h);
         }
-        hdf_saveData(g, it);
+        solver_makeStep(g);
     }
+    //test_linearRHS();
     free_wavespace();
     fftw_kill();
     mpi_kill();

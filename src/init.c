@@ -84,6 +84,7 @@ void init_conditions(COMPLEX *data){
         case RANDOM:
             //fill_rand(data);
             fill_randM0(data);
+           // fill_randSingleKM(data);
             break;
 
         case FROMFILE:

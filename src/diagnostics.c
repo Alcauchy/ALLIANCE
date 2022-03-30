@@ -120,14 +120,13 @@ void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
  * diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec)
  ***************************************/
 void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
-    COMPLEX *sum = malloc(array_local_size.nm * sizeof(*sum));
+    COMPLEX *sum = calloc(array_local_size.nm , sizeof(*sum));
     COMPLEX *buf = malloc(array_local_size.nm * sizeof(*buf));
     size_t ind6D;
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
             for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
                 for (size_t im = 0; im < array_local_size.nm; im++) {
-                    sum[im] = 0;
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
                             ind6D = get_flat_c(is, il, im, ix, iy, iz);

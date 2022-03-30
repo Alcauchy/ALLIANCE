@@ -34,7 +34,7 @@ void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, con
                             ind6DMinus = get_flat_c(is, il, im - 1, ix, iy, iz);
                             //printf("in = %f\n", cabs(in[ind6DPlus]));
                             out[ind6D] = space_iKz[iz] *
-                                         (space_sqrtM[im] * in[ind6DPlus] + space_sqrtM[im + 1] * in[ind6DMinus]);
+                                         (space_sqrtM[im + 1] * in[ind6DPlus] + space_sqrtM[im] * in[ind6DMinus]);
 
                             //printf("out = %f\n", cabs(out[ind6D]));
                         }
