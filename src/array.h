@@ -15,9 +15,7 @@ size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t 
 size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz);                                 //
 void multiply_ar_c(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret);                                   // multiply two complex 6d arrays, ar1 and ar2, and output the result to ret array.
 void multiply_ar_r(const double *ar1, const double *ar2, double *ret);                                      // multiply two return 6d arrays, ar1 and ar2, and output the result to ret array.
-void fill_rand(COMPLEX *ar1);                                                                   // fill 6D array ar1 with random values
-void fill_randM0(COMPLEX *ar1);
-void fill_randSingleKM(COMPLEX *ar1);
+
 double sinus(int kx, int ky, int kz, double f);
 
 

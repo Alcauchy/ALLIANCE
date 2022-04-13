@@ -278,7 +278,7 @@ void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPL
     if (VERBOSE)  printf("[MPI process %d] received plus, t = %.2fs.! buf_size = %d\n", mpi_my_rank, MPI_Wtime() - start,
            mpi_sub_buf_size);
     start = MPI_Wtime();
-    MPI_Send(input_array, 1, mpi_subarray_type_plus, m_neighbour_ranks[PLUS], 1, mpi_cube_comm);
+    MPI_Send(input_array, SUBARRAY_COUNT, mpi_subarray_type_plus, m_neighbour_ranks[PLUS], 1, mpi_cube_comm);
     MPI_Recv(minus_boundary, mpi_sub_buf_size, MPI_C_DOUBLE_COMPLEX, m_neighbour_ranks[MINUS], 1, mpi_cube_comm,
              MPI_STATUS_IGNORE);
     if (VERBOSE) printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d\n", mpi_my_rank,
