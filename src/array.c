@@ -6,6 +6,10 @@
 // alloc_complex6D
 // get_flat_c
 // get_flat_r
+// getIndChiBufEM_c
+// getIndChiBufEM_r
+// getIndChiBufEL_c
+// getIndChiBufEL_r
 // get_flatIndexComplex3D
 // multiply_ar_c
 // multiply_ar_r
@@ -20,6 +24,9 @@
 #include "utils_fftw.h"
 #include "space_config.h"
 
+#define CHI_EM 3
+#define CHI_EL 1
+#define FFT_OFFSET 2
 struct array_size array_local_size;
 struct array_size array_global_size;
 struct offset_size array_offset;
@@ -49,6 +56,46 @@ size_t get_flat_c(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t 
            im * array_offset.m +
            il * array_offset.l +
            is;
+}
+
+/***************************************
+ * getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield)
+ ***************************************/
+size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield) {
+    return ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns * CHI_EM +
+           iy * array_local_size.nkz * array_local_size.ns * CHI_EM +
+           iz * array_local_size.ns * CHI_EM +
+           is * CHI_EM + ifield;
+}
+
+/***************************************
+ * getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield)
+ ***************************************/
+size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield) {
+    return ix * array_local_size.nky * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
+           iy * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
+           iz * array_local_size.ns * CHI_EM +
+           is * CHI_EM + ifield;
+}
+
+/***************************************
+ * getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is)
+ ***************************************/
+size_t getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is) {
+    return ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns * CHI_EL +
+           iy * array_local_size.nkz * array_local_size.ns * CHI_EL +
+           iz * array_local_size.ns * CHI_EL +
+           is * CHI_EL;
+}
+
+/***************************************
+ * getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is)
+ ***************************************/
+size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is) {
+    return ix * array_local_size.nky * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EL +
+           iy * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EL +
+           iz * array_local_size.ns * CHI_EL +
+           is * CHI_EL;
 }
 
 /***************************************

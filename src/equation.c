@@ -95,14 +95,6 @@ void equation_getNonlinearTerm(COMPLEX *h, COMPLEX *plus_boundary, COMPLEX *minu
     size_t indB;
     size_t indA;
     size_t chi_buf_size;
-    //if(systemType == ELECTROSTATIC){
-    //    chi_buf_size = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * CHI_EL;
-    //}
-
-    //if(systemType == ELECTROMAGNETIC){
-    //    chi_buf_size = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * CHI_EM;
-    //}
-
     switch(systemType){
         case ELECTROSTATIC:
             chi_buf_size = array_local_size.nkx *

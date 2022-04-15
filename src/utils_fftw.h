@@ -8,12 +8,15 @@
 #include <string.h>
 #include "utils_mpi.h"
 #include "array.h"
+#include "init.h"
 
 
 void fftw_init(MPI_Comm communicator);                      // initializes fftw mpi environment
 void fftw_kill();                                           // kills environment
 void fftw_r2c(double *data_r, COMPLEX *data_c);             // real to complex transform; copies data_r array to fftw buffer r_d, performs transform to complex and copies the resulting array to data_c array
 void fftw_c2r(COMPLEX *data_c, double *data_r);             // complex to real transform; copies data_c array to fftw buffer c_d, performs transform to complex and copies the resulting array to data_r array
+void fftw_r2c_chi(double *data_r, COMPLEX *data_c);
+void fftw_c2r_chi(COMPLEX *data_c, double *data_r);
 void fftw_copy_buffer_r(double *ar1, double *ar2);          // copies real array to another real array, function used in fftw_r2c/fftw_c2r to copy input array to buffer and/or back;
 void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2);        // copies complex array to another complex array, function used in fftw_r2c/fftw_c2r to copy input array to buffer and/or back
 void fftw_normalise_data(double *data);                     // normilises real data after fftw by fftw_norm = nkx*nky*nz.

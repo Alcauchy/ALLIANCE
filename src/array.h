@@ -12,6 +12,10 @@ double* alloc_double6D(size_t nkx, size_t nky, size_t nz, size_t nm, size_t nl, 
 COMPLEX* alloc_complex6D(size_t nkx, size_t nky, size_t nkz, size_t nm, size_t nl, size_t ns);  // allocate 6d complex array
 size_t get_flat_c(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz);            // get correct array element from real
 size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz);
+size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield);
+size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield);
+size_t getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is);
+size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is);
 size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz);                                 //
 void multiply_ar_c(COMPLEX *ar1, COMPLEX *ar2, COMPLEX *ret);                                   // multiply two complex 6d arrays, ar1 and ar2, and output the result to ret array.
 void multiply_ar_r(const double *ar1, const double *ar2, double *ret);                                      // multiply two return 6d arrays, ar1 and ar2, and output the result to ret array.
