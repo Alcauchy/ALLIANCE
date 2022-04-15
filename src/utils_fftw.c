@@ -10,6 +10,8 @@
 //  fftw_c2r_chi
 //  fftw_copy_buffer_r
 //  fftw_copy_buffer_c
+//  fftw_copyChiBuf_r
+//  fftw_copyChiBuf_c
 //  fftw_normalise_data
 //  fftw_test_fill
 //  dealiasing23
@@ -179,26 +181,28 @@ void fftw_c2r(COMPLEX *data_c, double *data_r){
  ***************************************/
 void fftw_r2c_chi(double *data_r, COMPLEX *data_c){
     int start = MPI_Wtime();
-    if (mpi_my_coords[1] == 0){
-        //    c_d[get_flat_c(0,0,0,1,0,0)] = array_global_size.nkx*array_global_size.nky*array_global_size.nkz;
-    }
-
-    fftw_mpi_execute_dft_c2r(plan_c2r,c_d,r_d);
-    fftw_copy_buffer_r(data_r,r_d);
-    // fftw_normalise_data(data_r);
-    printf("[MPI process %d] c2r chi transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
-    if (mpi_my_rank == 0){
-        for (int i = 0; i < array_local_size.nkx; i++ ){
-            printf("[MPI process %d] data = %f\n", mpi_my_rank,r_d[get_flat_r(0,0,0,i,0,0)]);
-        }
-
-    }
+    fftw_copyChiBuf_r(r_d,data_r);
+    fftw_mpi_execute_dft_r2c(plan_r2c_chi,r_chi_buf,c_chi_buf);
+    fftw_copyChiBuf_c(data_c, c_d);
+    printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 };
 
 /***************************************
  * fftw_c2r_chi(COMPLEX *data_c, double *data_r)
  ***************************************/
 void fftw_c2r_chi(COMPLEX *data_c, double *data_r){
+    int start = MPI_Wtime();
+    fftw_copyChiBuf_c(c_d, data_c);
+    fftw_mpi_execute_dft_c2r(plan_c2r_chi,c_chi_buf,r_chi_buf);
+    fftw_copyChiBuf_r(data_r,r_d);
+    // fftw_normalise_data(data_r);
+    printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+    if (mpi_my_rank == 0){
+        for (int i = 0; i < array_local_size.nkx; i++ ){
+            printf("[MPI process %d] data = %f\n", mpi_my_rank,r_d[get_flat_r(0,0,0,i,0,0)]);
+        }
+
+    }
 
 };
 
@@ -251,6 +255,82 @@ void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2){
                 }
             }
         }
+    }
+}
+
+/***************************************
+ * fftw_copyChiBuf_r(double *ar1, double *ar2)
+ ***************************************/
+void fftw_copyChiBuf_r(double *ar1, double *ar2){
+    size_t ind;
+    switch (systemType) {
+        case ELECTROSTATIC:
+            for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
+                for(size_t iky = 0; iky < array_local_size.nky; iky++){
+                    for(size_t iz = 0; iz < array_local_size.nz+2; iz++){
+                        for(size_t is = 0; is <array_local_size.ns; is++){
+                            ind = getIndChiBufEL_r(ikx,iky,iz,is);
+                            ar1[ind] = ar2[ind];
+                        }
+                    }
+                }
+            }
+            break;
+        case ELECTROMAGNETIC:
+            for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
+                for(size_t iky = 0; iky < array_local_size.nky; iky++){
+                    for(size_t iz = 0; iz < array_local_size.nz+2; iz++){
+                        for(size_t is = 0; is <array_local_size.ns; is++){
+                            for(size_t ifield = 0; ifield < CHI_EM; ifield++){
+                                ind = getIndChiBufEM_r(ikx,iky,iz,is,ifield);
+                                ar1[ind] = ar2[ind];
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            printf("[MPI process %d] error copying real chi buffer\n", mpi_my_rank);
+            exit(1);
+    }
+}
+
+/***************************************
+ * fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2)
+ ***************************************/
+void fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2){
+    size_t ind;
+    switch (systemType) {
+        case ELECTROSTATIC:
+            for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
+                for(size_t iky = 0; iky < array_local_size.nky; iky++){
+                    for(size_t ikz = 0; ikz < array_local_size.nkz; ikz++){
+                        for(size_t is = 0; is <array_local_size.ns; is++){
+                            ind = getIndChiBufEL_c(ikx,iky,ikz,is);
+                            ar1[ind] = ar2[ind];
+                        }
+                    }
+                }
+            }
+            break;
+        case ELECTROMAGNETIC:
+            for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
+                for(size_t iky = 0; iky < array_local_size.nky; iky++){
+                    for(size_t ikz = 0; ikz < array_local_size.nkz; ikz++){
+                        for(size_t is = 0; is <array_local_size.ns; is++){
+                            for(size_t ifield = 0; ifield < CHI_EM; ifield++){
+                                ind = getIndChiBufEM_c(ikx,iky,ikz,is,ifield);
+                                ar1[ind] = ar2[ind];
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            printf("[MPI process %d] error copying complex chi buffer\n", mpi_my_rank);
+            exit(1);
     }
 }
 

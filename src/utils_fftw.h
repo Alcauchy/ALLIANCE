@@ -19,6 +19,8 @@ void fftw_r2c_chi(double *data_r, COMPLEX *data_c);
 void fftw_c2r_chi(COMPLEX *data_c, double *data_r);
 void fftw_copy_buffer_r(double *ar1, double *ar2);          // copies real array to another real array, function used in fftw_r2c/fftw_c2r to copy input array to buffer and/or back;
 void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2);        // copies complex array to another complex array, function used in fftw_r2c/fftw_c2r to copy input array to buffer and/or back
+void fftw_copyChiBuf_r(double *ar1, double *ar2);
+void fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2);
 void fftw_normalise_data(double *data);                     // normilises real data after fftw by fftw_norm = nkx*nky*nz.
 void fftw_test_fill(double *ar,double f);                   // fills input real array with cos(2*pi*f*x).
 void dealiasing23(COMPLEX *data_c);                         // performs dealiasing by employing 2/3 rule. Turns all the aliased modes to zero.
