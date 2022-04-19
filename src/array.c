@@ -78,6 +78,7 @@ size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield
            is * CHI_EM + ifield;
 }
 
+
 /***************************************
  * getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is)
  ***************************************/
@@ -117,6 +118,16 @@ size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz) {
     return ix * array_offset3D.kx +
            iy * array_offset3D.ky +
            iz;
+}
+
+/***************************************
+ * getIndChi(size_t ix,size_t iy, size_t iz, size_t is)
+ ***************************************/
+size_t getIndChi(size_t ix,size_t iy, size_t iz, size_t is) {
+    return ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+           iy * array_local_size.nkz * array_local_size.ns +
+           iz * array_local_size.ns +
+           is;
 }
 
 /***************************************

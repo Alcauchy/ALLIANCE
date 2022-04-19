@@ -12,6 +12,7 @@ double* alloc_double6D(size_t nkx, size_t nky, size_t nz, size_t nm, size_t nl, 
 COMPLEX* alloc_complex6D(size_t nkx, size_t nky, size_t nkz, size_t nm, size_t nl, size_t ns);  // allocate 6d complex array
 size_t get_flat_c(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz);            // get correct array element from real
 size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz);
+size_t getIndChi(size_t ix,size_t iy, size_t iz, size_t is);
 size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield);
 size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield);
 size_t getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is);
