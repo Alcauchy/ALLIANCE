@@ -26,43 +26,51 @@ void solver_init() {
     solverType = SOLVERTYPE;
     if (solverType == RK4) {
         if (mpi_my_rank == IORANK) printf("CHOSEN SOLVER IS RUNGE-KUTTA 4\n");
-        rk4.K1 = malloc(array_local_size.total_comp * sizeof(*rk4.K1));
-        rk4.K2 = malloc(array_local_size.total_comp * sizeof(*rk4.K2));
-        rk4.K3 = malloc(array_local_size.total_comp * sizeof(*rk4.K3));
-        rk4.K4 = malloc(array_local_size.total_comp * sizeof(*rk4.K4));
-        rk4.buf = malloc(array_local_size.total_comp * sizeof(*rk4.buf));
-        for (size_t i = 0; i < array_local_size.total_comp; i++){
-            rk4.K1[i] = 0;
-            rk4.K2[i] = 0;
-            rk4.K3[i] = 0;
-            rk4.K4[i] = 0;
-            rk4.buf[i] = 0;
-        }
+        rk4.K_buf = calloc(array_local_size.total_comp, sizeof(*rk4.K_buf));
+        rk4.RHS_buf = calloc(array_local_size.total_comp, sizeof(*rk4.RHS_buf));
+        rk4.g_buf = calloc(array_local_size.total_comp, sizeof(*rk4.g_buf));
+
     }
 };
 
 /***************************************
  * solver_makeStep(COMPLEX *g):
  ***************************************/
-void solver_makeStep(COMPLEX *g) {
+void solver_makeStep(COMPLEX **g, COMPLEX *h) {
+    COMPLEX *g_ar = *g;
     switch (solverType) {
         case RK4:
-            equation_getRHS(g, rk4.K1);
+            //computing k1
+            equation_getRHS(g_ar, h, rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
-                rk4.buf[i] = g[i] + 0.5 * solver.dt * rk4.K1[i];
+                rk4.RHS_buf[i] = g_ar[i] + 0.5 * solver.dt * rk4.K_buf[i];
+                rk4.g_buf[i] = g_ar[i] + solver.dt/6. * rk4.K_buf[i];
+                rk4.K_buf[i] = 0.j;
             }
-            equation_getRHS(rk4.buf, rk4.K2);
+            // computing k2
+            equation_getRHS(rk4.RHS_buf, h, rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
-                rk4.buf[i] = g[i] + 0.5 * solver.dt * rk4.K2[i];
+                rk4.RHS_buf[i] = g_ar[i] + 0.5 * solver.dt * rk4.K_buf[i];
+                rk4.g_buf[i] += solver.dt/3. * rk4.K_buf[i];
+                rk4.K_buf[i] = 0.j;
             }
-            equation_getRHS(rk4.buf, rk4.K3);
+            //computing k3
+            equation_getRHS(rk4.RHS_buf, h, rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
-                rk4.buf[i] = g[i] + solver.dt * rk4.K3[i];
+                rk4.RHS_buf[i] = g_ar[i] + solver.dt * rk4.K_buf[i];
+                rk4.g_buf[i] += solver.dt/3. * rk4.K_buf[i];
+                rk4.K_buf[i] = 0.j;
             }
-            equation_getRHS(rk4.buf, rk4.K4);
+            //computing k4
+            equation_getRHS(rk4.RHS_buf, h, rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
-                g[i] += 1. / 6. * solver.dt * (rk4.K1[i] + 2. * rk4.K2[i] + 2. * rk4.K3[i] + rk4.K4[i]);
+                rk4.g_buf[i] += solver.dt/6. * rk4.K_buf[i];
+                rk4.K_buf[i] = 0.j;
             }
+            COMPLEX *inter = rk4.g_buf;
+            //printf("3rd = %p\n", inter);
+            rk4.g_buf = *g;
+            *g = inter;
             break;
 
         default:

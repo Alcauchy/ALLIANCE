@@ -19,6 +19,8 @@ void fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01);
 void fields_getAFromH(const COMPLEX* h);
 void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1);
 void fields_getPhiFromH(const COMPLEX* h);
+void fields_getGradY(COMPLEX *out);
+void fields_getGradX(COMPLEX *out);
 
 struct fields_fields{
     COMPLEX *phi;

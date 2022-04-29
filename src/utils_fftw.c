@@ -37,10 +37,8 @@ ptrdiff_t local_size, local_n0, local_0_start;  // local size, local start and l
 ptrdiff_t local_size_chi, local_n0_chi, local_0_start_chi;  // local size, local start and local kx block size on a given processor
 fftw_plan plan_c2r, plan_r2c;                   // plans needed to perform complex to real and real to complex transforms
 fftw_plan plan_c2r_chi, plan_r2c_chi;                   // plans needed to perform complex to real and real to complex transforms
-COMPLEX* c_d;                                   // complex data array buffer; used for out-of-place
-COMPLEX* c_chi_buf;                             // complex data array buffer for chi transformation;
-double* r_d;                                    // real data array buffer; used for out-of-place transform;
-double* r_chi_buf;                              // real data array buffer for chi transformations;
+COMPLEX* fftw_hBuf;                                   // complex data array buffer; used for in-place
+COMPLEX* fftw_chiBuf;                             // complex data array buffer for chi transformation;
 double fftw_norm;                               //normalization coefficient for backward fft transform
 void (*fftw_dealiasing)(COMPLEX*) = NULL;
 int *global_nkx_index;                          // array which stores the global position of nkx on the processor. Needed for dealiasing, in order to find Nkx/3 and 2*Nkx/3 and put all modes between those to zeros.
@@ -77,16 +75,15 @@ void fftw_init(MPI_Comm communicator){
         printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
     }
 
-    c_d = fftw_alloc_complex(local_size);
-    r_d = fftw_alloc_real(2 * local_size);
+    fftw_hBuf = fftw_alloc_complex(local_size);
 
     plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                           size_r,
                                           howmany,
                                           local_n0,
                                           FFTW_MPI_DEFAULT_BLOCK,
-                                          c_d,
-                                          r_d,
+                                          fftw_hBuf,
+                                          fftw_hBuf,
                                           communicator,
                                           FFTW_ESTIMATE);
     plan_r2c = fftw_mpi_plan_many_dft_r2c(FFTW_RANK,
@@ -94,8 +91,8 @@ void fftw_init(MPI_Comm communicator){
                                           howmany,
                                           local_n0,
                                           FFTW_MPI_DEFAULT_BLOCK,
-                                          r_d,
-                                          c_d,
+                                          fftw_hBuf,
+                                          fftw_hBuf,
                                           communicator,
                                           FFTW_ESTIMATE);
 
@@ -120,90 +117,65 @@ void fftw_init(MPI_Comm communicator){
                                           &local_n0_chi,
                                           &local_0_start_chi); // getting local size stored on each processor;
     printf("[MPI process %d] CHI TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_chi, howmany_chi);
-    c_chi_buf = fftw_alloc_complex(local_size_chi);
-    r_chi_buf = fftw_alloc_real(2 * local_size_chi);
+    fftw_chiBuf = fftw_alloc_complex(local_size_chi);
+    //fftw_chiBuf = fftw_alloc_real(2 * local_size_chi);
 
     plan_c2r_chi = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
-                                          size_r,
-                                          howmany_chi,
-                                          local_n0_chi,
-                                          FFTW_MPI_DEFAULT_BLOCK,
-                                          c_chi_buf,
-                                          r_chi_buf,
-                                          communicator,
-                                          FFTW_ESTIMATE);
+                                              size_r,
+                                              howmany_chi,
+                                              local_n0_chi,
+                                              FFTW_MPI_DEFAULT_BLOCK,
+                                              fftw_chiBuf,
+                                              fftw_chiBuf,
+                                              communicator,
+                                              FFTW_ESTIMATE);
     plan_r2c_chi = fftw_mpi_plan_many_dft_r2c(FFTW_RANK,
-                                          size_r,
-                                          howmany_chi,
-                                          local_n0_chi,
-                                          FFTW_MPI_DEFAULT_BLOCK,
-                                          r_chi_buf,
-                                          c_chi_buf,
-                                          communicator,
-                                          FFTW_ESTIMATE);
+                                              size_r,
+                                              howmany_chi,
+                                              local_n0_chi,
+                                              FFTW_MPI_DEFAULT_BLOCK,
+                                              fftw_chiBuf,
+                                              fftw_chiBuf,
+                                              communicator,
+                                              FFTW_ESTIMATE);
 }
 
 /***************************************
  * fftw_r2c(double *data_r, COMPLEX *data_c)
  ***************************************/
-void fftw_r2c(double *data_r, COMPLEX *data_c){
+void fftw_r2c() {
     int start = MPI_Wtime();
-    fftw_copy_buffer_r(r_d,data_r);
-    fftw_mpi_execute_dft_r2c(plan_r2c,r_d,c_d);
-    fftw_copy_buffer_c(data_c, c_d);
+    fftw_mpi_execute_dft_r2c(plan_r2c, fftw_hBuf, fftw_hBuf);
+    fftw_normalise_data(fftw_hBuf);
     printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 };
 
 /***************************************
  * fftw_c2r(COMPLEX *data_c, double *data_r)
  ***************************************/
-void fftw_c2r(COMPLEX *data_c, double *data_r){
+void fftw_c2r() {
     int start = MPI_Wtime();
-    if (mpi_my_coords[1] == 0){
-    //    c_d[get_flat_c(0,0,0,1,0,0)] = array_global_size.nkx*array_global_size.nky*array_global_size.nkz;
-    }
-
-    fftw_copy_buffer_c(c_d, data_c);
-    fftw_mpi_execute_dft_c2r(plan_c2r,c_d,r_d);
-    fftw_copy_buffer_r(data_r,r_d);
-   // fftw_normalise_data(data_r);
+    fftw_mpi_execute_dft_c2r(plan_c2r, fftw_hBuf, fftw_hBuf);
     printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
-    if (mpi_my_rank == 0){
-        for (int i = 0; i < array_local_size.nkx; i++ ){
-            printf("[MPI process %d] data = %f\n", mpi_my_rank,r_d[get_flat_r(0,0,0,i,0,0)]);
-        }
-
-    }
 }
 
 /***************************************
  * fftw_r2c_chi(double *data_r, COMPLEX *data_c)
  ***************************************/
-void fftw_r2c_chi(double *data_r, COMPLEX *data_c){
+void fftw_r2c_chi() {
     int start = MPI_Wtime();
-    fftw_copyChiBuf_r(r_d,data_r);
-    fftw_mpi_execute_dft_r2c(plan_r2c_chi,r_chi_buf,c_chi_buf);
-    fftw_copyChiBuf_c(data_c, c_d);
+    fftw_mpi_execute_dft_r2c(plan_r2c_chi, fftw_chiBuf, fftw_chiBuf);
+    //fftw_normalise_data(array_local_size.nkx*array_local_size.nkx*, data_c);
     printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 };
 
 /***************************************
  * fftw_c2r_chi(COMPLEX *data_c, double *data_r)
  ***************************************/
-void fftw_c2r_chi(COMPLEX *data_c, double *data_r){
+void fftw_c2r_chi() {
     int start = MPI_Wtime();
-    fftw_copyChiBuf_c(c_d, data_c);
-    fftw_mpi_execute_dft_c2r(plan_c2r_chi,c_chi_buf,r_chi_buf);
-    fftw_copyChiBuf_r(data_r,r_d);
-    // fftw_normalise_data(data_r);
+    fftw_mpi_execute_dft_c2r(plan_c2r_chi, fftw_chiBuf, fftw_chiBuf);
     printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
-    if (mpi_my_rank == 0){
-        for (int i = 0; i < array_local_size.nkx; i++ ){
-            printf("[MPI process %d] data = %f\n", mpi_my_rank,r_d[get_flat_r(0,0,0,i,0,0)]);
-        }
-
-    }
-
 };
 
 /***************************************
@@ -214,22 +186,23 @@ void fftw_kill(){
     fftw_destroy_plan(plan_r2c);
     fftw_destroy_plan(plan_c2r_chi);
     fftw_destroy_plan(plan_r2c_chi);
-    free(c_d);
+    free(fftw_hBuf);
+    free(fftw_chiBuf);
     free(global_nkx_index);
     fftw_mpi_cleanup();
 }
 
 /***************************************
- * fftw_copy_buffer_r(double *ar1, double *ar2)
+ * fftw_copy_buffer_r(double *to, double *from)
  ***************************************/
-void fftw_copy_buffer_r(double *ar1, double *ar2){
+void fftw_copy_buffer_r(double *to, double *from){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
         for(size_t iky = 0; iky < array_local_size.nky; iky++){
             for(size_t iz = 0; iz < array_local_size.nz+2; iz++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
                     for(size_t il = 0; il < array_local_size.nl; il++){
                         for(size_t is = 0; is <array_local_size.ns; is++){
-                            ar1[get_flat_r(is,il,im,ikx,iky,iz)] = ar2[get_flat_r(is,il,im,ikx,iky,iz)];
+                            to[get_flat_r(is, il, im, ikx, iky, iz)] = from[get_flat_r(is, il, im, ikx, iky, iz)];
                         }
                     }
                 }
@@ -240,16 +213,16 @@ void fftw_copy_buffer_r(double *ar1, double *ar2){
 }
 
 /***************************************
- * fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2)
+ * fftw_copy_buffer_c(COMPLEX *to, COMPLEX *from)
  ***************************************/
-void fftw_copy_buffer_c(COMPLEX *ar1, COMPLEX *ar2){
+void fftw_copy_buffer_c(COMPLEX *to, COMPLEX *from){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
         for(size_t iky = 0; iky < array_local_size.nky; iky++){
             for(size_t iz = 0; iz < array_local_size.nkz; iz++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
                     for(size_t il = 0; il < array_local_size.nl; il++){
                         for(size_t is = 0; is <array_local_size.ns; is++){
-                            ar1[get_flat_c(is,il,im,ikx,iky,iz)] = ar2[get_flat_c(is,il,im,ikx,iky,iz)];
+                            to[get_flat_c(is, il, im, ikx, iky, iz)] = from[get_flat_c(is, il, im, ikx, iky, iz)];
                         }
                     }
                 }
@@ -358,8 +331,8 @@ void fftw_test_fill(double *ar,double f){
 /***************************************
  * fftw_normalise_data(double *data)
  ***************************************/
-void fftw_normalise_data(double *data){
-    for(size_t i = 0; i < array_local_size.total_real; i++) {
+void fftw_normalise_data(COMPLEX *data) {
+    for(size_t i = 0; i < array_local_size.total_comp; i++) {
         data[i] *= fftw_norm;
     }
 }

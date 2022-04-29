@@ -9,6 +9,6 @@ equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, const CO
 void equation_getNonlinearElectromagnetic();
 void equation_getNonlinearElectrostatic();
 void equation_getNonlinearTerm();
-void equation_getRHS(const COMPLEX *in, COMPLEX *out);
+void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out);
 
 #endif //ALLIANCE_ALPHA_1_0_EQUATION_H

@@ -21,6 +21,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "fields.h"
 
+#define CHI_PHI 0
+#define CHI_A 1
+#define CHI_B 2
+
 struct fields_fields fields_fields;
 struct fields_chi fields_chi;
 
@@ -748,3 +752,92 @@ void fields_getPhiFromH(const COMPLEX* h){
 
 };
 
+/***************************************
+ * fields_getGradX(COMPLEX *out)
+ ***************************************/
+void fields_getGradX(COMPLEX *out){
+    size_t ind4D;
+    size_t indChiBuf;
+    switch(systemType){
+        case(ELECTROSTATIC):
+            for (size_t ix = 0; ix < array_local_size.nkx; ix ++){
+                for (size_t iy = 0; iy < array_local_size.nky; iy ++){
+                    for (size_t iz = 0; iz < array_local_size.nkz; iz ++){
+                        for (size_t is = 0; is < array_local_size.ns; is ++){
+                            ind4D = getIndChi(ix,iy,iz,is);
+                            indChiBuf = getIndChiBufEL_c(ix,iy,iz,is);
+                            out[indChiBuf] = space_iKx[ix] * fields_chi.phi[ind4D];
+                        }
+                    }
+                }
+            }
+            break;
+        case(ELECTROMAGNETIC):
+            for (size_t ix = 0; ix < array_local_size.nkx; ix ++){
+                for (size_t iy = 0; iy < array_local_size.nky; iy ++){
+                    for (size_t iz = 0; iz < array_local_size.nkz; iz ++){
+                        for (size_t is = 0; is < array_local_size.ns; is ++){
+                            ind4D = getIndChi(ix,iy,iz,is);
+                            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_PHI);
+                            out[indChiBuf] = space_iKx[ix] * fields_chi.phi[ind4D];
+
+                            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_A);
+                            out[indChiBuf] = space_iKx[ix] * fields_chi.A[ind4D];
+
+                            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_B);
+                            out[indChiBuf] = space_iKx[ix] * fields_chi.B[ind4D];
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            printf("[MPI process %d] Error computing gradient chi! aborting...",mpi_my_rank);
+            exit(1);
+    }
+}
+
+/***************************************
+ * fields_getGradY(COMPLEX *out)
+ ***************************************/
+void fields_getGradY(COMPLEX *out){
+    size_t ind4D;
+    size_t indChiBuf;
+    switch(systemType){
+        case(ELECTROSTATIC):
+            for (size_t ix = 0; ix < array_local_size.nkx; ix ++){
+                for (size_t iy = 0; iy < array_local_size.nky; iy ++){
+                    for (size_t iz = 0; iz < array_local_size.nkz; iz ++){
+                        for (size_t is = 0; is < array_local_size.ns; is ++){
+                            ind4D = getIndChi(ix,iy,iz,is);
+                            indChiBuf = getIndChiBufEL_c(ix,iy,iz,is);
+                            out[indChiBuf] = space_iKy[iy] * fields_chi.phi[ind4D];
+                        }
+                    }
+                }
+            }
+            break;
+        case(ELECTROMAGNETIC):
+            for (size_t ix = 0; ix < array_local_size.nkx; ix ++){
+                for (size_t iy = 0; iy < array_local_size.nky; iy ++){
+                    for (size_t iz = 0; iz < array_local_size.nkz; iz ++){
+                        for (size_t is = 0; is < array_local_size.ns; is ++){
+                            ind4D = getIndChi(ix,iy,iz,is);
+                            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_PHI);
+                            out[indChiBuf] = space_iKy[iy] * fields_chi.phi[ind4D];
+
+                            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_A);
+                            out[indChiBuf] = space_iKy[iy] * fields_chi.A[ind4D];
+
+                            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_B);
+                            out[indChiBuf] = space_iKy[iy] * fields_chi.B[ind4D];
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            printf("[MPI process %d] Error computing gradient chi! aborting...",mpi_my_rank);
+            exit(1);
+    }
+}

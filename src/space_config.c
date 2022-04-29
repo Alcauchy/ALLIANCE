@@ -38,7 +38,6 @@ COMPLEX *space_iKz;
  *
  ***************************************/
 void space_init() {
-    global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     space_globalMIndex = malloc(array_local_size.nm * sizeof(*space_globalMIndex));
     for (size_t i = 0; i < array_local_size.nm; i++){
         space_globalMIndex[i] = array_global_size.nm / mpi_dims[0] * mpi_my_col_rank + i;

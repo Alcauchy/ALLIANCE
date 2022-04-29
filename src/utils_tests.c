@@ -130,7 +130,7 @@ void test_mainFunction(){
     distrib_getG(g, h);
     for(int it = 0; it < solver.Nt; it++)
     {
-        solver_makeStep(g);
+        solver_makeStep(g, h);
         //solver_updateDt();
         if(parameters.save_diagnostics && it % parameters.iter_diagnostics == 0)
         {
@@ -216,7 +216,77 @@ void test_kSpecComputations(){
     fields_getChi();
     distrib_getG(g, h);
     diag_computeSpectra(g, h,0);
-    equation_getRHS(g, rhs);
+    equation_getRHS(g, h, rhs);
     hdf_create_file_c("h.h5",h);
     hdf_create_file_c("rhs.h5",rhs);
  }
+
+/***************************
+*  test_inplaceFFTW_chi()
+* *************************/
+void test_inplaceFFTW_chi(){
+    //COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
+    //COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
+    //init_conditions(h);
+    //fields_sendG(h);
+    //fields_getFieldsFromH(g00, g10, g01);
+    //fields_getChi();
+    //distrib_getG(g, h);
+    size_t indChi;
+    COMPLEX *chi = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns * 3 * sizeof(*chi));
+    double *chi_r = malloc(array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.ns * 3 * sizeof(*chi_r));
+    // initialising chi array
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t is = 0; is < array_local_size.ns; is++){
+                    for(size_t ifield = 0 ; ifield < 3; ifield ++){
+                        if(global_nkx_index[ix] == 1 && iy == 0 && iz == 0){
+                            indChi = getIndChiBufEM_c(ix,iy,iz,is, ifield);
+                            chi[indChi] = 1.0;
+                        }
+                        else{
+                            indChi = getIndChiBufEM_c(ix,iy,iz,is, ifield);
+                            chi[indChi] = 0.0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fftw_c2r_chi();
+
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nz + 2; iz++){
+                for(size_t is = 0; is < array_local_size.ns; is++){
+                    for(size_t ifield = 0 ; ifield < 3; ifield ++){
+                        if (iz == 0 && iy == 0 && ifield == 0){
+                            indChi = getIndChiBufEM_r(ix,iy,iz,is, ifield);
+                            printf("[MPI process %d] chi[%zu,%zu,%zu,%zu] = %f\n", mpi_my_rank,global_nkx_index[ix], iy, iz, is, ifield, chi_r[indChi]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fftw_r2c_chi();
+
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t is = 0; is < array_local_size.ns; is++){
+                    for(size_t ifield = 0 ; ifield < 3; ifield ++){
+                        if(global_nkx_index[ix] == 1 && iy == 0 && iz == 0){
+                            indChi = getIndChiBufEM_c(ix,iy,iz,is, ifield);
+                            printf("[MPI process %d] chi[%zu,%zu,%zu,%zu] = %f\n", mpi_my_rank,global_nkx_index[ix], iy, iz, is, ifield, creal(chi[indChi]));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}

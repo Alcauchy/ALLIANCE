@@ -20,6 +20,7 @@
 #define CHI_PHI 0
 #define CHI_A 1
 #define CHI_B 2
+
 /***************************************
  * equation_getLinearTerm()
  ***************************************/
@@ -37,7 +38,7 @@ void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, con
                             ind6D = get_flat_c(is, il, im, ix, iy, iz);
                             ind6DPlus = get_flat_c(is, il, im + 1, ix, iy, iz);
                             ind6DMinus = get_flat_c(is, il, im - 1, ix, iy, iz);
-                            out[ind6D] = space_iKz[iz] * var_var.vT[is] *
+                            out[ind6D] += space_iKz[iz] * var_var.vT[is] *
                                          (space_sqrtM[im + 1] * in[ind6DPlus] + space_sqrtM[im] * in[ind6DMinus]);
 
                         }
@@ -60,71 +61,149 @@ void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, con
                                       + iz * array_local_size.nl * array_local_size.ns
                                       + il * array_local_size.ns
                                       + is;
-                        out[ind6D] = space_iKz[iz] * var_var.vT[is] *
+                        out[ind6D] += space_iKz[iz] * var_var.vT[is] *
                                 (space_sqrtM[1] * in[ind6DPlus] + space_sqrtM[0] * minus_boundary[indBoundary]);
                         /*treating right boundary*/
                         ind6D = get_flat_c(is, il, array_local_size.nm - 1, ix, iy, iz);
                         ind6DMinus = get_flat_c(is, il, array_local_size.nm - 2, ix, iy, iz);
-                        out[ind6D] = space_iKz[iz] * var_var.vT[is] * (space_sqrtM[array_local_size.nm - 1] * in[ind6DMinus] +
+                        out[ind6D] += space_iKz[iz] * var_var.vT[is] * (space_sqrtM[array_local_size.nm - 1] * in[ind6DMinus] +
                                                       space_sqrtM[array_local_size.nm] * plus_boundary[indBoundary]);
                     }
                 }
             }
         }
     }
-
 };
 
 /***************************************
- * equation_getNonlinearElectromagnetic()
+ * equation_getNonlinearElectromagnetic(double *in, double *chiAr)
  ***************************************/
-void equation_getNonlinearElectromagnetic() {};
+void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out, double sign) {
+    size_t indH;
+    size_t indHPlus;
+    size_t indHMinus;
+    size_t indHBound;
+    size_t indH_l1;
+    size_t indH_l0;
+    size_t indChi_phi;
+    size_t indChi_A;
+    size_t indChi_B;
+    double phibh;
+    double ah;
+    double bh;
+    double *plus_boundary = calloc(array_local_size.nkx *
+                                    array_local_size.nky *
+                                    (array_local_size.nz + 2)*
+                                    array_local_size.nl *
+                                    array_local_size.ns,
+                                    sizeof(*plus_boundary));
+    double *minus_boundary = calloc(array_local_size.nkx *
+                                    array_local_size.nky *
+                                    (array_local_size.nz + 2)*
+                                    array_local_size.nl *
+                                    array_local_size.ns,
+                                    sizeof(*plus_boundary));
+    mpi_exchangeMBoundaries_r(in, plus_boundary, minus_boundary);
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nz + 2; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            //getting flat indices
+                            indH = get_flat_r(is,il,im,ix,iy,iz);
+                            indH_l1 = get_flat_r(is,1,im,ix,iy,iz);
+                            indH_l0 = get_flat_r(is,0,im,ix,iy,iz);
+                            indChi_phi = getIndChiBufEM_r(ix,iy,iz,is,CHI_PHI);
+                            indChi_A = getIndChiBufEM_r(ix,iy,iz,is,CHI_A);
+                            indChi_B = getIndChiBufEM_r(ix,iy,iz,is,CHI_B);
+                            // computing (chi_phi + chi_b * h)
+                            phibh = (chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];
+                            // computing chi_b * h_l=1
+                            bh = (il==0)?  chiAr[indChi_B] * in[indH_l1] : chiAr[indChi_B] * (in[indH_l0] + 2. * in[indH_l1]);
+                            if(im!=0 && im!=array_local_size.nm-1){
+                                indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
+                                indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
+                                ah = chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);
+                            }
+                            //left boundary
+                            else if(im == 0){
+                                indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
+                                indHBound = ix * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                              + iy * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                              + iz * array_local_size.nl * array_local_size.ns
+                                              + il * array_local_size.ns
+                                              + is;
+                                ah = chiAr[indChi_A] * (space_sqrtM[0] * minus_boundary[indHBound] + space_sqrtM[1] * in[indHPlus]);
+                            }
+                            //right boundary
+                            else{
+                                indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
+                                indHBound = ix * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                            + iy * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                            + iz * array_local_size.nl * array_local_size.ns
+                                            + il * array_local_size.ns
+                                            + is;
+                                ah = chiAr[indChi_A] * (space_sqrtM[array_local_size.nm] * plus_boundary[indHBound] + space_sqrtM[array_local_size.nm - 1] * in[indHMinus]);
+                            }
+                            out[indH] += sign * (phibh + bh + ah);
+                            out[indH] /= var_var.B0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    free(minus_boundary);
+    free(plus_boundary);
+};
 
 /***************************************
- * equation_getNonlinearElectrostatic()
+ * equation_getNonlinearElectrostatic(double *in, double *chiAr)
  ***************************************/
-void equation_getNonlinearElectrostatic() {};
+void equation_getNonlinearElectrostatic(double *in, double *chiAr, double *out, double sign) {
+    size_t indH;
+    size_t indChi;
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nz + 2; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            indH = get_flat_r(is,il,im,ix,iy,iz);
+                            indChi = getIndChiBufEL_r(ix,iy,iz,is);
+                            out[indH] += sign * in[indH] * chiAr[indChi];
+                            out[indH] /= var_var.B0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
 
 /***************************************
- * equation_computeGradChi(size_t ix, size_t iy, size_t iz, size_t is, COMPLEX *out_dhdhx, COMPLEX *out_dhdy)
+ * equation_getNonlinearProduct(double *in, double *chiAr, double *out, double sign)
  ***************************************/
-void equation_computeGradChi(size_t ix, size_t iy, size_t iz, size_t is, COMPLEX *out_dChidx, COMPLEX *out_dChidy){
-    size_t ind4D;
-    size_t indChiBuf;
-    switch(systemType){
-        case(ELECTROSTATIC):
-            ind4D = getIndChi(ix,iy,iz,is);
-            indChiBuf = getIndChiBufEL_c(ix,iy,iz,is);
-            out_dChidx[indChiBuf] = space_iKx[ix] * fields_chi.phi[ind4D];
-            out_dChidy[indChiBuf] = space_iKy[iy] * fields_chi.phi[ind4D];
+void equation_getNonlinearProduct(double *in, double *chiAr, double *out, double sign){
+    switch(systemType)
+    {
+        case ELECTROSTATIC:
+            equation_getNonlinearElectrostatic(in, chiAr, out, sign);
             break;
-        case(ELECTROMAGNETIC):
-            ind4D = getIndChi(ix,iy,iz,is);
-            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is, CHI_PHI);
-            out_dChidx[indChiBuf] = space_iKx[ix] * fields_chi.phi[ind4D];
-            out_dChidy[indChiBuf] = space_iKy[iy] * fields_chi.phi[ind4D];
-
-            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is, CHI_A);
-            out_dChidx[indChiBuf] = space_iKx[ix] * fields_chi.A[ind4D];
-            out_dChidy[indChiBuf] = space_iKy[iy] * fields_chi.A[ind4D];
-
-            indChiBuf = getIndChiBufEM_c(ix,iy,iz,is, CHI_B);
-            out_dChidx[indChiBuf] = space_iKx[ix] * fields_chi.B[ind4D];
-            out_dChidy[indChiBuf] = space_iKy[iy] * fields_chi.B[ind4D];
+        case ELECTROMAGNETIC:
+            equation_getNonlinearElectromagnetic(in, chiAr, out, sign);
             break;
         default:
-            printf("[MPI process %d] Error computing gradient chi! aborting...",mpi_my_rank);
+            printf("[MPI process %d] ERROR COMPUTING NONLINEAR TERM; ABORTING",mpi_my_rank);
             exit(1);
     }
-
-
 }
-
 
 /***************************************
  * equation_getNonlinearTerm()
  ***************************************/
-void equation_getNonlinearTerm(COMPLEX *h, COMPLEX *plus_boundary, COMPLEX *minus_boundary, COMPLEX *out) {
+void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     size_t ind6D;
     size_t ind4D;
     size_t indPhi;
@@ -132,123 +211,81 @@ void equation_getNonlinearTerm(COMPLEX *h, COMPLEX *plus_boundary, COMPLEX *minu
     size_t indA;
     size_t chi_buf_size;
     size_t chi_buf_size_r;
-    switch(systemType){
-        case ELECTROSTATIC:
-            chi_buf_size = array_local_size.nkx *
-                    array_local_size.nky *
-                    array_local_size.nkz *
-                    array_local_size.ns *
-                    CHI_EL;
-            chi_buf_size_r = array_local_size.nkx *
-                             array_local_size.nky *
-                             array_local_size.nz *
-                             array_local_size.ns *
-                             CHI_EL;
-            break;
-        case ELECTROMAGNETIC:
-            chi_buf_size = array_local_size.nkx *
-                    array_local_size.nky *
-                    array_local_size.nkz *
-                    array_local_size.ns *
-                    CHI_EM;
-            chi_buf_size_r = array_local_size.nkx *
-                           array_local_size.nky *
-                           array_local_size.nz *
-                           array_local_size.ns *
-                           CHI_EM;
-            break;
-    }
-    COMPLEX *dchidx = malloc(chi_buf_size * sizeof(*dchidx));
-    COMPLEX *dchidy = malloc(chi_buf_size * sizeof(*dchidy));
-    double *dchidx_r = malloc(array_local_size.total_real * sizeof(*dchidx_r));
-    double *dchidy_r = malloc(array_local_size.total_real * sizeof(*dchidy_r));
-
-    COMPLEX *dhdx = malloc(array_local_size.total_comp * sizeof(*dhdx));
-    COMPLEX *dhdy = malloc(array_local_size.total_comp * sizeof(*dhdy));
-
-    double *dhdx_r = malloc(array_local_size.total_real * sizeof(*dhdx_r));
-    double *dhdy_r = malloc(array_local_size.total_real * sizeof(*dhdy_r));
-    /*computing gradients simultaneously to save time*/
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
-        for(size_t iy = 0; iy < array_local_size.nky; iy++){
-            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
-                for(size_t im = 0; im < array_local_size.nm; im++){
-                    for(size_t il = 0; il < array_local_size.nl; il++){
-                        for(size_t is = 0; is < array_local_size.ns; is++){
-                            /*computing h gradients*/
-                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                            dhdx[ind6D] = space_iKx[ix] * h[ind6D];
-                            dhdy[ind6D] = space_iKy[iy] * h[ind6D];
-                            /*computing chi gradients*/
-                            equation_computeGradChi(ix, iy, iz, is, dchidx, dchidy);
-                        }
-                    }
-                }
-            }
-        }
-    }
+    double *buffer = calloc(array_local_size.total_real, sizeof(*buffer));
     //
-    //make fftw of everything
+    // take gradient: dh/dx and dchi/dy
     //
-    fftw_c2r(dhdx, dhdx_r);
-    fftw_c2r(dhdy,dhdy_r);
-    fftw_c2r_chi(dchidx,dchidx_r);
-    fftw_c2r_chi(dchidy,dchidy_r);
+    distrib_getXGrad(h, fftw_hBuf);
+    fields_getGradY(fftw_chiBuf);
     //
-    //compute product
+    // make fftw of everything
     //
-
+    fftw_c2r();
+    fftw_c2r_chi();
+    printf("[MPI process %d] fftw of dh/dx and dchi/dy is done\n",mpi_my_rank);
     //
-    // make ifftw of rhs
+    //compute product, first part
     //
-
+    equation_getNonlinearProduct(fftw_hBuf, fftw_chiBuf, buffer, 1);
     //
-    // free memory
+    // take gradient: dh/dy and dchi/dx
     //
-    free(dchidx);
-    free(dchidy);
-    free(dchidx_r);
-    free(dchidy_r);
-    free(dhdx);
-    free(dhdy);
-    free(dhdx_r);
-    free(dhdy_r);
+    distrib_getYGrad(h, fftw_hBuf);
+    fields_getGradX(fftw_chiBuf);
+    //
+    // transform those gradients
+    //
+    fftw_c2r();
+    fftw_c2r_chi();
+    printf("[MPI process %d] fftw of dh/dy and dchi/dx is done\n",mpi_my_rank);
+    //
+    //compute product, second part
+    //
+    equation_getNonlinearProduct(fftw_hBuf, fftw_chiBuf, buffer, -1);
+    //
+    // make ifftw of the computed product
+    //
+    fftw_copy_buffer_r(fftw_hBuf, buffer);
+    fftw_r2c();
+    printf("[MPI process %d] inverse fftw of the nonlinear product is done\n",mpi_my_rank);
+    //
+    // add it to RHS
+    //
+    for (size_t ii = 0; ii < array_local_size.total_comp; ii++) out[ii] += fftw_hBuf[ii];
+    //
+    // perform dealiasing
+    //
+    dealiasing23(out);
+    free(buffer);
 };
 
 /***************************************
  * equation_getRHS()
  ***************************************/
-void equation_getRHS(const COMPLEX *in, COMPLEX *out) {
+void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     /* allocating memory for buffers */
     size_t boundary_size = array_local_size.nkx *
             array_local_size.nky *
             array_local_size.nkz *
             array_local_size.nl *
             array_local_size.ns;
-    COMPLEX *rhs = malloc(array_local_size.total_comp * sizeof(*rhs));
-    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *minus_boundary = calloc(boundary_size, sizeof(*minus_boundary));
     COMPLEX *plus_boundary = calloc(boundary_size, sizeof(*plus_boundary));
     /* exchanging boundaries to compute linear term and fields */
     /* computing h */
-    fields_sendG(in);
+    fields_sendG(in_g);
     fields_getFields(g00, g10, g01);
     fields_getChi();
-    distrib_getH(h, in);
+    distrib_getH(in_h, in_g);
 
     /* boundary exchange */
-    mpi_exchangeMBoundaries(h, plus_boundary, minus_boundary);
+    mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
 
     /* computing linear term */
-    equation_getLinearTerm(h, plus_boundary, minus_boundary, rhs);
+    equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
 
     /* computing nonlinear term */
-    equation_getNonlinearTerm(h, plus_boundary, minus_boundary, rhs);
-    for (size_t i = 0; i < array_local_size.total_comp; i++){
-        out[i] = rhs[i];
-    }
-    free(rhs);
-    free(h);
+    equation_getNonlinearTerm(in_h, out);
     free(minus_boundary);
     free(plus_boundary);
 };

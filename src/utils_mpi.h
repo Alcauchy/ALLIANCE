@@ -16,6 +16,7 @@ void mpi_splitInRows();               // splits communicators in rows. needed fo
 void mpi_splitInCols();               // splits communicator in columns. Needed to send data to compute fields for each process.
 void mpi_initMExchange();             // used to define all the variables needed to prepare exchange of m+1 and m-1 Hermite moments between processors
 void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPLEX *minus_boundary);       // required to exchange the m+1 and m-1 Hermite moments between processes
+void mpi_exchangeMBoundaries_r(double *input_array, double *plus_boundary, double *minus_boundary);       // required to exchange the m+1 and m-1 Hermite moments between processes for real data
 void mpi_getLocalArraySize();        //computes array sizes stored locally by each process
 void mpi_getLocalArrayOffsets();     //computes offsets for easy 6d indexing (see function get_flat_r)
 

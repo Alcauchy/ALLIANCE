@@ -125,15 +125,16 @@ void fill_randSingleKM(COMPLEX *ar1) {
         ar1[i] = 0.;
     }
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
-        printf("ix = %zu, %d\n", ix, global_nkx_index[ix]);
+       // printf("[MPI process %d] ix = %zu, %d\n",mpi_my_rank, ix, global_nkx_index[ix]);
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
             for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
                 for (size_t im = 0; im < array_local_size.nm; im++) {
+                    //printf("im = %d\n", space_globalMIndex[im]);
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
                             if (space_globalMIndex[im] == 1 || space_globalMIndex[im] == 0 && global_nkx_index[ix] == 0) {
-                                printf("%d\n", im);
-                                printf("%f\n", space_kz[2]);
+
+                                //printf("%f\n", space_kz[2]);
                                 ind6D = get_flat_c(is, il, im, ix, 0, 2);
                                 ar1[ind6D] = 10.* ((0.5 - (double) rand() / (double) (RAND_MAX)) +
                                                    (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j);

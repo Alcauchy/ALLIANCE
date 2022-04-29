@@ -14,4 +14,5 @@ void test_mainFunction();
 void test_fieldComparison();
 void test_kSpecComputations();
 void test_linearRHS();
+void test_inplaceFFTW_chi();
 #endif //ALLIANCE_ALPHA_1_0_UTILS_TESTS_H

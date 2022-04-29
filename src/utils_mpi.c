@@ -29,11 +29,14 @@ int mpi_my_coords[2];                   // coordinates of the process in 2D topo
 int mpi_dims[] = {0, 0};                // size of the dimensions. {0,0} means there is no limits in defining the size.
 int m_neighbour_ranks[2];               // ranks of the neighbours
 int mpi_sub_buf_size;                   // buffer size needed to exchange m+1 and m-1 Hermite moments
+int mpi_sub_buf_size_r;                 // buffer size needed to exchange m+1 and m-1 Hermite moments of real type
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
 MPI_Comm mpi_row_comm;                  // row communicator (kx direction)
 MPI_Comm mpi_col_comm;                  // column communicator (Hermite direction)
 MPI_Datatype mpi_subarray_type_plus;    // subarray type to perform the m+1 boundary exchange
 MPI_Datatype mpi_subarray_type_minus;   // subarray type to perform the m-1 boundary exchange
+MPI_Datatype mpi_subarray_type_plus_r;    // subarray type to perform the m+1 boundary exchange for real data
+MPI_Datatype mpi_subarray_type_minus_r;   // subarray type to perform the m-1 boundary exchange for real data
 enum DIRECTIONS {
     MINUS, PLUS
 };           // minus and plus neighbours in m direction
@@ -217,6 +220,7 @@ void mpi_splitInCols(){
  *  mpi_initMExchange
  * *************************/
 void mpi_initMExchange() {
+    //Complex data init exchange
     int dimensions_full[6] = {array_local_size.nkx,
                               array_local_size.nky,
                               array_local_size.nkz,
@@ -253,6 +257,32 @@ void mpi_initMExchange() {
     MPI_Type_commit(&mpi_subarray_type_plus);
     MPI_Type_commit(&mpi_subarray_type_minus);
 
+    //Real data init exchange
+    dimensions_full[2] = array_local_size.nz + 2;
+    dimensions_sub[2] = array_local_size.nz + 2;
+    mpi_sub_buf_size_r = array_local_size.nkx *
+                         array_local_size.nky *
+                        (array_local_size.nz + 2) *
+                         array_local_size.nl *
+                         array_local_size.ns;
+    MPI_Type_create_subarray(SUBARRAY_DIMS,
+                             dimensions_full,
+                             dimensions_sub,
+                             start_coordinates_plus,
+                             MPI_ORDER_C,
+                             MPI_DOUBLE,
+                             &mpi_subarray_type_plus_r);
+    MPI_Type_create_subarray(SUBARRAY_DIMS,
+                             dimensions_full,
+                             dimensions_sub,
+                             start_coordinates_minus,
+                             MPI_ORDER_C,
+                             MPI_DOUBLE,
+                             &mpi_subarray_type_minus_r);
+    MPI_Type_commit(&mpi_subarray_type_plus_r);
+    MPI_Type_commit(&mpi_subarray_type_minus_r);
+
+
 }
 
 /***************************
@@ -284,4 +314,45 @@ void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPL
     if (VERBOSE) printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d\n", mpi_my_rank,
            MPI_Wtime() - start,
            mpi_sub_buf_size);
+}
+
+/***************************
+ *  mpi_exchangeMBoundaries_r
+ * *************************/
+void mpi_exchangeMBoundaries_r(double *input_array, double *plus_boundary, double *minus_boundary) {
+    double start;
+    double end;
+    start = MPI_Wtime();
+    MPI_Send(input_array,
+             SUBARRAY_COUNT,
+             mpi_subarray_type_minus_r,
+             m_neighbour_ranks[MINUS],
+             0,
+             mpi_cube_comm);
+    MPI_Recv(plus_boundary,
+             mpi_sub_buf_size_r,
+             MPI_DOUBLE,
+             m_neighbour_ranks[PLUS],
+             0,
+             mpi_cube_comm,
+             MPI_STATUS_IGNORE);
+    if (VERBOSE)  printf("[MPI process %d] received plus, t = %.2fs.! buf_size = %d\n", mpi_my_rank, MPI_Wtime() - start,
+                         mpi_sub_buf_size);
+    start = MPI_Wtime();
+    MPI_Send(input_array,
+             SUBARRAY_COUNT,
+             mpi_subarray_type_plus_r,
+             m_neighbour_ranks[PLUS],
+             1,
+             mpi_cube_comm);
+    MPI_Recv(minus_boundary,
+             mpi_sub_buf_size_r,
+             MPI_DOUBLE,
+             m_neighbour_ranks[MINUS],
+             1,
+             mpi_cube_comm,
+             MPI_STATUS_IGNORE);
+    if (VERBOSE) printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d\n", mpi_my_rank,
+                        MPI_Wtime() - start,
+                        mpi_sub_buf_size);
 }
