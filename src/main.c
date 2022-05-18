@@ -7,6 +7,7 @@
 #include "init.h"
 #include "fields.h"
 #include "utils_tests.h"
+#include <unistd.h>
 
 int main(int argc, char **argv) {
     char *filename;
@@ -31,12 +32,13 @@ int main(int argc, char **argv) {
     fields_getFieldsFromH(g00, g10, g01);
     fields_getChi();
     distrib_getG(g, h);
-
+    double free_energy0;
     for (int it = 0; it < solver.Nt; it++) {
         hdf_saveData(g, it);
         if(it%10 == 0) printf("it = %d\n", it);
         //solver_updateDt();
         if (parameters.save_diagnostics && it % parameters.iter_diagnostics == 0) {
+
             fields_sendG(g);
             fields_getFields(g00, g10, g01);
             fields_getChi();
@@ -44,9 +46,11 @@ int main(int argc, char **argv) {
             diag_compute(g, h, it);
             char name[64];
             sprintf(name, "%s%s%s%d%s", ".","/","g_",it,".h5");
-            hdf_create_file_c(name,g);
+            //hdf_create_file_c(name,g);
             sprintf(name, "%s%s%s%d%s", ".","/","h_",it,".h5");
-            hdf_create_file_c(name,h);
+            //hdf_create_file_c(name,h);
+            if (it == 0) free_energy0 = diag_freeEnergy;
+            if (mpi_my_rank == 0) printf("W = %f\n", diag_freeEnergy/free_energy0);
         }
         //printf("1)1st = %p, 2nd = %p\n", g, rk4.g_buf);
         solver_makeStep(&g, h);
@@ -54,6 +58,12 @@ int main(int argc, char **argv) {
     }
     //test_linearRHS();
     //test_inplaceFFTW_chi();
+    //test_nonlinearTerm();
+    //test_Poisson();
+    //test_Poisson1();
+    //test_xGrad();
+    //test_enforceRealityConditions();
+    //test_enforceZero();
     free_wavespace();
     fftw_kill();
     mpi_kill();

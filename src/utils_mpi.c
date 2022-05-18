@@ -26,10 +26,12 @@ int mpi_size;                           // size of the communicator
 int mpi_my_row_rank;                    // rank of the process in a kx direction of parallelization
 int mpi_my_col_rank;                    // rank of the process in Hermite direction of parallelization
 int mpi_my_coords[2];                   // coordinates of the process in 2D topology
-int mpi_dims[] = {0, 0};                // size of the dimensions. {0,0} means there is no limits in defining the size.
+int mpi_dims[] = {0, 0};                // size of the dimensions. {0,0} means there is no limits in defining the size. 0th dimension is for Hermite parallelization, and 1st dimension is for kx.
 int m_neighbour_ranks[2];               // ranks of the neighbours
 int mpi_sub_buf_size;                   // buffer size needed to exchange m+1 and m-1 Hermite moments
 int mpi_sub_buf_size_r;                 // buffer size needed to exchange m+1 and m-1 Hermite moments of real type
+int *mpi_whereIsX;                       // arrays which returns the rank of a process which has a required kx
+size_t mpi_vectorSliceLength;
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
 MPI_Comm mpi_row_comm;                  // row communicator (kx direction)
 MPI_Comm mpi_col_comm;                  // column communicator (Hermite direction)
@@ -37,6 +39,7 @@ MPI_Datatype mpi_subarray_type_plus;    // subarray type to perform the m+1 boun
 MPI_Datatype mpi_subarray_type_minus;   // subarray type to perform the m-1 boundary exchange
 MPI_Datatype mpi_subarray_type_plus_r;    // subarray type to perform the m+1 boundary exchange for real data
 MPI_Datatype mpi_subarray_type_minus_r;   // subarray type to perform the m-1 boundary exchange for real data
+MPI_Datatype mpi_vector_kxSlice;           // kx slice to enforce reality condition
 enum DIRECTIONS {
     MINUS, PLUS
 };           // minus and plus neighbours in m direction
@@ -56,6 +59,7 @@ void mpi_init() {
  * *************************/
 void mpi_generateTopology(){
     mpi_createTopology();
+    mpi_getLocalArraySize();
     mpi_findHermiteNeighbours();
     mpi_splitInRows();
     mpi_splitInCols();
@@ -205,6 +209,34 @@ void mpi_splitInRows(){
     mpi_my_row_rank = mpi_my_coords[1];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
     printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
+    mpi_whereIsX = malloc(2 * array_global_size.nkx * sizeof(mpi_whereIsX));
+    for(int iproc = 0; iproc < mpi_dims[1]; iproc++){
+        int ilocal = 0;
+        if(iproc != mpi_dims[1] - 1){
+            for (int ix = array_global_size.nkx/mpi_dims[1] * iproc; ix < array_global_size.nkx/mpi_dims[1] * (iproc + 1); ix++){
+                mpi_whereIsX[ix * 2 + 0] = iproc;
+                mpi_whereIsX[ix * 2 + 1] = ilocal;
+                ilocal++;
+            }
+        }
+        else{
+            for (int ix = array_global_size.nkx/mpi_dims[1] * iproc; ix < array_global_size.nkx; ix++){
+                mpi_whereIsX[ix * 2 + 0] = iproc;
+                mpi_whereIsX[ix * 2 + 1] = ilocal;
+                ilocal++;
+            }
+        }
+    }
+    if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nkx; ii++) printf("[MPI process %d] x = %zu is located at %d proc and local ix = %d\n",mpi_my_rank, ii, mpi_whereIsX[2 * ii], mpi_whereIsX[2 * ii + 1]);
+    // create mpi vector type to use for enforcing reality condition
+    mpi_vectorSliceLength = array_local_size.nky*array_local_size.nl * array_local_size.nm * array_local_size.ns;
+    MPI_Type_vector(array_local_size.nky,
+                    array_local_size.nl * array_local_size.nm * array_local_size.ns,
+                    array_local_size.nl * array_local_size.nm * array_local_size.ns * (array_local_size.nkz ) ,
+                    MPI_C_DOUBLE_COMPLEX,
+                    &mpi_vector_kxSlice);
+    MPI_Type_commit(&mpi_vector_kxSlice);
+
 }
 
 /***************************
@@ -356,3 +388,51 @@ void mpi_exchangeMBoundaries_r(double *input_array, double *plus_boundary, doubl
                         MPI_Wtime() - start,
                         mpi_sub_buf_size);
 }
+
+/***************************
+ *  mpi_sendVector(COMPLEX *from_array, COMPLEX *to_buffer, int to_proc)
+ * *************************/
+void mpi_sendVector(COMPLEX *from_array, COMPLEX *to_buffer, int from_proc, int to_proc) {
+
+    if(mpi_my_row_rank == from_proc) {
+        MPI_Send(from_array, 1, mpi_vector_kxSlice, to_proc,1,mpi_row_comm);
+        printf("[MPI process %d] sent kx slice to process %d!\n",mpi_my_rank, to_proc);
+        printf("[MPI process %d] from =  %f!\n",mpi_my_rank, cabs(from_array[0]));
+        size_t ii = 0;
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t im = 0; im < array_local_size.nm; im++) {
+                for (size_t il = 0; il < array_local_size.nl; il++) {
+                    for (size_t is = 0; is < array_local_size.ns; is++) {
+                        size_t ind6D_pos = iy * array_local_size.nm * array_local_size.nl * array_local_size.ns * array_local_size.nkz +
+                                           im * array_local_size.nl * array_local_size.ns +
+                                           il * array_local_size.ns +
+                                           is;
+                        //printf("[MPI process %d] arr[%zu] = %f %f\n", mpi_my_rank, ii, creal(from_array[ind6D_pos]),
+                        //       cimag(from_array[ind6D_pos]));
+                        ii++;
+                    }
+                }
+            }
+        }
+    }
+    if(mpi_my_row_rank == to_proc) {
+        MPI_Recv(to_buffer, mpi_vectorSliceLength, MPI_C_DOUBLE_COMPLEX, from_proc, 1, mpi_row_comm, MPI_STATUS_IGNORE);
+        printf("[MPI process %d] received kx slice from %d!\n", mpi_my_rank, from_proc);
+        size_t ii = 0;
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t im = 0; im < array_local_size.nm; im++) {
+                for (size_t il = 0; il < array_local_size.nl; il++) {
+                    for (size_t is = 0; is < array_local_size.ns; is++) {
+                        size_t ind6D_pos = iy * array_local_size.nm * array_local_size.nl * array_local_size.ns +
+                                           im * array_local_size.nl * array_local_size.ns +
+                                           il * array_local_size.ns +
+                                           is;
+                        //printf("[MPI process %d] buf[%zu] = %f %f\n", mpi_my_rank, ii, creal(to_buffer[ii]),
+                        //       cimag(to_buffer[ii]));
+                        ii++;
+                    }
+                }
+            }
+        }
+    }
+};

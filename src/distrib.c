@@ -152,7 +152,7 @@ void distrib_getYGrad(const COMPLEX *in, COMPLEX *out) {
                 for (size_t im = 0; im < array_local_size.nm; im++) {
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
-                            out[get_flat_c(is, il, im, ix, iy, iz)] *= space_iKy[iy] * in[get_flat_c(is, il, im, ix, iy, iz)];
+                            out[get_flat_c(is, il, im, ix, iy, iz)] = space_iKy[iy] * in[get_flat_c(is, il, im, ix, iy, iz)];
                         }
                     }
                 }
@@ -180,6 +180,116 @@ void distrib_getZGrad(const COMPLEX *in, COMPLEX *out) {
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
                             out[get_flat_c(is, il, im, ix, iy, iz)] = space_iKz[iz] * in[get_flat_c(is, il, im, ix, iy, iz)];
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
+
+/***************************************
+ * distrib_enforceReality
+ ***************************************/
+void distrib_enforceReality(COMPLEX *f){
+    size_t local_kxPosInd;
+    size_t local_kxNegInd;
+    size_t kyNeg;
+    size_t kxNeg;
+    size_t ind6D;
+    size_t ind6D_pos;
+    size_t ind6D_neg;
+    int where_pos;
+    int where_neg;
+    COMPLEX *buffer = malloc(array_local_size.nky * array_local_size.nm * array_local_size.ns * array_local_size.nl * sizeof(*buffer));
+    for (size_t ix = 0; ix < array_global_size.nkx/2 ; ix++){
+        where_pos = mpi_whereIsX[ix * 2];
+        local_kxPosInd = mpi_whereIsX[ix * 2 + 1];
+        kxNeg = (ix == 0)  ? ix : array_global_size.nkx - ix;
+        where_neg = mpi_whereIsX[kxNeg * 2];
+        local_kxNegInd = mpi_whereIsX[kxNeg * 2 + 1];
+        printf("%zu %d\n",ix,where_neg);
+        if (where_pos == where_neg){
+            for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                    for(size_t im = 0; im < array_local_size.nm; im++){
+                        for(size_t il = 0; il < array_local_size.nl; il++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                kyNeg = (iy == 0)  ? iy : array_local_size.nky - iy;
+                                ind6D_neg = get_flat_c(is,il,im,local_kxNegInd,kyNeg,0);
+                                ind6D_pos = get_flat_c(is,il,im,local_kxPosInd,iy,0);
+                                f[ind6D_neg] = conj(f[ind6D_pos]);
+                            }
+                        }
+                    }
+            }
+        }
+        else{
+            ind6D = get_flat_c(0,0,0,local_kxPosInd,0,0);
+             mpi_sendVector(&f[ind6D],buffer,where_pos,where_neg);
+             if(mpi_my_row_rank == where_neg){
+                 for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                     for(size_t im = 0; im < array_local_size.nm; im++){
+                         for(size_t il = 0; il < array_local_size.nl; il++){
+                             for(size_t is = 0; is < array_local_size.ns; is++){
+                                 kyNeg = (iy == 0)  ? iy : array_local_size.nky - iy;
+                                 ind6D_neg = get_flat_c(is,il,im,local_kxNegInd,kyNeg,0);
+                                 ind6D_pos = iy * array_local_size.nm * array_local_size.nl * array_local_size.ns +
+                                             im * array_local_size.nl * array_local_size.ns +
+                                             il * array_local_size.ns +
+                                             is;
+                                 f[ind6D_neg] = conj(buffer[ind6D_pos]);
+                             }
+                         }
+                     }
+                 }
+             }
+        }
+    }
+    free(buffer);
+};
+
+/***************************************
+ * distrib_setZeroNHalf(COMPLEX *f)
+ ***************************************/
+void distrib_setZeroNHalf(COMPLEX *f){
+    size_t ind6D;
+    //setting f(nky/2) = 0;
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+            for(size_t im = 0; im < array_local_size.nm; im++){
+                for(size_t il = 0; il < array_local_size.nl; il++){
+                    for(size_t is = 0; is < array_local_size.ns; is++){
+                        ind6D = get_flat_c(is,il,im,ix,array_global_size.nky/2,iz);
+                        f[ind6D] = 0;
+                    }
+                }
+            }
+        }
+    }
+    //setting f(nz/2) = f(nkz) = 0;
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t im = 0; im < array_local_size.nm; im++){
+                for(size_t il = 0; il < array_local_size.nl; il++){
+                    for(size_t is = 0; is < array_local_size.ns; is++){
+                        ind6D = get_flat_c(is,il,im,ix,iy,array_local_size.nkz - 1);
+                        f[ind6D] = 0;
+                    }
+                }
+            }
+        }
+    }
+    //setting f(nkx/2) = 0
+    int local_kx = mpi_whereIsX[2 * array_global_size.nkx/2 + 1];
+    int iproc = mpi_whereIsX[2 * array_global_size.nkx/2];
+    if (mpi_my_row_rank == iproc){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,local_kx,iy,iz);
+                            f[ind6D] = 0;
                         }
                     }
                 }

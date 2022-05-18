@@ -10,6 +10,8 @@
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
 #include "init.h"
+#include "distrib.h"
+
 #define RANK_IO 0
 
 enum adiabatic kinetic;
@@ -20,12 +22,12 @@ enum initial initialConditions;
  * init_start(char *filename)
  ***************************************/
 void init_start(char *filename){
+    srand(time(NULL));
     mpi_init();
     read_parameters(filename);
-
     init_initEnums();
     mpi_generateTopology();
-    mpi_getLocalArraySize();
+    //mpi_getLocalArraySize();
     mpi_initMExchange();
     fftw_init(mpi_row_comm);
     space_init();
@@ -79,9 +81,8 @@ void init_initEnums(){
  * fill_rand(COMPLEX *ar1)
  ***************************************/
 void fill_rand(COMPLEX *ar1) {
-    srand(time(NULL));
     for (size_t i = 0; i < array_local_size.total_comp; i++) {
-        ar1[i] = (0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j;
+        ar1[i] = ((0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
     }
 }
 
@@ -89,7 +90,6 @@ void fill_rand(COMPLEX *ar1) {
  * fill_randM0(COMPLEX *ar1)
  ***************************************/
 void fill_randM0(COMPLEX *ar1) {
-    srand(time(NULL));
     size_t ind6D;
     for (size_t i = 0; i < array_local_size.total_comp; i++) {
         ar1[i] = 0.;
@@ -103,8 +103,8 @@ void fill_randM0(COMPLEX *ar1) {
                             if (space_globalMIndex[im] == 0 || space_globalMIndex[im] == 1) {
                                 //printf("%d\n",im);
                                 ind6D = get_flat_c(is, il, im, ix, iy, iz);
-                                ar1[ind6D] = (0.5 - (double) rand() / (double) (RAND_MAX)) +
-                                             (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j / array_global_size.total_comp;
+                                ar1[ind6D] = ((0.5 - (double) rand() / (double) (RAND_MAX)) +
+                                             (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
                             }
 
                         }
@@ -119,7 +119,6 @@ void fill_randM0(COMPLEX *ar1) {
  * fill_randSingleKM(COMPLEX *ar1)
  ***************************************/
 void fill_randSingleKM(COMPLEX *ar1) {
-    srand(time(NULL));
     size_t ind6D;
     for (size_t i = 0; i < array_local_size.total_comp; i++) {
         ar1[i] = 0.;
@@ -136,8 +135,9 @@ void fill_randSingleKM(COMPLEX *ar1) {
 
                                 //printf("%f\n", space_kz[2]);
                                 ind6D = get_flat_c(is, il, im, ix, 0, 2);
-                                ar1[ind6D] = 10.* ((0.5 - (double) rand() / (double) (RAND_MAX)) +
-                                                   (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j);
+                                ar1[ind6D] = ((0.5 - (double) rand() / (double) (RAND_MAX)) +
+                                                   (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j)
+                                                           * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
                             };
                         }
                     }
@@ -155,8 +155,8 @@ void init_conditions(COMPLEX *data){
     {
         case RANDOM:
             //fill_rand(data);
-            //fill_randM0(data);
-            fill_randSingleKM(data);
+            fill_randM0(data);
+            //fill_randSingleKM(data);
             break;
 
         case FROMFILE:
@@ -167,5 +167,7 @@ void init_conditions(COMPLEX *data){
             printf("[MPI process %d] error with initial conditions! Aborting...",mpi_my_rank);
             exit(1);
     }
+    distrib_enforceReality(data);
+    distrib_setZeroNHalf(data);
 };
 

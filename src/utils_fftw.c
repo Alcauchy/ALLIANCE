@@ -26,6 +26,7 @@
 #define FFTW_RANK 3
 #define CHI_EL 1
 #define CHI_EM 3
+#define VERBOSE 0
 
 
 
@@ -72,7 +73,7 @@ void fftw_init(MPI_Comm communicator){
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
         global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_row_rank + i;
-        printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
+        //printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);
@@ -118,6 +119,7 @@ void fftw_init(MPI_Comm communicator){
                                           &local_0_start_chi); // getting local size stored on each processor;
     printf("[MPI process %d] CHI TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_chi, howmany_chi);
     fftw_chiBuf = fftw_alloc_complex(local_size_chi);
+    for (size_t ii = 0; ii < local_size_chi; ii++) fftw_chiBuf[ii] = 0;
     //fftw_chiBuf = fftw_alloc_real(2 * local_size_chi);
 
     plan_c2r_chi = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
@@ -146,8 +148,7 @@ void fftw_init(MPI_Comm communicator){
 void fftw_r2c() {
     int start = MPI_Wtime();
     fftw_mpi_execute_dft_r2c(plan_r2c, fftw_hBuf, fftw_hBuf);
-    fftw_normalise_data(fftw_hBuf);
-    printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+    if (VERBOSE) printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 };
 
 /***************************************
@@ -156,7 +157,8 @@ void fftw_r2c() {
 void fftw_c2r() {
     int start = MPI_Wtime();
     fftw_mpi_execute_dft_c2r(plan_c2r, fftw_hBuf, fftw_hBuf);
-    printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+    fftw_normalise_data_r(fftw_hBuf);
+    if (VERBOSE) printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 }
 
 /***************************************
@@ -165,8 +167,7 @@ void fftw_c2r() {
 void fftw_r2c_chi() {
     int start = MPI_Wtime();
     fftw_mpi_execute_dft_r2c(plan_r2c_chi, fftw_chiBuf, fftw_chiBuf);
-    //fftw_normalise_data(array_local_size.nkx*array_local_size.nkx*, data_c);
-    printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+    if (VERBOSE) printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 };
 
 /***************************************
@@ -175,7 +176,8 @@ void fftw_r2c_chi() {
 void fftw_c2r_chi() {
     int start = MPI_Wtime();
     fftw_mpi_execute_dft_c2r(plan_c2r_chi, fftw_chiBuf, fftw_chiBuf);
-    printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+    fftw_normalise_chi_r(fftw_chiBuf);
+    if (VERBOSE) printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 };
 
 /***************************************
@@ -335,6 +337,35 @@ void fftw_normalise_data(COMPLEX *data) {
     for(size_t i = 0; i < array_local_size.total_comp; i++) {
         data[i] *= fftw_norm;
     }
+}
+
+/***************************************
+ * fftw_normalise_data_r(double *data)
+ ***************************************/
+void fftw_normalise_data_r(double *data) {
+    for(size_t i = 0; i < array_local_size.total_real; i++) {
+        data[i] *= fftw_norm;
+    }
+}
+
+/***************************************
+ * fftw_normalise_chi_r(double *data)
+ ***************************************/
+void fftw_normalise_chi_r(double *data) {
+    switch(systemType){
+        case ELECTROSTATIC:
+            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns; i++) {
+                data[i] *= fftw_norm;
+            }
+            break;
+        case ELECTROMAGNETIC:
+            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns * 3; i++) {
+                data[i] *= fftw_norm;
+            }
+            break;
+        default: exit(1);
+    }
+
 }
 
 /***************************************

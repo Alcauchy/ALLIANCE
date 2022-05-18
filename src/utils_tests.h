@@ -15,4 +15,10 @@ void test_fieldComparison();
 void test_kSpecComputations();
 void test_linearRHS();
 void test_inplaceFFTW_chi();
+void test_nonlinearTerm();
+void test_Poisson();
+void test_Poisson1();
+void test_xGrad();
+void test_enforceRealityConditions();
+void test_enforceZero();
 #endif //ALLIANCE_ALPHA_1_0_UTILS_TESTS_H

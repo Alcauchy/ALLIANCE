@@ -18,4 +18,6 @@ void distrib_getG(COMPLEX *g, const COMPLEX *h);
 void distrib_getXGrad(const COMPLEX *in, COMPLEX *out);    // computes gradient in x direction
 void distrib_getYGrad(const COMPLEX *in, COMPLEX *out);    // computes gradient in y direction
 void distrib_getZGrad(const COMPLEX *in, COMPLEX *out);    // computes gradient in z direction
+void distrib_enforceReality(COMPLEX *f);                   // enforces reality condition
+void distrib_setZeroNHalf(COMPLEX *f);                          // sets all f(n/2) = 0 since there is no way to distinguish derivatives for them
 #endif //ALLIANCE_ALPHA_1_0_DISTRIB_H

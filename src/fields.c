@@ -158,8 +158,13 @@ void fields_init() {
                                                         var_J0[var_getJIndex(ix,iy,is)];
                     }
                     sum[flatInd] *= var_var.beta/4.;
-                    A_denom[flatInd] = 1.0/(space_kPerp2[flatInd] + sum[flatInd]);
-
+                    if (fabs((space_kPerp2[flatInd] + sum[flatInd])) > 1e-16){
+                        A_denom[flatInd] = 1.0/(space_kPerp2[flatInd] + sum[flatInd]);
+                    }
+                    else{
+                        A_denom[flatInd] = 1e16;
+                    }
+                    //printf("A_denom[flatInd] = %f\n", A_denom[flatInd]);
                 }
             }
             for(size_t ix  = 0 ; ix < array_local_size.nkx; ix++)
@@ -246,6 +251,7 @@ void fields_init() {
                     }
                     phiB_denom[ind2D] = 2. * a_pot[ind2D] * b_pot[ind2D] +
                                              var_var.beta * c_pot[ind2D] * c_pot[ind2D];
+                    //printf("phib_denom = %f\n", phiB_denom[ind2D]);
                 }
             }
             break;

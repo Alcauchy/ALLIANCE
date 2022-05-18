@@ -55,7 +55,7 @@ void space_init() {
  *
  *  generates arrays space_iKx, space_iKy, space_iKz,
  *  of lengths nkx,nky,nkz. These arrays are later used to compute gradients:
- *  space_iKx = - i * space_kx, etc.
+ *  space_iKx =  i * space_kx, etc.
  *
  *  args:
  *
@@ -82,9 +82,9 @@ void space_generateWaveSpace() {
     space_kPerp2 = malloc(array_local_size.nkx * array_local_size.nky *
                           sizeof(*space_kPerp2));
 
-    double deltaKx = M_PI / (array_global_size.nkx * space_Lx);
-    double deltaKy = M_PI / (array_global_size.nky * space_Ly);
-    double deltaKz = 2. * M_PI / (array_global_size.nkz * space_Lz);
+    double deltaKx = 2.* M_PI / ( space_Lx);
+    double deltaKy = 2.* M_PI / ( space_Ly);
+    double deltaKz = 2. * M_PI / ( space_Lz);
 
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         if (global_nkx_index[ix] < array_global_size.nkx / 2 + 1) {
@@ -92,7 +92,7 @@ void space_generateWaveSpace() {
         } else {
             space_kx[ix] = deltaKx * ((double) global_nkx_index[ix] - (double) array_global_size.nkx);
         }
-        space_iKx[ix] = -1.j * space_kx[ix];
+        space_iKx[ix] = 1.j * space_kx[ix];
         //printf("[MPI process %d] kx[%d] = %f\n",mpi_my_rank, ix, space_kx[ix]);
     }
     printf("[MPI process %d] kx generated \n", mpi_my_rank);
@@ -103,14 +103,14 @@ void space_generateWaveSpace() {
         } else {
             space_ky[iy] = deltaKy * ((double) iy - (double) array_global_size.nky);
         }
-        space_iKy[iy] = -1.j * space_ky[iy];
+        space_iKy[iy] = 1.j * space_ky[iy];
         //printf("[MPI process %d] ky[%d] = %f\n",mpi_my_rank, iy, space_ky[iy]);
     }
     //space_iKy[1] = (0,0);
     printf("[MPI process %d] ky generated \n", mpi_my_rank);
     for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
         space_kz[iz] = deltaKz * iz;
-        space_iKz[iz] = -1.j * space_kz[iz];
+        space_iKz[iz] = 1.j * space_kz[iz];
         //printf("[MPI process %d] kz[%d] = %f\n ",mpi_my_rank, iz, space_kz[iz]);
     }
     printf("[MPI process %d] kz generated \n", mpi_my_rank);

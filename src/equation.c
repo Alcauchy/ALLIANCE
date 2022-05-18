@@ -119,12 +119,15 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
                             indChi_B = getIndChiBufEM_r(ix,iy,iz,is,CHI_B);
                             // computing (chi_phi + chi_b * h)
                             phibh = (chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];
+                           //if (fabs(phibh)> 1e-16 ) printf("phibh[%zu,%zu,%zu,%zu,%zu,%zu] = %f\n",ix,iy,iz,il,im,is,phibh);
                             // computing chi_b * h_l=1
                             bh = (il==0)?  chiAr[indChi_B] * in[indH_l1] : chiAr[indChi_B] * (in[indH_l0] + 2. * in[indH_l1]);
                             if(im!=0 && im!=array_local_size.nm-1){
                                 indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
                                 indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
-                                ah = chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);
+                                ah = chiAr[indChi_A] * (in[indH]);//chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);
+                                //if (fabs(in[indH]) > 1e-16 && fabs(chiAr[indChi_A]) > 1e-16) printf("%f %f\n",chiAr[indChi_A], in[indH]);
+                                //if (fabs(ah)> 1e-16 ) printf("ah[%zu,%zu,%zu,%zu,%zu,%zu] = %.10e\n",ix,iy,iz,il,im,is,ah);
                             }
                             //left boundary
                             else if(im == 0){
@@ -146,7 +149,10 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
                                             + is;
                                 ah = chiAr[indChi_A] * (space_sqrtM[array_local_size.nm] * plus_boundary[indHBound] + space_sqrtM[array_local_size.nm - 1] * in[indHMinus]);
                             }
-                            out[indH] += sign * (phibh + bh + ah);
+
+
+                            out[indH] += sign * (phibh + bh + ah);//sign * (phibh + bh + ah);
+                            //if (fabs(out[indH])>1e-16) printf("out = %f  \n ", out[indH]);
                             out[indH] /= var_var.B0;
                         }
                     }
@@ -211,6 +217,13 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     size_t indA;
     size_t chi_buf_size;
     size_t chi_buf_size_r;
+    double *h_r = calloc(array_local_size.total_real, sizeof(*h_r));
+    //
+    // CHECKS DELETE LATER WHEN NOT NEEDED
+    //
+    fftw_copy_buffer_c(fftw_hBuf,h);
+    fftw_c2r();
+    fftw_copy_buffer_r(h_r,fftw_hBuf);
     double *buffer = calloc(array_local_size.total_real, sizeof(*buffer));
     //
     // take gradient: dh/dx and dchi/dy
@@ -222,36 +235,54 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     fftw_c2r();
     fftw_c2r_chi();
-    printf("[MPI process %d] fftw of dh/dx and dchi/dy is done\n",mpi_my_rank);
+    //printf("[MPI process %d] fftw of dh/dx and dchi/dy is done\n",mpi_my_rank);
     //
     //compute product, first part
     //
-    equation_getNonlinearProduct(fftw_hBuf, fftw_chiBuf, buffer, 1);
+    equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, 1);
+    double tot = 0;
+    double totb = 0;
+    //for (size_t ii = 0; ii < array_local_size.total_real; ii++)
+   // {
+     //   tot += h_r[ii] * buffer[ii];
+    //    totb += buffer[ii];
+   // }
+   // printf("total 1 = %f\n", tot);
     //
     // take gradient: dh/dy and dchi/dx
     //
     distrib_getYGrad(h, fftw_hBuf);
+    //for (size_t ii = 0; ii < array_local_size.total_comp; ii++) printf("[MPI process %d] buf = %f\n",mpi_my_rank, fftw_hBuf[ii]);
     fields_getGradX(fftw_chiBuf);
     //
     // transform those gradients
     //
     fftw_c2r();
     fftw_c2r_chi();
-    printf("[MPI process %d] fftw of dh/dy and dchi/dx is done\n",mpi_my_rank);
+    //printf("[MPI process %d] fftw of dh/dy and dchi/dx is done\n",mpi_my_rank);
     //
     //compute product, second part
     //
-    equation_getNonlinearProduct(fftw_hBuf, fftw_chiBuf, buffer, -1);
+    equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, -1);
     //
     // make ifftw of the computed product
     //
-    fftw_copy_buffer_r(fftw_hBuf, buffer);
+    fftw_copy_buffer_r((double *)fftw_hBuf, buffer);
+    tot = 0;
+    for (size_t ii = 0; ii < array_local_size.total_real; ii++)
+    {
+        tot += h_r[ii] * buffer[ii];
+        totb += buffer[ii];
+    }
+    //printf("total = %f\n", tot);
+    //printf("total b = %f\n", totb);
     fftw_r2c();
-    printf("[MPI process %d] inverse fftw of the nonlinear product is done\n",mpi_my_rank);
+
+    //printf("[MPI process %d] inverse fftw of the nonlinear product is done\n",mpi_my_rank);
     //
     // add it to RHS
     //
-    for (size_t ii = 0; ii < array_local_size.total_comp; ii++) out[ii] += fftw_hBuf[ii];
+    for (size_t ii = 0; ii < array_local_size.total_comp; ii++) out[ii] -= fftw_hBuf[ii];
     //
     // perform dealiasing
     //

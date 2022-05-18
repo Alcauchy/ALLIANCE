@@ -22,6 +22,8 @@ void fftw_copy_buffer_c(COMPLEX *to, COMPLEX *from);        // copies complex ar
 void fftw_copyChiBuf_r(double *ar1, double *ar2);
 void fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2);
 void fftw_normalise_data(COMPLEX *data);                     // normilises real data after fftw by fftw_norm = nkx*nky*nz.
+void fftw_normalise_chi_r(double *data);
+void fftw_normalise_data_r(double *data);
 void fftw_test_fill(double *ar,double f);                   // fills input real array with cos(2*pi*f*x).
 void dealiasing23(COMPLEX *data_c);                         // performs dealiasing by employing 2/3 rule. Turns all the aliased modes to zero.
 double cosinus(double f,int ix);                            // returns cos(2*pi*f*ix)
