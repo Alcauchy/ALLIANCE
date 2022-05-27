@@ -208,7 +208,7 @@ void distrib_enforceReality(COMPLEX *f){
         kxNeg = (ix == 0)  ? ix : array_global_size.nkx - ix;
         where_neg = mpi_whereIsX[kxNeg * 2];
         local_kxNegInd = mpi_whereIsX[kxNeg * 2 + 1];
-        printf("%zu %d\n",ix,where_neg);
+        //printf("%zu %d\n",ix,where_neg);
         if (where_pos == where_neg){
             for(size_t iy = 0; iy < array_local_size.nky; iy++){
                     for(size_t im = 0; im < array_local_size.nm; im++){

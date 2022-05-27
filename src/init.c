@@ -24,6 +24,7 @@ enum initial initialConditions;
 void init_start(char *filename){
     srand(time(NULL));
     mpi_init();
+    srand(mpi_my_rank);
     read_parameters(filename);
     init_initEnums();
     mpi_generateTopology();
@@ -82,7 +83,27 @@ void init_initEnums(){
  ***************************************/
 void fill_rand(COMPLEX *ar1) {
     for (size_t i = 0; i < array_local_size.total_comp; i++) {
-        ar1[i] = ((0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
+        ar1[i] = 0;//cexp(2. * M_PI *1.j * (double) rand() / (double) (RAND_MAX)) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
+                //((0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
+    }
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for (size_t iy = 0; iy < array_local_size.nky; iy++){
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for (size_t im = 0; im < array_local_size.nm; im++){
+                    for (size_t il = 0; il < array_local_size.nl; il++){
+                        for (size_t is = 0; is < array_local_size.ns; is++){
+                            size_t ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                            size_t ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                                            iy * array_local_size.nkz +
+                                            iz;
+                            ar1[ind6D] = cexp(2. * M_PI *1.j * (double) rand() / (double) (RAND_MAX)) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
+                            if (space_kSq[ind3D] > 1e-16) ar1[ind6D] /=space_kSq[ind3D];
+                            if(global_nkx_index[ix] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -154,8 +175,8 @@ void init_conditions(COMPLEX *data){
     switch(initialConditions)
     {
         case RANDOM:
-            //fill_rand(data);
-            fill_randM0(data);
+            fill_rand(data);
+            //fill_randM0(data);
             //fill_randSingleKM(data);
             break;
 
@@ -169,5 +190,6 @@ void init_conditions(COMPLEX *data){
     }
     distrib_enforceReality(data);
     distrib_setZeroNHalf(data);
+    //dealiasing23(data);
 };
 

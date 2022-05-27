@@ -88,9 +88,9 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
     size_t indChi_phi;
     size_t indChi_A;
     size_t indChi_B;
-    double phibh;
-    double ah;
-    double bh;
+    double phibh = 0;
+    double ah = 0;
+    double bh = 0;
     double *plus_boundary = calloc(array_local_size.nkx *
                                     array_local_size.nky *
                                     (array_local_size.nz + 2)*
@@ -118,16 +118,13 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
                             indChi_A = getIndChiBufEM_r(ix,iy,iz,is,CHI_A);
                             indChi_B = getIndChiBufEM_r(ix,iy,iz,is,CHI_B);
                             // computing (chi_phi + chi_b * h)
-                            phibh = (chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];
-                           //if (fabs(phibh)> 1e-16 ) printf("phibh[%zu,%zu,%zu,%zu,%zu,%zu] = %f\n",ix,iy,iz,il,im,is,phibh);
+                            phibh = (chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];//(chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];
                             // computing chi_b * h_l=1
                             bh = (il==0)?  chiAr[indChi_B] * in[indH_l1] : chiAr[indChi_B] * (in[indH_l0] + 2. * in[indH_l1]);
                             if(im!=0 && im!=array_local_size.nm-1){
                                 indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
                                 indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
-                                ah = chiAr[indChi_A] * (in[indH]);//chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);
-                                //if (fabs(in[indH]) > 1e-16 && fabs(chiAr[indChi_A]) > 1e-16) printf("%f %f\n",chiAr[indChi_A], in[indH]);
-                                //if (fabs(ah)> 1e-16 ) printf("ah[%zu,%zu,%zu,%zu,%zu,%zu] = %.10e\n",ix,iy,iz,il,im,is,ah);
+                                ah = chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);//chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);
                             }
                             //left boundary
                             else if(im == 0){
@@ -150,9 +147,8 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
                                 ah = chiAr[indChi_A] * (space_sqrtM[array_local_size.nm] * plus_boundary[indHBound] + space_sqrtM[array_local_size.nm - 1] * in[indHMinus]);
                             }
 
-
+                            //printf("ah = %f bh = %f phibh = %f\n", ah,bh,phibh);
                             out[indH] += sign * (phibh + bh + ah);//sign * (phibh + bh + ah);
-                            //if (fabs(out[indH])>1e-16) printf("out = %f  \n ", out[indH]);
                             out[indH] /= var_var.B0;
                         }
                     }
@@ -228,8 +224,8 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     // take gradient: dh/dx and dchi/dy
     //
-    distrib_getXGrad(h, fftw_hBuf);
-    fields_getGradY(fftw_chiBuf);
+    distrib_getYGrad(h, fftw_hBuf);
+    fields_getGradX(fftw_chiBuf);
     //
     // make fftw of everything
     //
@@ -239,21 +235,22 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     //compute product, first part
     //
-    equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, 1);
+    equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, 1.);
     double tot = 0;
     double totb = 0;
-    //for (size_t ii = 0; ii < array_local_size.total_real; ii++)
-   // {
-     //   tot += h_r[ii] * buffer[ii];
-    //    totb += buffer[ii];
-   // }
-   // printf("total 1 = %f\n", tot);
+    for (size_t ii = 0; ii < array_local_size.total_real; ii++)
+    {
+        tot += h_r[ii] * buffer[ii];
+        totb += buffer[ii];
+    }
+    //printf("[MPI process %d] total before minus = %.10e\n", mpi_my_rank, totb);
+    //printf("[MPI process %d] total flux before minus= %.10e\n", mpi_my_rank, tot);
     //
     // take gradient: dh/dy and dchi/dx
     //
-    distrib_getYGrad(h, fftw_hBuf);
+    distrib_getXGrad(h, fftw_hBuf);
     //for (size_t ii = 0; ii < array_local_size.total_comp; ii++) printf("[MPI process %d] buf = %f\n",mpi_my_rank, fftw_hBuf[ii]);
-    fields_getGradX(fftw_chiBuf);
+    fields_getGradY(fftw_chiBuf);
     //
     // transform those gradients
     //
@@ -263,19 +260,27 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     //compute product, second part
     //
-    equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, -1);
+    equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, -1.);
     //
     // make ifftw of the computed product
     //
     fftw_copy_buffer_r((double *)fftw_hBuf, buffer);
-    tot = 0;
+    //tot = 0;
+    totb = 0;
     for (size_t ii = 0; ii < array_local_size.total_real; ii++)
     {
         tot += h_r[ii] * buffer[ii];
         totb += buffer[ii];
     }
-    //printf("total = %f\n", tot);
-    //printf("total b = %f\n", totb);
+    //printf("[MPI process %d] total after minus = %.10e\n", mpi_my_rank,totb);
+    double total_reduced = 0;
+    MPI_Allreduce(&tot,
+                  &total_reduced,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  MPI_COMM_WORLD);
+    //if (mpi_my_rank == 0 ) printf("[MPI process %d] total flux after minus = %.10e\n", mpi_my_rank, total_reduced);
     fftw_r2c();
 
     //printf("[MPI process %d] inverse fftw of the nonlinear product is done\n",mpi_my_rank);
@@ -288,7 +293,9 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     dealiasing23(out);
     free(buffer);
+    free(h_r);
 };
+
 
 /***************************************
  * equation_getRHS()
@@ -313,7 +320,7 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
 
     /* computing linear term */
-    equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
+    //equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
 
     /* computing nonlinear term */
     equation_getNonlinearTerm(in_h, out);

@@ -21,7 +21,7 @@ struct rk4 rk4;
  ***************************************/
 void solver_init() {
     solver.dt = parameters.dt;
-    solver.dt = 0.001;
+    //solver.dt = 0.015;
     solver.Nt = parameters.Nt;
     solverType = SOLVERTYPE;
     if (solverType == RK4) {
@@ -42,6 +42,9 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h) {
         case RK4:
             //computing k1
             equation_getRHS(g_ar, h, rk4.K_buf);
+            // setting additional constrains on substeps of rk4:
+            distrib_enforceReality(rk4.K_buf);
+            distrib_setZeroNHalf(rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
                 rk4.RHS_buf[i] = g_ar[i] + 0.5 * solver.dt * rk4.K_buf[i];
                 rk4.g_buf[i] = g_ar[i] + solver.dt/6. * rk4.K_buf[i];
@@ -49,6 +52,9 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h) {
             }
             // computing k2
             equation_getRHS(rk4.RHS_buf, h, rk4.K_buf);
+            // setting additional constrains on substeps of rk4:
+            distrib_enforceReality(rk4.K_buf);
+            distrib_setZeroNHalf(rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
                 rk4.RHS_buf[i] = g_ar[i] + 0.5 * solver.dt * rk4.K_buf[i];
                 rk4.g_buf[i] += solver.dt/3. * rk4.K_buf[i];
@@ -56,6 +62,9 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h) {
             }
             //computing k3
             equation_getRHS(rk4.RHS_buf, h, rk4.K_buf);
+            // setting additional constrains on substeps of rk4:
+            distrib_enforceReality(rk4.K_buf);
+            distrib_setZeroNHalf(rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
                 rk4.RHS_buf[i] = g_ar[i] + solver.dt * rk4.K_buf[i];
                 rk4.g_buf[i] += solver.dt/3. * rk4.K_buf[i];
@@ -63,6 +72,9 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h) {
             }
             //computing k4
             equation_getRHS(rk4.RHS_buf, h, rk4.K_buf);
+            // setting additional constrains on substeps of rk4:
+            distrib_enforceReality(rk4.K_buf);
+            distrib_setZeroNHalf(rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
                 rk4.g_buf[i] += solver.dt/6. * rk4.K_buf[i];
                 rk4.K_buf[i] = 0.j;

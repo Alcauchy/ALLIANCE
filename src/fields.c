@@ -332,7 +332,7 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
                                         iz * array_local_size.ns +
                                         is;
                                 fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += a_pot[ind2D] * I_B[ind3D] *
-                                                                                     (g0[ind4D] + g1[ind4D]);
+                                                                                        (g0[ind4D] + g1[ind4D]);//(g0[ind4D] + g1[ind4D]);
                                 fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += c_pot[ind2D] * I_phi[ind3D] *
                                                                                      g0[ind4D];
 
@@ -346,6 +346,17 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
                         for(size_t iz = 0; iz < array_local_size.nkz; iz++)
                         {
                             fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                        /*    for(size_t is = 0; is < array_local_size.ns; is++) {
+                                ind3D = ix * array_local_size.nky * array_local_size.ns +
+                                        iy * array_local_size.ns +
+                                        is;
+                                ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                        iy * array_local_size.nkz * array_local_size.ns +
+                                        iz * array_local_size.ns +
+                                        is;
+                                fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = - 0.5 * var_var.beta * I_B[ind3D] *
+                                                                                    (g0[ind4D] + g1[ind4D])/b_pot[ind2D];
+                            }*/
                         }
                     }
                 }
@@ -487,8 +498,8 @@ void fields_getChiPhi(){
  * fields_getChiB():
  ***************************************/
 void fields_getChiB(){
-    size_t ind3D = 0;
-    size_t ind4D = 0;
+    size_t ind3D;
+    size_t ind4D;
     for(size_t ix = 0; ix < array_local_size.nkx; ix++)
     {
         for(size_t iy = 0; iy < array_local_size.nky; iy++)
@@ -792,6 +803,7 @@ void fields_getGradX(COMPLEX *out){
 
                             indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_B);
                             out[indChiBuf] = space_iKx[ix] * fields_chi.B[ind4D];
+                            //printf("kx = %f\n", cabs(space_iKx[ix]));
                         }
                     }
                 }
@@ -837,6 +849,7 @@ void fields_getGradY(COMPLEX *out){
 
                             indChiBuf = getIndChiBufEM_c(ix,iy,iz,is,CHI_B);
                             out[indChiBuf] = space_iKy[iy] * fields_chi.B[ind4D];
+                            //printf("ky = %f\n", cabs(space_iKy[iy]));
                         }
                     }
                 }

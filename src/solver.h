@@ -1,6 +1,7 @@
 #ifndef ALLIANCE_ALPHA_1_0_SOLVER_H
 #define ALLIANCE_ALPHA_1_0_SOLVER_H
 #include "parameters_io.h"
+#include "distrib.h"
 
 enum solverType {RK4};
 void solver_init(); // initialize solver depending on the choice.

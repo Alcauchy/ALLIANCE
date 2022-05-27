@@ -14,14 +14,15 @@
 #include <complex.h>
 
 #define MINUS_I -1.j
-double space_Lx = 1.0;
-double space_Ly = 1.0;
-double space_Lz = 1.0;
+double space_Lx = 100;
+double space_Ly = 100;
+double space_Lz = 100;
 double *space_kx;
 double *space_ky;
 double *space_kz;
 double *space_kPerp;
 double *space_kPerp2;
+double *space_kSq;
 double *space_sqrtM;
 size_t *space_globalMIndex;
 COMPLEX *space_iKx;
@@ -82,6 +83,9 @@ void space_generateWaveSpace() {
     space_kPerp2 = malloc(array_local_size.nkx * array_local_size.nky *
                           sizeof(*space_kPerp2));
 
+    space_kSq = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz *
+                          sizeof(*space_kPerp2));
+
     double deltaKx = 2.* M_PI / ( space_Lx);
     double deltaKy = 2.* M_PI / ( space_Ly);
     double deltaKz = 2. * M_PI / ( space_Lz);
@@ -119,6 +123,17 @@ void space_generateWaveSpace() {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
             space_kPerp2[ix * array_local_size.nky + iy] = space_kx[ix] * space_kx[ix] + space_ky[iy] * space_ky[iy];
             space_kPerp[ix * array_local_size.nky + iy] = sqrt(space_kPerp2[ix * array_local_size.nky + iy]);
+        }
+    }
+
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                size_t ind3D = ix * array_local_size.nky * array_local_size.nkz
+                               + iy * array_local_size.nkz
+                               + iz;
+                space_kSq[ind3D] = space_kx[ix] * space_kx[ix] + space_ky[iy] * space_ky[iy] + space_kz[iz] * space_kz[iz];
+            }
         }
     }
 

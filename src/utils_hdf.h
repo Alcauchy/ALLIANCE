@@ -13,6 +13,7 @@ void hdf_init();                                            // inits hdf5 enviro
 void hdf_create_file_c(char *filename, COMPLEX *data);      // creates file with complex data
 void hdf_create_file_r(char *filename, double *data);       // creates file with real data
 void hdf_initField();
+void hdf_saveField_r(double *f, char *filename);
 void hdf_saveFieldA(char *filename);
 void hdf_saveFieldB(char *filename);
 void hdf_saveFieldPhi(char *filename);

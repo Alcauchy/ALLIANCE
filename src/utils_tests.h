@@ -21,4 +21,5 @@ void test_Poisson1();
 void test_xGrad();
 void test_enforceRealityConditions();
 void test_enforceZero();
+void test_fieldsFFT();
 #endif //ALLIANCE_ALPHA_1_0_UTILS_TESTS_H

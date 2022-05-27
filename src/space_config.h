@@ -16,6 +16,7 @@ void space_generateMSpace();
 
 extern double *space_kPerp2;
 extern double *space_kPerp;
+extern double *space_kSq;
 extern double *space_kx;
 extern double *space_ky;
 extern double *space_kz;

@@ -12,7 +12,11 @@
 //  fftw_copy_buffer_c
 //  fftw_copyChiBuf_r
 //  fftw_copyChiBuf_c
+//  fftw_copyFieldBuf_r
+//  fftw_copyFieldBuf_c
 //  fftw_normalise_data
+// fftw_normalise_chi_r
+// fftw_normalise_field_r
 //  fftw_test_fill
 //  dealiasing23
 //  cosinus
@@ -36,10 +40,13 @@ ptrdiff_t howmany;                              // how many 3D transforms of box
 ptrdiff_t howmany_chi;
 ptrdiff_t local_size, local_n0, local_0_start;  // local size, local start and local kx block size on a given processor
 ptrdiff_t local_size_chi, local_n0_chi, local_0_start_chi;  // local size, local start and local kx block size on a given processor
+ptrdiff_t local_size_field, local_n0_field, local_0_start_field;
 fftw_plan plan_c2r, plan_r2c;                   // plans needed to perform complex to real and real to complex transforms
 fftw_plan plan_c2r_chi, plan_r2c_chi;                   // plans needed to perform complex to real and real to complex transforms
+fftw_plan plan_c2r_field, plan_r2c_field;
 COMPLEX* fftw_hBuf;                                   // complex data array buffer; used for in-place
 COMPLEX* fftw_chiBuf;                             // complex data array buffer for chi transformation;
+COMPLEX *fftw_field;                              //complex data to transform fields
 double fftw_norm;                               //normalization coefficient for backward fft transform
 void (*fftw_dealiasing)(COMPLEX*) = NULL;
 int *global_nkx_index;                          // array which stores the global position of nkx on the processor. Needed for dealiasing, in order to find Nkx/3 and 2*Nkx/3 and put all modes between those to zeros.
@@ -140,6 +147,34 @@ void fftw_init(MPI_Comm communicator){
                                               fftw_chiBuf,
                                               communicator,
                                               FFTW_ESTIMATE);
+
+    /* preparing field transform */
+    //getting local size
+    local_size_field = fftw_mpi_local_size_many(FFTW_RANK,
+                                                size_c,
+                                                1,
+                                                array_local_size.nkx,
+                                                communicator,
+                                                &local_n0_field,
+                                                &local_0_start_field);
+    printf("[MPI process %d] FIELD TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_field, 1);
+    fftw_field = fftw_alloc_complex(local_size_field);
+    //creating r2c and c2r plans
+    plan_c2r_field = fftw_mpi_plan_dft_c2r_3d(size_r[0],
+                                              size_r[1],
+                                              size_r[2],
+                                              fftw_field,
+                                              fftw_field,
+                                              communicator,
+                                              FFTW_ESTIMATE);
+    plan_r2c_field = fftw_mpi_plan_dft_r2c_3d(size_r[0],
+                                              size_r[1],
+                                              size_r[2],
+                                              fftw_field,
+                                              fftw_field,
+                                              communicator,
+                                              FFTW_ESTIMATE);
+
 }
 
 /***************************************
@@ -181,6 +216,26 @@ void fftw_c2r_chi() {
 };
 
 /***************************************
+ * fftw_r2c_field(double *data_r, COMPLEX *data_c)
+ ***************************************/
+void fftw_r2c_field() {
+    int start = MPI_Wtime();
+    fftw_mpi_execute_dft_r2c(plan_r2c_field, fftw_field, fftw_field);
+    if (VERBOSE) printf("[MPI process %d] r2c transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+};
+
+
+/***************************************
+ * fftw_c2r_field(COMPLEX *data_c, double *data_r)
+ ***************************************/
+void fftw_c2r_field() {
+    int start = MPI_Wtime();
+    fftw_mpi_execute_dft_c2r(plan_c2r_field, fftw_field, fftw_field);
+    fftw_normalise_field_r(fftw_field);
+    if (VERBOSE) printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+};
+
+/***************************************
  * fftw_kill()
  ***************************************/
 void fftw_kill(){
@@ -188,8 +243,11 @@ void fftw_kill(){
     fftw_destroy_plan(plan_r2c);
     fftw_destroy_plan(plan_c2r_chi);
     fftw_destroy_plan(plan_r2c_chi);
+    fftw_destroy_plan(plan_c2r_field);
+    fftw_destroy_plan(plan_r2c_field);
     free(fftw_hBuf);
     free(fftw_chiBuf);
+    free(fftw_field);
     free(global_nkx_index);
     fftw_mpi_cleanup();
 }
@@ -310,6 +368,25 @@ void fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2){
 }
 
 /***************************************
+ * fftw_copyFieldBuf_r(double *to, double *from)
+ ***************************************/
+void fftw_copyFieldBuf_r(double *to, double *from){
+    for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2); ii++){
+        to[ii] = from[ii];
+    }
+}
+
+/***************************************
+ * fftw_copyFieldBuf_c(double *to, double *from)
+ ***************************************/
+void fftw_copyFieldBuf_c(COMPLEX *to, COMPLEX *from){
+    for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
+        to[ii] = from[ii];
+    }
+}
+
+
+/***************************************
  * cosinus(double f,int ix)
  ***************************************/
 double cosinus(double f,int ix){
@@ -354,19 +431,28 @@ void fftw_normalise_data_r(double *data) {
 void fftw_normalise_chi_r(double *data) {
     switch(systemType){
         case ELECTROSTATIC:
-            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns; i++) {
+            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.ns; i++) {
                 data[i] *= fftw_norm;
             }
             break;
         case ELECTROMAGNETIC:
-            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns * 3; i++) {
+            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.ns * 3; i++) {
                 data[i] *= fftw_norm;
             }
             break;
         default: exit(1);
     }
-
 }
+
+/***************************************
+ * fftw_normalise_field_r(double *data)
+ ***************************************/
+void fftw_normalise_field_r(double *data) {
+    for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2); i++) {
+        data[i] *= fftw_norm;
+    }
+}
+
 
 /***************************************
  * dealiasing23(COMPLEX *data_c)

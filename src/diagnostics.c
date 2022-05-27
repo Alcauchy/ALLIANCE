@@ -64,8 +64,8 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
     for (size_t i = 0; i < array_local_size.total_comp; i++) {
         sum += g[i] * conj(h[i]);
     }
-    MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-    diag_freeEnergy = creal(freeEnergy);
+    MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_C_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+    diag_freeEnergy = 2. * creal(freeEnergy);
 
 };
 

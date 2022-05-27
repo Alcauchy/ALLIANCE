@@ -337,15 +337,15 @@ void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPL
              0,
              mpi_cube_comm,
              MPI_STATUS_IGNORE);
-    if (VERBOSE)  printf("[MPI process %d] received plus, t = %.2fs.! buf_size = %d\n", mpi_my_rank, MPI_Wtime() - start,
-           mpi_sub_buf_size);
+    if (VERBOSE) printf("[MPI process %d] received plus, t = %.2fs.! buf_size = %d, my_col_rank = %d\n", mpi_my_rank, MPI_Wtime() - start,
+           mpi_sub_buf_size,mpi_my_col_rank);
     start = MPI_Wtime();
     MPI_Send(input_array, SUBARRAY_COUNT, mpi_subarray_type_plus, m_neighbour_ranks[PLUS], 1, mpi_cube_comm);
     MPI_Recv(minus_boundary, mpi_sub_buf_size, MPI_C_DOUBLE_COMPLEX, m_neighbour_ranks[MINUS], 1, mpi_cube_comm,
              MPI_STATUS_IGNORE);
-    if (VERBOSE) printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d\n", mpi_my_rank,
+    if (VERBOSE)printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d,my_col_rank = %d\n", mpi_my_rank,
            MPI_Wtime() - start,
-           mpi_sub_buf_size);
+           mpi_sub_buf_size,mpi_my_col_rank);
 }
 
 /***************************
@@ -393,46 +393,13 @@ void mpi_exchangeMBoundaries_r(double *input_array, double *plus_boundary, doubl
  *  mpi_sendVector(COMPLEX *from_array, COMPLEX *to_buffer, int to_proc)
  * *************************/
 void mpi_sendVector(COMPLEX *from_array, COMPLEX *to_buffer, int from_proc, int to_proc) {
-
     if(mpi_my_row_rank == from_proc) {
         MPI_Send(from_array, 1, mpi_vector_kxSlice, to_proc,1,mpi_row_comm);
-        printf("[MPI process %d] sent kx slice to process %d!\n",mpi_my_rank, to_proc);
-        printf("[MPI process %d] from =  %f!\n",mpi_my_rank, cabs(from_array[0]));
-        size_t ii = 0;
-        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
-            for (size_t im = 0; im < array_local_size.nm; im++) {
-                for (size_t il = 0; il < array_local_size.nl; il++) {
-                    for (size_t is = 0; is < array_local_size.ns; is++) {
-                        size_t ind6D_pos = iy * array_local_size.nm * array_local_size.nl * array_local_size.ns * array_local_size.nkz +
-                                           im * array_local_size.nl * array_local_size.ns +
-                                           il * array_local_size.ns +
-                                           is;
-                        //printf("[MPI process %d] arr[%zu] = %f %f\n", mpi_my_rank, ii, creal(from_array[ind6D_pos]),
-                        //       cimag(from_array[ind6D_pos]));
-                        ii++;
-                    }
-                }
-            }
-        }
+        if (VERBOSE)printf("[MPI process %d] sent kx slice to process %d!\n",mpi_my_rank, to_proc);
+        if (VERBOSE)printf("[MPI process %d] from =  %f!\n",mpi_my_rank, cabs(from_array[0]));
     }
     if(mpi_my_row_rank == to_proc) {
         MPI_Recv(to_buffer, mpi_vectorSliceLength, MPI_C_DOUBLE_COMPLEX, from_proc, 1, mpi_row_comm, MPI_STATUS_IGNORE);
-        printf("[MPI process %d] received kx slice from %d!\n", mpi_my_rank, from_proc);
-        size_t ii = 0;
-        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
-            for (size_t im = 0; im < array_local_size.nm; im++) {
-                for (size_t il = 0; il < array_local_size.nl; il++) {
-                    for (size_t is = 0; is < array_local_size.ns; is++) {
-                        size_t ind6D_pos = iy * array_local_size.nm * array_local_size.nl * array_local_size.ns +
-                                           im * array_local_size.nl * array_local_size.ns +
-                                           il * array_local_size.ns +
-                                           is;
-                        //printf("[MPI process %d] buf[%zu] = %f %f\n", mpi_my_rank, ii, creal(to_buffer[ii]),
-                        //       cimag(to_buffer[ii]));
-                        ii++;
-                    }
-                }
-            }
-        }
+        if (VERBOSE) printf("[MPI process %d] received kx slice from %d!\n", mpi_my_rank, from_proc);
     }
 };

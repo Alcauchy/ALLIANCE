@@ -48,9 +48,10 @@ int main(int argc, char **argv) {
             sprintf(name, "%s%s%s%d%s", ".","/","g_",it,".h5");
             //hdf_create_file_c(name,g);
             sprintf(name, "%s%s%s%d%s", ".","/","h_",it,".h5");
-            //hdf_create_file_c(name,h);
+            //hdf_saveField_r()
+            hdf_create_file_c(name,h);
             if (it == 0) free_energy0 = diag_freeEnergy;
-            if (mpi_my_rank == 0) printf("W = %f\n", diag_freeEnergy/free_energy0);
+            if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/free_energy0);
         }
         //printf("1)1st = %p, 2nd = %p\n", g, rk4.g_buf);
         solver_makeStep(&g, h);
@@ -58,12 +59,16 @@ int main(int argc, char **argv) {
     }
     //test_linearRHS();
     //test_inplaceFFTW_chi();
-    //test_nonlinearTerm();
+
     //test_Poisson();
     //test_Poisson1();
     //test_xGrad();
     //test_enforceRealityConditions();
     //test_enforceZero();
+    //test_fieldComparison();
+    //test_fieldsFFT();
+    //test_Poisson();
+    //test_nonlinearTerm();
     free_wavespace();
     fftw_kill();
     mpi_kill();
