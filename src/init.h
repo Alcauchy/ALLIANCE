@@ -26,6 +26,7 @@ void init_start(char *filename);
 void init_printParameters();
 void init_initEnums();
 void init_conditions(COMPLEX *data);
+double init_energySpec(double k, double m, double amp, double disp);
 
 extern enum adiabatic kinetic;
 extern enum electromagnetic systemType;

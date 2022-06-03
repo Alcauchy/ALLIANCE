@@ -202,7 +202,7 @@ void distrib_enforceReality(COMPLEX *f){
     int where_pos;
     int where_neg;
     COMPLEX *buffer = malloc(array_local_size.nky * array_local_size.nm * array_local_size.ns * array_local_size.nl * sizeof(*buffer));
-    for (size_t ix = 0; ix < array_global_size.nkx/2 ; ix++){
+    for (size_t ix = 0; ix < array_global_size.nkx/2 + 1; ix++){
         where_pos = mpi_whereIsX[ix * 2];
         local_kxPosInd = mpi_whereIsX[ix * 2 + 1];
         kxNeg = (ix == 0)  ? ix : array_global_size.nkx - ix;
@@ -225,8 +225,10 @@ void distrib_enforceReality(COMPLEX *f){
         }
         else{
             ind6D = get_flat_c(0,0,0,local_kxPosInd,0,0);
+            //printf("[MPI process %d], from %d to %d ix = %zu, kx = %zu, buf sent = (%f,%f)\n",mpi_my_rank,where_pos, where_neg,ix,local_kxPosInd,creal(f[ind6D]),cimag(f[ind6D]));
              mpi_sendVector(&f[ind6D],buffer,where_pos,where_neg);
              if(mpi_my_row_rank == where_neg){
+                 //printf("[MPI process %d], buf recieved = (%f,%f)\n",mpi_my_rank,creal(buffer[0]),cimag(buffer[0]));
                  for(size_t iy = 0; iy < array_local_size.nky; iy++){
                      for(size_t im = 0; im < array_local_size.nm; im++){
                          for(size_t il = 0; il < array_local_size.nl; il++){
@@ -238,6 +240,7 @@ void distrib_enforceReality(COMPLEX *f){
                                              il * array_local_size.ns +
                                              is;
                                  f[ind6D_neg] = conj(buffer[ind6D_pos]);
+                                 //if (iy == 0 && local_kxNegInd == 0 && im == 0 && il==0 && is == 0) printf("[MPI process %d]\n",mpi_my_rank);
                              }
                          }
                      }

@@ -457,7 +457,7 @@ void fftw_normalise_field_r(double *data) {
 /***************************************
  * dealiasing23(COMPLEX *data_c)
  ***************************************/
-void dealiasing23(COMPLEX *data_c){
+/*void dealiasing23(COMPLEX *data_c){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
         for(size_t iky = 0; iky < array_local_size.nky; iky++){
             for(size_t ikz = 0; ikz < array_local_size.nkz; ikz++){
@@ -467,6 +467,31 @@ void dealiasing23(COMPLEX *data_c){
                             data_c[get_flat_c(is,il,im,ikx,iky,ikz)] =  (ikz>array_local_size.nkz*2/3)||
                                                                         ((iky>array_local_size.nky/3)&&(iky<array_local_size.nky*2/3))||
                                                                         ((global_nkx_index[ikx] > array_global_size.nkx / 3) && (global_nkx_index[ikx] < array_global_size.nkx * 2 / 3)) ? 0.j : data_c[get_flat_c(is, il, im, ikx, iky, ikz)];
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+}*/
+
+void dealiasing23(COMPLEX *data_c){
+    for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
+        for(size_t iky = 0; iky < array_local_size.nky; iky++){
+            for(size_t ikz = 0; ikz < array_local_size.nkz; ikz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is <array_local_size.ns; is++){
+                            if (ikz > array_local_size.nkz * 2 / 3){
+                                data_c[get_flat_c(is,il,im,ikx,iky,ikz)] = 0.j;
+                            }
+                            if (iky > array_local_size.nky / 3 + 1 && iky < array_local_size.nky *2 / 3){
+                                data_c[get_flat_c(is,il,im,ikx,iky,ikz)] = 0.j;
+                            }
+                            if (global_nkx_index[ikx] > array_global_size.nkx / 3 + 1 && (global_nkx_index[ikx] < array_global_size.nkx * 2 / 3)){
+                                data_c[get_flat_c(is,il,im,ikx,iky,ikz)] = 0.j;
+                            }
                         }
                     }
                 }

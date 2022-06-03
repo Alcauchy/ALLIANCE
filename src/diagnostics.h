@@ -21,5 +21,6 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep);
 extern double *diag_mSpec;
 extern double *diag_kSpec;
 extern double *diag_shells;
+
 extern double diag_freeEnergy;
 #endif //ALLIANCE_ALPHA_1_0_DIAGNOSTICS_H

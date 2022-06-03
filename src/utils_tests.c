@@ -731,8 +731,9 @@ void test_Poisson1(){
 void test_enforceRealityConditions(){
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     init_conditions(h);
+    hdf_create_file_c("test_real_cond_0.h5",h);
     distrib_enforceReality(h);
-    hdf_create_file_c("test_real_cond.h5",h);
+    hdf_create_file_c("test_real_cond_1.h5",h);
 }
 /***************************
 *  test_enforceRealityConditions()
@@ -745,7 +746,7 @@ void test_enforceZero(){
 }
 
 /***************************
-*  test_enforceRealityConditions()
+*  test_fieldsFFT()
 * *************************/
 void test_fieldsFFT(){
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
@@ -776,4 +777,106 @@ void test_fieldsFFT(){
     fftw_copyFieldBuf_c(fftw_field,fields_fields.B);
     fftw_c2r_field();
     hdf_saveField_r(fftw_field,"B.h5");
+}
+
+/***************************
+*  test_everything()
+* *************************/
+void test_everything(){
+    COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
+    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    //initializing g
+    init_conditions(h);
+    fields_sendG(h);
+    //computing fields
+    fields_getFieldsFromH(g00,g10,g01);
+    fields_getChi();
+    // computing h function
+    distrib_getG(g, h);
+    //computing diagnostics
+    diag_compute(g, h, 0);
+    //saving distribution functions, both real and complex space
+    char name[64];
+    sprintf(name, "%s%s%s%d%s", ".","/","g_",0,".h5");
+    hdf_create_file_c(name,g);
+    sprintf(name, "%s%s%s%d%s", ".","/","h_",0,".h5");
+    hdf_create_file_c(name,h);
+    //fftw transform to save real distribution functions
+    fftw_copy_buffer_c(fftw_hBuf, g);
+    fftw_c2r();
+    sprintf(name, "%s%s%s%d%s", ".","/","gr_",0,".h5");
+    hdf_create_file_r(name,(double *) fftw_hBuf);
+
+    fftw_copy_buffer_c(fftw_hBuf, h);
+    fftw_c2r();
+    sprintf(name, "%s%s%s%d%s", ".","/","hr_",0,".h5");
+    hdf_create_file_r(name,(double *) fftw_hBuf);
+    //fftw transform of the fields
+    fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
+    fftw_c2r_field();
+    hdf_saveField_r(fftw_field,"phi.h5");
+
+    fftw_copyFieldBuf_c(fftw_field,fields_fields.A);
+    fftw_c2r_field();
+    hdf_saveField_r(fftw_field,"A.h5");
+
+    fftw_copyFieldBuf_c(fftw_field,fields_fields.B);
+    fftw_c2r_field();
+    hdf_saveField_r(fftw_field,"B.h5");
+
+    hdf_saveData(g,0);
+    free(g);
+    free(h);
+}
+
+/***************************
+*  test_RHS()
+* *************************/
+void test_RHS(){
+    COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
+    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    //initializing g
+    init_conditions(h);
+    fields_sendG(h);
+    //computing fields
+    fields_getFieldsFromH(g00,g10,g01);
+    fields_getChi();
+    // computing h function
+    distrib_getG(g, h);
+    //computing diagnostics
+    diag_compute(g, h, 0);
+    //saving distribution functions, both real and complex space
+    char name[64];
+    sprintf(name, "%s%s%s%d%s", ".","/","g_",0,".h5");
+    hdf_create_file_c(name,g);
+    sprintf(name, "%s%s%s%d%s", ".","/","h_",0,".h5");
+    hdf_create_file_c(name,h);
+    //fftw transform to save real distribution functions
+    fftw_copy_buffer_c(fftw_hBuf, g);
+    fftw_c2r();
+    sprintf(name, "%s%s%s%d%s", ".","/","gr_",0,".h5");
+    hdf_create_file_r(name,(double *) fftw_hBuf);
+
+    fftw_copy_buffer_c(fftw_hBuf, h);
+    fftw_c2r();
+    sprintf(name, "%s%s%s%d%s", ".","/","hr_",0,".h5");
+    hdf_create_file_r(name,(double *) fftw_hBuf);
+    //fftw transform of the fields
+    fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
+    fftw_c2r_field();
+    hdf_saveField_r(fftw_field,"phi.h5");
+
+    fftw_copyFieldBuf_c(fftw_field,fields_fields.A);
+    fftw_c2r_field();
+    hdf_saveField_r(fftw_field,"A.h5");
+
+    fftw_copyFieldBuf_c(fftw_field,fields_fields.B);
+    fftw_c2r_field();
+    hdf_saveField_r(fftw_field,"B.h5");
+
+    hdf_saveData(g,0);
+
+    //compute RHS and save it
+    free(g);
+    free(h);
 }
