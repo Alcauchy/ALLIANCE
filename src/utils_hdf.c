@@ -47,6 +47,7 @@
 
 int hdf_rank = 6;
 int hdf_rankFields = 3;
+int hdf_rankChi = 5;
 int hdf_freeEnergyCalls = 0;
 char **hdf_checkpointNames;
 char hdf_newCheckpointName[FILENAME_ID_LEN];
@@ -61,17 +62,25 @@ hsize_t dataspace_dims_r[6];
 hsize_t dataspace_dims_c[6];
 hsize_t dataspace_dimsFields[3];
 hsize_t dataspace_dimsFields_r[3];
+hsize_t dataspace_dimsChi[5];
+hsize_t dataspace_dimsChi_r[5];
 hsize_t chunk_dims_r[6];
 hsize_t chunk_dims_c[6];
 hsize_t chunk_dimsFields[3];
 hsize_t chunk_dimsFields_r[3];
+hsize_t chunk_dimsChi[5];
+hsize_t chunk_dimsChi_r[5];
 hsize_t offset[6];
 hsize_t offsetFields[3];
 hsize_t offsetFields_r[3];
+hsize_t offsetChi[5];
+hsize_t offsetChi_r[5];
 hsize_t count[6] = {1,1,1,1,1,1};
 hsize_t stride[6] = {1,1,1,1,1,1};
 hsize_t countFields[3] = {1,1,1};
 hsize_t strideFields[3] = {1,1,1};
+hsize_t countChi[5] = {1,1,1,1,1};
+hsize_t strideChi[5] = {1,1,1,1,1};
 herr_t	status;
 MPI_Info info = MPI_INFO_NULL;
 complex_t tmp;  //used only to compute offsets
@@ -94,6 +103,7 @@ void complex_t_init(){
 void hdf_init(){
     complex_t_init();
     hdf_initField();
+    hdf_initChi();
     hdf_createSaveDirs();
     if (parameters.checkpoints > 0)
     {
@@ -261,6 +271,162 @@ void hdf_create_file_r(char *filename, double *data){
     plist_id = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
     status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, data);
+
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Sclose(memory_space);
+    H5Pclose(plist_id);
+    H5Fclose(file_id);
+}
+
+/***************************
+ *  hdf_initChi
+ * *************************/
+void hdf_initChi(){
+    if (systemType == ELECTROSTATIC){
+        dataspace_dimsChi[0] = array_global_size.nkx;
+        dataspace_dimsChi[1] = array_global_size.nky;
+        dataspace_dimsChi[2] = array_global_size.nkz;
+        dataspace_dimsChi[3] = array_global_size.ns;
+        dataspace_dimsChi[4] = 1;
+
+        dataspace_dimsChi_r[0] = array_global_size.nkx;
+        dataspace_dimsChi_r[1] = array_global_size.nky;
+        dataspace_dimsChi_r[2] = array_global_size.nz+2;
+        dataspace_dimsChi_r[3] = array_global_size.ns;
+        dataspace_dimsChi_r[4] = 1;
+
+        chunk_dimsChi[0] = array_local_size.nkx;
+        chunk_dimsChi[1] = array_local_size.nky;
+        chunk_dimsChi[2] = array_local_size.nkz;
+        chunk_dimsChi[3] = array_local_size.ns;
+        chunk_dimsChi[4] = 1;
+        printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
+
+        chunk_dimsChi_r[0] = array_local_size.nkx;
+        chunk_dimsChi_r[1] = array_local_size.nky;
+        chunk_dimsChi_r[2] = array_local_size.nz + 2;
+        chunk_dimsChi_r[3] = array_local_size.ns;
+        chunk_dimsChi_r[4] = 1;
+
+        offsetChi[0] = array_local_size.nkx * mpi_my_coords[1];
+        offsetChi[1] = 0;
+        offsetChi[2] = 0;
+        offsetChi[3] = 0;
+        offsetChi[4] = 0;
+
+        offsetChi_r[0] = array_local_size.nkx * mpi_my_coords[1];
+        offsetChi_r[1] = 0;
+        offsetChi_r[2] = 0;
+        offsetChi_r[3] = 0;
+        offsetChi_r[4] = 0;
+
+    }
+    else{
+        dataspace_dimsChi[0] = array_global_size.nkx;
+        dataspace_dimsChi[1] = array_global_size.nky;
+        dataspace_dimsChi[2] = array_global_size.nkz;
+        dataspace_dimsChi[3] = array_global_size.ns;
+        dataspace_dimsChi[4] = 3;
+
+        dataspace_dimsChi_r[0] = array_global_size.nkx;
+        dataspace_dimsChi_r[1] = array_global_size.nky;
+        dataspace_dimsChi_r[2] = array_global_size.nz+2;
+        dataspace_dimsChi_r[3] = array_global_size.ns;
+        dataspace_dimsChi_r[4] = 3;
+
+        chunk_dimsChi[0] = array_local_size.nkx;
+        chunk_dimsChi[1] = array_local_size.nky;
+        chunk_dimsChi[2] = array_local_size.nkz;
+        chunk_dimsChi[3] = array_local_size.ns;
+        chunk_dimsChi[4] = 3;
+        printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
+
+        chunk_dimsChi_r[0] = array_local_size.nkx;
+        chunk_dimsChi_r[1] = array_local_size.nky;
+        chunk_dimsChi_r[2] = array_local_size.nz + 2;
+        chunk_dimsChi_r[3] = array_local_size.ns;
+        chunk_dimsChi_r[4] = 3;
+
+        offsetChi[0] = array_local_size.nkx * mpi_my_coords[1];
+        offsetChi[1] = 0;
+        offsetChi[2] = 0;
+        offsetChi[3] = 0;
+        offsetChi[4] = 0;
+
+        offsetChi_r[0] = array_local_size.nkx * mpi_my_coords[1];
+        offsetChi_r[1] = 0;
+        offsetChi_r[2] = 0;
+        offsetChi_r[3] = 0;
+        offsetChi_r[4] = 0;
+
+    }
+};
+
+/***************************
+ *  hdf_createChiFile_r
+ * *************************/
+void hdf_createChiFile_r(char *filename, double *data){
+    // now we will create a file, and write a dataset into it.
+    hid_t file_id, dset_id;
+    hid_t file_space, memory_space;
+    hid_t plist_id; //property list id
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
+    printf("[process id %d] trying to create a file\n",mpi_my_rank);
+    file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
+    printf("[process id %d] file created\n",mpi_my_rank);
+    H5Pclose(plist_id);
+    file_space = H5Screate_simple(hdf_rankChi, dataspace_dimsChi_r, NULL);
+    memory_space = H5Screate_simple(hdf_rankChi, chunk_dimsChi_r, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
+    H5Pset_chunk(plist_id, hdf_rankChi, chunk_dimsChi_r);
+    dset_id = H5Dcreate(file_id,"chi", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(file_space);
+
+    file_space = H5Dget_space(dset_id);
+    status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offsetChi_r, strideChi, countChi, chunk_dimsChi_r);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, data);
+
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Sclose(memory_space);
+    H5Pclose(plist_id);
+    H5Fclose(file_id);
+}
+
+/***************************
+ *  hdf_createChiFile_c
+ * *************************/
+void hdf_createChiFile_c(char *filename, COMPLEX *data){
+    // now we will create a file, and write a dataset into it.
+    hid_t file_id, dset_id;
+    hid_t file_space, memory_space;
+    hid_t plist_id; //property list id
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
+    printf("[process id %d] trying to create a file\n",mpi_my_rank);
+    file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
+    printf("[process id %d] file created\n",mpi_my_rank);
+    H5Pclose(plist_id);
+    file_space = H5Screate_simple(hdf_rank, dataspace_dimsChi, NULL);
+    memory_space = H5Screate_simple(hdf_rank, chunk_dimsChi, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
+    H5Pset_chunk(plist_id, hdf_rankChi, chunk_dimsChi);
+    dset_id = H5Dcreate(file_id,"chi", complex_id, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(file_space );
+
+    file_space = H5Dget_space(dset_id);
+    status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offsetChi, strideChi, countChi, chunk_dimsChi);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    status = H5Dwrite(dset_id, complex_id, memory_space, file_space,plist_id, data);
 
     H5Dclose(dset_id);
     H5Sclose(file_space);

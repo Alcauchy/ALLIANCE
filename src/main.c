@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
-    init_conditions(h);
+    /*init_conditions(h);
     fields_sendG(h);
     fields_getFieldsFromH(g00, g10, g01);
     fields_getChi();
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
         //printf("1)1st = %p, 2nd = %p\n", g, rk4.g_buf);
         solver_makeStep(&g, h);
         //printf("2)1st = %p, 2nd = %p\n", g, rk4.g_buf);
-    }
+    }*/
     //test_linearRHS();
     //test_inplaceFFTW_chi();
 
@@ -101,6 +101,7 @@ int main(int argc, char **argv) {
     //test_Poisson();
     //test_nonlinearTerm();
     //test_everything();
+    test_RHS();
     free_wavespace();
     fftw_kill();
     mpi_kill();

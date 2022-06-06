@@ -835,48 +835,53 @@ void test_everything(){
 void test_RHS(){
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX *out = malloc(array_local_size.total_comp * sizeof(*out));
     //initializing g
     init_conditions(h);
     fields_sendG(h);
     //computing fields
     fields_getFieldsFromH(g00,g10,g01);
+    for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
+        fields_fields.A[ii] = 0;
+    }
     fields_getChi();
     // computing h function
     distrib_getG(g, h);
     //computing diagnostics
     diag_compute(g, h, 0);
-    //saving distribution functions, both real and complex space
+    //compute dh/dx
+    distrib_getXGrad(h,fftw_hBuf);
+    fftw_c2r();
     char name[64];
-    sprintf(name, "%s%s%s%d%s", ".","/","g_",0,".h5");
-    hdf_create_file_c(name,g);
-    sprintf(name, "%s%s%s%d%s", ".","/","h_",0,".h5");
-    hdf_create_file_c(name,h);
-    //fftw transform to save real distribution functions
-    fftw_copy_buffer_c(fftw_hBuf, g);
+    sprintf(name, "%s%s%s%d%s", ".","/","dhdx_",0,".h5");
+    hdf_create_file_r(name,fftw_hBuf);
+    //compute and save dh/dy
+    distrib_getYGrad(h,fftw_hBuf);
     fftw_c2r();
-    sprintf(name, "%s%s%s%d%s", ".","/","gr_",0,".h5");
-    hdf_create_file_r(name,(double *) fftw_hBuf);
+    sprintf(name, "%s%s%s%d%s", ".","/","dhdy_",0,".h5");
+    hdf_create_file_r(name,fftw_hBuf);
+    //compute and save dchidx
+    fields_getGradX(fftw_chiBuf);
+    fftw_c2r_chi();
+    sprintf(name, "%s%s%s%d%s", ".","/","dchidx_",0,".h5");
+    hdf_createChiFile_r(name, fftw_chiBuf);
+    //compute and save dchidy
+    fields_getGradY(fftw_chiBuf);
+    fftw_c2r_chi();
+    sprintf(name, "%s%s%s%d%s", ".","/","dchidy_",0,".h5");
+    hdf_createChiFile_r(name, fftw_chiBuf);
 
-    fftw_copy_buffer_c(fftw_hBuf, h);
+    //compute rhs and save it
+    equation_getNonlinearTerm(h,out);
+    fftw_copy_buffer_c(fftw_hBuf,out);
     fftw_c2r();
-    sprintf(name, "%s%s%s%d%s", ".","/","hr_",0,".h5");
-    hdf_create_file_r(name,(double *) fftw_hBuf);
-    //fftw transform of the fields
-    fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
-    fftw_c2r_field();
-    hdf_saveField_r(fftw_field,"phi.h5");
+    sprintf(name, "%s%s%s%d%s", ".","/","rhs_",0,".h5");
+    //size_t ind6D = get_flat_r(0,0,15,0,0,0);
+    //printf(ind6D = get_flat_r(0,0,,0,0,0));
 
-    fftw_copyFieldBuf_c(fftw_field,fields_fields.A);
-    fftw_c2r_field();
-    hdf_saveField_r(fftw_field,"A.h5");
-
-    fftw_copyFieldBuf_c(fftw_field,fields_fields.B);
-    fftw_c2r_field();
-    hdf_saveField_r(fftw_field,"B.h5");
-
-    hdf_saveData(g,0);
-
-    //compute RHS and save it
+    hdf_create_file_r(name, fftw_hBuf);
+    //free memory
+    free(out);
     free(g);
     free(h);
 }
