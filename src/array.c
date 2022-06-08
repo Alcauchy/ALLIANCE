@@ -1,3 +1,10 @@
+/**************************************
+* @file array.c
+*   \brief array manipulation module
+*
+*   contains functions which are supposed
+*   to make array manipulation simpler
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 26/01/2022 created by Gene Gorbunov
 //                                   ARRAY
@@ -27,27 +34,29 @@
 #define CHI_EM 3
 #define CHI_EL 1
 #define FFT_OFFSET 2
+/************
+ * \struct array_size
+ * gives array sizes
+ ***********/
 struct array_size array_local_size;
 struct array_size array_global_size;
 struct offset_size array_offset;
 struct offset_size array_offset3D;
 
-/***************************************
- * alloc_double6D(size_t nkx, size_t nky, size_t nz, size_t nm, size_t nl, size_t ns)
- ***************************************/
-double *alloc_double6D(size_t nkx, size_t nky, size_t nz, size_t nm, size_t nl, size_t ns) {
-    return malloc(nkx * nky * nz * nl * nm * ns * sizeof(double));
-}
 
 /***************************************
- * alloc_complex6D(size_t nkx, size_t nky, size_t nkz, size_t nm, size_t nl, size_t ns)
- ***************************************/
-COMPLEX *alloc_complex6D(size_t nkx, size_t nky, size_t nkz, size_t nm, size_t nl, size_t ns) {
-    return malloc(nkx * nky * nkz * nl * nm * ns * sizeof(COMPLEX));
-}
-
-/***************************************
- * get_flat_c(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz)
+ * \fn size_t get_flat_c(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz)
+ * \brief returns flat index of the element of complex 6D array
+ * \param is: species type
+ * \param il: Laguerre moment
+ * \param im: Hermite moment
+ * \param ix: kx index
+ * \param iy: ky index
+ * \param iz: kz index
+ *
+ * returns flattened index of a complex array from its 6D index.
+ * Flattened index then can be passed to distribution function
+ * 6D array to get a required element at position (is,il,im,ix,iy,iz).
  ***************************************/
 size_t get_flat_c(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz) {
     return ix * array_offset.kx +
@@ -59,7 +68,18 @@ size_t get_flat_c(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t 
 }
 
 /***************************************
- * getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield)
+ * \fn size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield)
+ * \brief returns flat index of an element of electromagnetic gyrokinetic potential in FOURIER SPACE
+ * \param ix: kx index
+ * \param iy: ky index
+ * \param iz: kz index
+ * \param is: particle species index
+ * \param ifield: field type
+ *
+ * returns flattened index of a gyrokinetic potential \f$\chi^{\phi,A,B}\f$ from its 4D index in FOURIER SPACE.
+ * flattened index is then can be used to access required value of the gyrokinetic potential at position (ix,iy,iz,is).
+ * Type of gyrokinetic potential is specified by ifield parameter. Use 0 is to access \f$\chi^{\phi}(\mathbf{k})\f$,
+ * 1 to access \f$\chi^{A}(\mathbf{k})\f$ and 2 to access \f$\chi^{B}(\mathbf{k})\f$.
  ***************************************/
 size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield) {
     return ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns * CHI_EM +
@@ -69,7 +89,18 @@ size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield
 }
 
 /***************************************
- * getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield)
+ * \fn size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield)
+ * \brief returns flat index of an element of electromagnetic gyrokinetic potential in POSITION SPACE
+ * \param ix: x index
+ * \param iy: y index
+ * \param iz: z index
+ * \param is: particle species index
+ * \param ifield: field type
+ *
+ * returns flattened index of a gyrokinetic potential \f$\chi^{\phi,A,B}(\mathbf{k})\f$ from its 4D index in POSITION SPACE.
+ * flattened index is then can be used to access required value of the gyrokinetic potential at position (ix,iy,iz,is).
+ * Type of gyrokinetic potential is specified by ifield parameter. Use 0 is to access \f$\chi^{\phi}(\mathbf{r})\f$,
+ * 1 to access \f$\chi^{A}(\mathbf{r})\f$ and 2 to access \f$\chi^{B}(\mathbf{r})\f$.
  ***************************************/
 size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield) {
     return ix * array_local_size.nky * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
@@ -80,7 +111,15 @@ size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield
 
 
 /***************************************
- * getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is)
+ * \fn size_t getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is)
+ * \brief returns returns flat index of an element of electrostatic gyrokinetic potential in FOURIER SPACE
+ * \param ix: kx index
+ * \param iy: ky index
+ * \param iz: kz index
+ * \param is: particle species index
+ *
+ * returns flattened index of a gyrokinetic potential \f$\chi^{\phi}(\mathbf{k})\f$ from its 4D index in FOURIER SPACE.
+ * flattened index is then can be used to access required value of the gyrokinetic potential at position (ix,iy,iz,is).
  ***************************************/
 size_t getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is) {
     return ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns * CHI_EL +
@@ -90,7 +129,15 @@ size_t getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is) {
 }
 
 /***************************************
- * getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is)
+ * \fn size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is)
+ * \brief returns returns flat index of an element of electrostatic gyrokinetic potential in REAL SPACE
+ * \param ix: x index
+ * \param iy: y index
+ * \param iz: z index
+ * \param is: particle species index
+ *
+ * returns flattened index of a gyrokinetic potential \f$\chi^{\phi}(\mathbf{r})\f$ from its 4D index in REAL SPACE.
+ * flattened index is then can be used to access required value of the gyrokinetic potential at position (ix,iy,iz,is).
  ***************************************/
 size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is) {
     return ix * array_local_size.nky * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EL +
@@ -100,7 +147,18 @@ size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is) {
 }
 
 /***************************************
- * get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz)
+ * \fn size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz)
+ * \brief returns flat index of the element of real 6D array
+ * \param is: species type
+ * \param il: Laguerre moment
+ * \param im: Hermite moment
+ * \param ix: x index
+ * \param iy: y index
+ * \param iz: z index
+ *
+ * returns flattened index of a real array from its 6D index.
+ * Flattened index then can be passed to distribution function
+ * 6D array to get a required element at position (is,il,im,ix,iy,iz).
  ***************************************/
 size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz) {
     return ix * array_offset.x +
@@ -112,7 +170,15 @@ size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t 
 }
 
 /***************************************
- * get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz)
+ * \fn size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz)
+ * \brief returns flat array of complex 3D array
+ * \param ix: kx index
+ * \param iy: ky index
+ * \param iz: kz index
+ *
+ * returns flattened index of a complex array from its 3D position index.
+ * Flattened index then can be passed to one of the fields (\f$ \phi(\mathbf{k}), A_{||}(\mathbf{k}), B_{||}(\mathbf{k}) \f$)
+ * 6D array to get a required element at position (ix,iy,iz).
  ***************************************/
 size_t get_flatIndexComplex3D(size_t ix, size_t iy, size_t iz) {
     return ix * array_offset3D.kx +

@@ -833,6 +833,7 @@ void test_everything(){
 *  test_RHS()
 * *************************/
 void test_RHS(){
+    //
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *out = malloc(array_local_size.total_comp * sizeof(*out));
@@ -841,9 +842,9 @@ void test_RHS(){
     fields_sendG(h);
     //computing fields
     fields_getFieldsFromH(g00,g10,g01);
-    for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
+    /*for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
         fields_fields.A[ii] = 0;
-    }
+    }*/
     fields_getChi();
     // computing h function
     distrib_getG(g, h);
@@ -881,6 +882,36 @@ void test_RHS(){
 
     hdf_create_file_r(name, fftw_hBuf);
     //free memory
+    free(out);
+    free(g);
+    free(h);
+}
+
+/***************************
+*  test_CFL()
+* *************************/
+void test_CFL(){
+    //
+    COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
+    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX *out = malloc(array_local_size.total_comp * sizeof(*out));
+    //initializing g
+    init_conditions(h);
+    fields_sendG(h);
+    //computing fields
+    fields_getFieldsFromH(g00,g10,g01);
+    /*for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
+        fields_fields.A[ii] = 0;
+    }*/
+    fields_getChi();
+    // computing h function
+    distrib_getG(g, h);
+    double C_max = 0.5;
+    //computing cfl from complex data
+    //kmax = nx / L * 2pi
+    double kxMax = 2. * M_PI / 100. * array_global_size.nkx;
+    double kyMax = 2. * M_PI / 100. * array_global_size.nky;
+    //double *dt_ar =malloc();
     free(out);
     free(g);
     free(h);

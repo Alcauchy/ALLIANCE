@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
-    /*init_conditions(h);
+    init_conditions(h);
     fields_sendG(h);
     fields_getFieldsFromH(g00, g10, g01);
     fields_getChi();
@@ -44,42 +44,41 @@ int main(int argc, char **argv) {
             fields_getChi();
             distrib_getH(h, g);
             diag_compute(g, h, it);
-
             //
             // saving fields and everything
             //
-            char name[64];
+            /*char name[64];
             //save g and h
             sprintf(name, "%s%s%s%d%s", ".","/","g_",it,".h5");
-            hdf_create_file_c(name,g);
+            //hdf_create_file_c(name,g);
             sprintf(name, "%s%s%s%d%s", ".","/","h_",it,".h5");
-            hdf_create_file_c(name,h);
+            //hdf_create_file_c(name,h);
             // save real g and h
             fftw_copy_buffer_c(fftw_hBuf,g);
             fftw_c2r();
             sprintf(name, "%s%s%s%d%s", ".","/","gr_",it,".h5");
-            hdf_create_file_r(name,fftw_hBuf);
+            //hdf_create_file_r(name,fftw_hBuf);
 
             fftw_copy_buffer_c(fftw_hBuf,h);
             fftw_c2r();
             sprintf(name, "%s%s%s%d%s", ".","/","hr_",it,".h5");
-            hdf_create_file_r(name,fftw_hBuf);
+            //hdf_create_file_r(name,fftw_hBuf);
 
             // save fields
             fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
-            fftw_c2r_field();
+            //fftw_c2r_field();
             sprintf(name, "%s%s%s%d%s", ".","/","phir_",it,".h5");
-            hdf_saveField_r(fftw_field,name);
+            //hdf_saveField_r(fftw_field,name);
 
             fftw_copyFieldBuf_c(fftw_field,fields_fields.A);
-            fftw_c2r_field();
+            //fftw_c2r_field();
             sprintf(name, "%s%s%s%d%s", ".","/","Ar_",it,".h5");
-            hdf_saveField_r(fftw_field,name);
+            //hdf_saveField_r(fftw_field,name);
 
             fftw_copyFieldBuf_c(fftw_field,fields_fields.B);
-            fftw_c2r_field();
+            //fftw_c2r_field();
             sprintf(name, "%s%s%s%d%s", ".","/","Br_",it,".h5");
-            hdf_saveField_r(fftw_field,name);
+            //hdf_saveField_r(fftw_field,name);*/
 
             if (it == 0) free_energy0 = diag_freeEnergy;
             if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/free_energy0);
@@ -87,7 +86,7 @@ int main(int argc, char **argv) {
         //printf("1)1st = %p, 2nd = %p\n", g, rk4.g_buf);
         solver_makeStep(&g, h);
         //printf("2)1st = %p, 2nd = %p\n", g, rk4.g_buf);
-    }*/
+    }
     //test_linearRHS();
     //test_inplaceFFTW_chi();
 
@@ -101,7 +100,7 @@ int main(int argc, char **argv) {
     //test_Poisson();
     //test_nonlinearTerm();
     //test_everything();
-    test_RHS();
+    //test_RHS();
     free_wavespace();
     fftw_kill();
     mpi_kill();

@@ -291,7 +291,7 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     // perform dealiasing
     //
-    //dealiasing23(out);
+    dealiasing23(out);
     free(buffer);
     free(h_r);
 };

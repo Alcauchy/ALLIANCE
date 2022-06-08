@@ -1,3 +1,9 @@
+/**************************************
+* @file init.c
+*   \brief initialization module for alliance.
+*
+*   all the inititalization routines are here.
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 03/02/2022 created by Gene Gorbunov
 //                                   INITIALIZATION
@@ -12,14 +18,23 @@
 #include "init.h"
 #include "distrib.h"
 
+/**************************************
+* \def RANK_IO
+*   defines rank of the processor
+*   used to output information to console
+***************************************/
 #define RANK_IO 0
 
 enum adiabatic kinetic;
 enum electromagnetic systemType;
 enum initial initialConditions;
 
-/***************************************
- * init_start(char *filename)
+/****************************************
+* \fn void init_start(char *filename)
+* \brief initialization of ALLIANCE
+* \param filename: specifies parameter filename
+*
+* initializes all the modules required for ALLIANCE to work.
  ***************************************/
 void init_start(char *filename){
     srand(time(NULL));
@@ -41,7 +56,10 @@ void init_start(char *filename){
 };
 
 /***************************************
- * init_printParameters()
+ * \fn void init_printParameters()
+ * \brief parameter output
+ *
+ * prints parameters of the simulation
  ***************************************/
 void init_printParameters(){
     if (mpi_my_rank == RANK_IO)
@@ -70,7 +88,13 @@ void init_printParameters(){
 };
 
 /***************************************
- * init_initEnums()
+ * \fn void init_initEnums()
+ * \brief enumerator initialization
+ *
+ * initializes enumerators, which are then used
+ * to define if system is adiabatic or kinetic,
+ * electromagnetic or electrostatic,
+ * and type of initial conditions
  ***************************************/
 void init_initEnums(){
    kinetic = parameters.adiabatic;
@@ -79,7 +103,13 @@ void init_initEnums(){
 };
 
 /***************************************
- * fill_rand(COMPLEX *ar1)
+ * \fn void fill_rand(COMPLEX *data)
+ * \brief fills the inital conditions randomly
+ * \param data: complex 6d array to fill
+ * initializes distribution with spectrum defined in
+ * #init_energySpec
+ * This function is supposed to be used in-module only
+ * and should not be used elsewhere outside init.c file.
  ***************************************/
 void fill_rand(COMPLEX *ar1) {
     for (size_t i = 0; i < array_local_size.total_comp; i++) {
@@ -99,7 +129,7 @@ void fill_rand(COMPLEX *ar1) {
                             double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
                             ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
                             if (space_kSq[ind3D] > 1e-10){
-                                double amplitude = sqrt(init_energySpec(sqrt(space_kSq[ind3D]), 0, 0.01, 1.0) / 2.0/ M_PI);
+                                double amplitude = sqrt(init_energySpec(sqrt(space_kSq[ind3D]), 0, 0.00001, 2.) / 2.0/ M_PI);
                                 ar1[ind6D] *=amplitude;
                             }
                             if(global_nkx_index[ix] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
@@ -112,7 +142,13 @@ void fill_rand(COMPLEX *ar1) {
 }
 
 /***************************************
- * fill_randM0(COMPLEX *ar1)
+ * \fn void fill_randM0(COMPLEX *data)
+ * \brief fill zeroth Hermite moment with random values
+ * \param data: complex 6D array to fill
+ *
+ * fills 0-th Hermite moment of a distribution function ar1 with random values
+ * This function is supposed to be used in-module only
+ * and should not be used elsewhere outside init.c file.
  ***************************************/
 void fill_randM0(COMPLEX *ar1) {
     size_t ind6D;
@@ -141,7 +177,14 @@ void fill_randM0(COMPLEX *ar1) {
 }
 
 /***************************************
- * fill_randSingleKM(COMPLEX *ar1)
+ * \fn void fill_randSingleKM(COMPLEX *ar1)
+ * \brief fill single chosen wavevector and Hermite moment
+ * \param data: complex 6D array
+ *
+ * initializes single wavevector and Hermite moment
+ * of a distribution function with random variable.
+ * This function is only for in-module use
+ * and should not be used elsewhere outside init.c file.
  ***************************************/
 void fill_randSingleKM(COMPLEX *ar1) {
     size_t ind6D;
@@ -173,7 +216,14 @@ void fill_randSingleKM(COMPLEX *ar1) {
 }
 
 /***************************************
- * init_conditions(COMPLEX *data)
+ * \fn void init_conditions(COMPLEX *data)
+ * \brief distribution function initialization
+ * \param data: complex 6D array
+ *
+ * initializes distribution function with chosen method
+ * (see #fill_rand,
+ * #fill_randM0,
+ * #fill_randSingleKM)
  ***************************************/
 void init_conditions(COMPLEX *data){
     switch(initialConditions)
@@ -198,7 +248,19 @@ void init_conditions(COMPLEX *data){
 };
 
 /***************************************
- * init_energySpec(COMPLEX *data)
+ * \fn double init_energySpec(double k, double m, double amp, double disp)
+ * \brief returns energy spectrum
+ * \param k: a wavenumber at which spectrum is computed
+ * \param m: Hermite moment at which amplitude is computed
+ * \param amp: amplitude of the spectrum
+ * \param disp: dispersion of the spectrum
+ *
+ * computes spectrum of form
+ * \f$ A \cdot k^2 exp(-2 k^2/\sigma^2) \f$, where
+ * \f$\sigma = disp\f$, and
+ * \f$A = amp \f$
+ * This function is supposed to be used in-module only
+ * and should not be used elsewhere outside init.c file.
  ***************************************/
 double init_energySpec(double k, double m, double amp, double disp){
     return amp * k*k * exp( - 2.0 * (k * k / disp / disp  ));
