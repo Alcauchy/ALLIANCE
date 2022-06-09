@@ -34,10 +34,6 @@
 #define CHI_EM 3
 #define CHI_EL 1
 #define FFT_OFFSET 2
-/************
- * \struct array_size
- * gives array sizes
- ***********/
 struct array_size array_local_size;
 struct array_size array_global_size;
 struct offset_size array_offset;

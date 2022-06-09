@@ -1,3 +1,9 @@
+/**************************************
+* @file diagnostics.c
+*   \brief diagnostics module
+*
+*   different diagnostic tools are gathered in this module
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 20/01/2022 created by Gene Gorbunov
 //                                   DIAGNOSTICS
@@ -19,14 +25,32 @@
 
 #define TO_ROOT 0
 #define BUFFER_SIZE 1
-
+/**\var double *diag_kSpec
+ * \brief used to store free energy k spectra*/
 double *diag_kSpec = 0;
+
+/**\var double *diag_mSpec
+ * \brief used to store free energy m spectra*/
 double *diag_mSpec = 0;
+
+/**\var double *diag_shells
+ * \brief used to store positions of k shells  required to compute k spectra*/
 double *diag_shells = 0;
+
+/**\var double diag_freeEnergy
+ * \brief free energy*/
 double diag_freeEnergy;
 
 /***************************************
- * diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep)
+ * \fn void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep)
+ * \brief general function to compute k or m spectra
+ * \param g: gyrokinetic distribution function
+ * \param h: distribution function
+ * \param timestep: current time step
+ *
+ * function computes spectra at timestep as given in parameter file.
+ * \f$k_{\perp}\f$ spectra is computed using #diag_computeKSpectrum, and
+ * m spectra is computed using #diag_computeMSpectrum
  ***************************************/
 void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
     if (parameters.compute_k && timestep % parameters.iter_diagnostics == 0) {
@@ -38,7 +62,17 @@ void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
 };
 
 /***************************************
- * diag_initSpec()
+ * \fn void diag_initSpec()
+ * \brief initialize spectra computation
+ *
+ * Prepares free energy spectra computation. For spectra in k:
+ * allocates diag_kSpec array used to store k spectra.
+ * Allocates diag_shells array and fills it with
+ * shell positions \f$k^{shells}\f$, used for binning of wave vectors
+ * when computing \f$k_\perp\f$ spectra.
+ * For spectra in m:
+ * allocates diag_mSpec array used to store m spectra.
+ * Called in #init_start function
  ***************************************/
 void diag_initSpec() {
     if (parameters.compute_k) {
@@ -56,7 +90,13 @@ void diag_initSpec() {
 };
 
 /***************************************
- * diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h)
+ * \fn void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h)
+ * \brief compute free energy
+ * \param g: modified gyrokinetic distribution function
+ * \param h: gyrokintic distribution function
+ *
+ * computes free energy as \f$ W = 2. \Re(\sum_{k_x,k_y, k_z>0,m,l,s} g * \bar{h})\f$,
+ * taking into account reality condition.
  ***************************************/
 void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
     COMPLEX sum = 0;
@@ -70,7 +110,14 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
 };
 
 /***************************************
- * diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec)
+ * \fn void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec)
+ * \param g: modified gyrokinetic distribution function
+ * \param h: gyrokinetic distribution function
+ * \param spec: spectra array
+ *
+ * computes free energy \f$k_{\perp}\f$ spectra
+ * \f$ W(k^{shell}_i) = \frac{1}{N}\sum_{k^{shell}_{i-1}<|\mathbf{k}_{\perp}|<k^{shell}_{i}}\sum_{k_z,l,m,s} g \bar{h}\f$
+ * where \f$N\f$ is a number of wave vectors between shells \f$k^{shell}_{i-1}\f$ and \f$k^{shell}_{i}\f$
  ***************************************/
 void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
     COMPLEX *sum = malloc(parameters.k_shells * sizeof(*sum));
@@ -117,7 +164,13 @@ void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
 };
 
 /***************************************
- * diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec)
+ * \fn void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec)
+ * \brief computes free energy spectra in m space
+ * \param g: modified gyrokinetic distribution function
+ * \param h: gyrokinetic distribution function
+ * \param spec: spectra array
+ *
+ * computes free energy m spectra as \f$ W(m) = \sum_{k_x,k_y,k_z,l,s} g \bar{h} \f$
  ***************************************/
 void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
     COMPLEX *sum = calloc(array_local_size.nm , sizeof(*sum));
@@ -148,7 +201,13 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
 };
 
 /***************************************
- * diag_getShells()
+ * \fn diag_getShells()
+ * \brief computes shells from parameters
+ *
+ * computes positions of k_shells in between
+ * last_shell and first_shell as provided
+ * by user in parameter file. Position of \f$i^{th}\f$ shell is computed as
+ * \f$k^{shell}_i = (last\_shell - first\_shell)/(k\_shells) \cdot i\f$
  ***************************************/
 void diag_getShells() {
     diag_shells = malloc((parameters.k_shells + 1) * sizeof(*diag_shells));
@@ -160,12 +219,21 @@ void diag_getShells() {
 }
 
 /***************************************
- * diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields)
+ * \fn diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields)
+ * \brief to be done later
+ * \param g:
+ * \param fields:
+ *
+ * computes free energy from the fields and distribution function.
  ***************************************/
 double diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields) {};
 
 /***************************************
- * diag_compute(int iter)
+ * \fn void diag_compute(COMPLEX *g, COMPLEX *h, int timestep)
+ * \brief computes all diagnostics
+ * \param g: modified distribution function
+ * \param h: distribution function
+ * \param iter: current time step
  ***************************************/
 void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
     diag_computeFreeEnergy(g, h);
