@@ -1,3 +1,9 @@
+/**************************************
+* @file utils_fftw.c
+* \brief FFT module
+*
+* contains FFT related routines
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 08/12/2021 created by Gene Gorbunov
 //                                   FFTW UTILITIES
@@ -52,7 +58,8 @@ void (*fftw_dealiasing)(COMPLEX*) = NULL;
 int *global_nkx_index;                          // array which stores the global position of nkx on the processor. Needed for dealiasing, in order to find Nkx/3 and 2*Nkx/3 and put all modes between those to zeros.
 
 /***************************************
- * fftw_init(MPI_Comm communicator)
+ * \fn  fftw_init(MPI_Comm communicator)
+ * \brief initializes fftw transform.
  ***************************************/
 void fftw_init(MPI_Comm communicator){
     /*initializing fftw and size of the transformation*/
@@ -178,7 +185,11 @@ void fftw_init(MPI_Comm communicator){
 }
 
 /***************************************
- * fftw_r2c(double *data_r, COMPLEX *data_c)
+ * \fn fftw_r2c()
+ * \brief real to complex fft transform.
+ *
+ * Performs real to complex in-place fft transform of on array <tt>fftw_hBuf</tt>.
+ * Used to transform 6D arrays (kx,ky,kz,m,l,s).
  ***************************************/
 void fftw_r2c() {
     int start = MPI_Wtime();
@@ -187,7 +198,11 @@ void fftw_r2c() {
 };
 
 /***************************************
- * fftw_c2r(COMPLEX *data_c, double *data_r)
+ * \fn fftw_c2r()
+ * \brief complex to real fft transform.
+ *
+ * Performs complex to real in-place fft transform on array <tt>fftw_hBuf</tt>.
+ * Used to transform 6D arrays (x,y,z,m,l,s).
  ***************************************/
 void fftw_c2r() {
     int start = MPI_Wtime();
@@ -197,7 +212,11 @@ void fftw_c2r() {
 }
 
 /***************************************
- * fftw_r2c_chi(double *data_r, COMPLEX *data_c)
+ * \fn void fftw_r2c_chi()
+ * \brief real to complex transform of chi potentials
+ *
+ * Performs real to complex in-place fft transform on array <tt>fftw_chiBuf</tt>.
+ * Used to transform 5D arrays (x,y,z,s,field).
  ***************************************/
 void fftw_r2c_chi() {
     int start = MPI_Wtime();
@@ -206,7 +225,11 @@ void fftw_r2c_chi() {
 };
 
 /***************************************
- * fftw_c2r_chi(COMPLEX *data_c, double *data_r)
+ * \fn void fftw_c2r_chi()
+ * \brief complex to real transform of chi potentials
+ *
+ * Performs complex to real in-place fft transform on array <tt>fftw_chiBuf</tt>.
+ * Used to transform 5D arrays (kx,ky,kz,s,field).
  ***************************************/
 void fftw_c2r_chi() {
     int start = MPI_Wtime();
@@ -216,7 +239,11 @@ void fftw_c2r_chi() {
 };
 
 /***************************************
- * fftw_r2c_field(double *data_r, COMPLEX *data_c)
+ * \fn void fftw_r2c_field()
+ * \brief real to complex transform of field potentials
+ *
+ * Performs real to complex in-place fft transform on array <tt>fftw_field</tt>.
+ * Used to transform 3D arrays (x,y,z).
  ***************************************/
 void fftw_r2c_field() {
     int start = MPI_Wtime();
@@ -226,7 +253,11 @@ void fftw_r2c_field() {
 
 
 /***************************************
- * fftw_c2r_field(COMPLEX *data_c, double *data_r)
+ * \fn void fftw_c2r_field()
+ * \brief complex to real transform of field potentials
+ *
+ * Performs complex to real in-place fft transform on array <tt>fftw_field</tt>.
+ * Used to transform 3D arrays (kx,ky,kz).
  ***************************************/
 void fftw_c2r_field() {
     int start = MPI_Wtime();
@@ -236,7 +267,10 @@ void fftw_c2r_field() {
 };
 
 /***************************************
- * fftw_kill()
+ * \fn void fftw_kill()
+ * \brief kills fftw
+ *
+ * to be added
  ***************************************/
 void fftw_kill(){
     fftw_destroy_plan(plan_c2r);
@@ -253,7 +287,12 @@ void fftw_kill(){
 }
 
 /***************************************
- * fftw_copy_buffer_r(double *to, double *from)
+ * \fn fftw_copy_buffer_r(double *to, double *from)
+ * \brief copy 6D real array
+ * \param to: where to copy array
+ * \param from: array which will be copied
+ *
+ * copies real data <tt>from</tt> array to array <tt>to</tt>
  ***************************************/
 void fftw_copy_buffer_r(double *to, double *from){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
@@ -273,7 +312,12 @@ void fftw_copy_buffer_r(double *to, double *from){
 }
 
 /***************************************
- * fftw_copy_buffer_c(COMPLEX *to, COMPLEX *from)
+ * \fn fftw_copy_buffer_c(COMPLEX *to, COMPLEX *from)
+ * \brief copy 6D complex array
+ * \param to: where to copy array
+ * \param from: array which will be copied
+ *
+ * copies complex data <tt>from</tt> array to array <tt>to</tt>
  ***************************************/
 void fftw_copy_buffer_c(COMPLEX *to, COMPLEX *from){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
@@ -292,7 +336,12 @@ void fftw_copy_buffer_c(COMPLEX *to, COMPLEX *from){
 }
 
 /***************************************
- * fftw_copyChiBuf_r(double *ar1, double *ar2)
+ * \fn fftw_copyChiBuf_r(double *ar1, double *ar2)
+ * \brief copy 5D real array
+ * \param ar1: destination
+ * \param ar2: source
+ *
+ * copies real \f$ \chi \f$ array from <tt>ar1</tt> to <tt>ar2</tt>.
  ***************************************/
 void fftw_copyChiBuf_r(double *ar1, double *ar2){
     size_t ind;
@@ -330,7 +379,12 @@ void fftw_copyChiBuf_r(double *ar1, double *ar2){
 }
 
 /***************************************
- * fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2)
+ * \fn fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2)
+ * \brief copy 5D complex array.
+ * \param ar1: destination
+ * \param ar2: source
+ *
+ * copies complex \f$ \chi \f$ array from <tt>ar1</tt> to <tt>ar2</tt>.
  ***************************************/
 void fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2){
     size_t ind;
@@ -368,7 +422,12 @@ void fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2){
 }
 
 /***************************************
- * fftw_copyFieldBuf_r(double *to, double *from)
+ * \fn fftw_copyFieldBuf_r(double *to, double *from)
+ * \brief copy 3D real data array.
+ * \param to:
+ * \param from:
+ *
+ * copies 3D data array <tt>from</tt> to <tt></tt>
  ***************************************/
 void fftw_copyFieldBuf_r(double *to, double *from){
     for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2); ii++){
@@ -377,7 +436,12 @@ void fftw_copyFieldBuf_r(double *to, double *from){
 }
 
 /***************************************
- * fftw_copyFieldBuf_c(double *to, double *from)
+ * \fn fftw_copyFieldBuf_c(COMPLEX *to, COMPLEX *from)
+ * \brief copy 3D complex data array.
+ * \param to:
+ * \param from:
+ *
+ * copies 3D complex data array <tt>from</tt> to <tt></tt>
  ***************************************/
 void fftw_copyFieldBuf_c(COMPLEX *to, COMPLEX *from){
     for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
@@ -395,7 +459,7 @@ double cosinus(double f,int ix){
 }
 
 /***************************************
- * fftw_test_fill(double *ar,double f)
+ *  fftw_test_fill(double *ar,double f)
  ***************************************/
 void fftw_test_fill(double *ar,double f){
     for(int i = 0; i<local_n0;i++){
@@ -417,7 +481,11 @@ void fftw_normalise_data(COMPLEX *data) {
 }
 
 /***************************************
- * fftw_normalise_data_r(double *data)
+ * \fn void fftw_normalise_data_r(double *data)
+ * \brief normalise data.
+ * \param data: 6D data array
+ *
+ * normalises <tt>data</tt> by #fftw_norm.
  ***************************************/
 void fftw_normalise_data_r(double *data) {
     for(size_t i = 0; i < array_local_size.total_real; i++) {
@@ -426,7 +494,11 @@ void fftw_normalise_data_r(double *data) {
 }
 
 /***************************************
- * fftw_normalise_chi_r(double *data)
+ * \fn void fftw_normalise_chi_r(double *data)
+ * \brief notmalase chi data
+ * \param data: 5D real data array
+ *
+ * normalises <tt>data</tt> by #fftw_norm.
  ***************************************/
 void fftw_normalise_chi_r(double *data) {
     switch(systemType){
@@ -445,7 +517,11 @@ void fftw_normalise_chi_r(double *data) {
 }
 
 /***************************************
- * fftw_normalise_field_r(double *data)
+ * \fn void fftw_normalise_field_r(double *data)
+ * \brief normalise real 3D data
+ * \param data: 3D real array
+ *
+ * normalises <tt>data</tt> by #fftw_norm.
  ***************************************/
 void fftw_normalise_field_r(double *data) {
     for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2); i++) {
@@ -455,27 +531,10 @@ void fftw_normalise_field_r(double *data) {
 
 
 /***************************************
- * dealiasing23(COMPLEX *data_c)
+ * \fn void dealiasing23(COMPLEX *data_c)
+ * \brief 2/3 rule dealiasing
+ * \param data_c: complex 6D data array
  ***************************************/
-/*void dealiasing23(COMPLEX *data_c){
-    for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
-        for(size_t iky = 0; iky < array_local_size.nky; iky++){
-            for(size_t ikz = 0; ikz < array_local_size.nkz; ikz++){
-                for(size_t im = 0; im < array_local_size.nm; im++){
-                    for(size_t il = 0; il < array_local_size.nl; il++){
-                        for(size_t is = 0; is <array_local_size.ns; is++){
-                            data_c[get_flat_c(is,il,im,ikx,iky,ikz)] =  (ikz>array_local_size.nkz*2/3)||
-                                                                        ((iky>array_local_size.nky/3)&&(iky<array_local_size.nky*2/3))||
-                                                                        ((global_nkx_index[ikx] > array_global_size.nkx / 3) && (global_nkx_index[ikx] < array_global_size.nkx * 2 / 3)) ? 0.j : data_c[get_flat_c(is, il, im, ikx, iky, ikz)];
-                        }
-                    }
-                }
-
-            }
-        }
-    }
-}*/
-
 void dealiasing23(COMPLEX *data_c){
     for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
         for(size_t iky = 0; iky < array_local_size.nky; iky++){
