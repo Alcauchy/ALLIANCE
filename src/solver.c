@@ -1,3 +1,8 @@
+/**************************************
+* @file solver.c
+* \brief numerical solver
+*
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 26/01/2022 created by Gene Gorbunov
 //                                   SOLVER
@@ -17,7 +22,10 @@ struct solver solver;
 struct rk4 rk4;
 
 /***************************************
- * solver_init():
+ * \fn void solver_init():
+ * \brief initializes solver
+ *
+ * initializes solver with the <tt>solverType</tt>.
  ***************************************/
 void solver_init() {
     solver.dt = parameters.dt;
@@ -34,7 +42,10 @@ void solver_init() {
 };
 
 /***************************************
- * solver_makeStep(COMPLEX *g):
+ * \fn void solver_makeStep(COMPLEX *g):
+ * \brief iterate solver forward
+ *
+ * solves one simulation time step
  ***************************************/
 void solver_makeStep(COMPLEX **g, COMPLEX *h) {
     COMPLEX *g_ar = *g;
