@@ -1,3 +1,8 @@
+/**************************************
+* @file parameters_io.c
+* \brief reads inpuit parameters from parameter file provided by user
+*
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 27/12/2021 created by Gene Gorbunov
 //                                   PARAMETERS
@@ -15,7 +20,10 @@
 struct system_param parameters;
 
 /***************************************
- * init_global_size():
+ * \fn void init_global_size():
+ * \brief initializes global size of the 6D array
+ *
+ * initializes <tt>array_local_size</tt> structure with global simulation size.
  ***************************************/
 void init_global_size() {
     array_global_size.nkx = parameters.nkx;
@@ -40,7 +48,11 @@ void init_global_size() {
 };
 
 /***************************************
- * read_parameters(char *filename):
+ * \fn read_parameters(char *filename)
+ * \brief reads parameters from user parameter file.
+ *
+ * Reads parameters from user parameter file. All the parameters
+ * are stored in the <tt>parameters</tt> structure
  ***************************************/
 void read_parameters(char *filename) {
     char string[128];

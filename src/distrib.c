@@ -1,3 +1,9 @@
+/**************************************
+* @file distrib.c
+*   \brief gyrokinetic distribution function module
+*
+*   everything required to perform different manipulations to distribution functions
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 03/02/2022 created by Gene Gorbunov
 //                                   DISTRIBUTION
@@ -13,7 +19,15 @@
 #include "distrib.h"
 
 /***************************************
- * distrib_getH(COMPLEX *h, const COMPLEX *g)
+ * \fn void distrib_getH(COMPLEX *h, const COMPLEX *g)
+ * \brief computes h from g
+ * \param h: complex array to store h
+ * \param g: complex array with g
+ *
+ * computes gyrokinetic distribution function h
+ * from modified gyrokinetic distribution function g.
+ * Please note that before calling this function
+ * gyrokinetic potentials must be computed
  ***************************************/
 void distrib_getH(COMPLEX *h, const COMPLEX *g) {
     size_t ind6D;
@@ -60,7 +74,15 @@ void distrib_getH(COMPLEX *h, const COMPLEX *g) {
 };
 
 /***************************************
- * distrib_getG(COMPLEX *g, const COMPLEX *h)
+ * \fn distrib_getG(COMPLEX *g, const COMPLEX *h)
+ * \brief computes g from h
+ * \param g: complex array to store g
+ * \param h: complex array with h
+ *
+ * computes modified gyrokinetic distribution function g
+ * from gyrokinetic distribution function h.
+ * Please note that before calling this function
+ * gyrokinetic potentials must be computed
  ***************************************/
 void distrib_getG(COMPLEX *g, const COMPLEX *h) {
     size_t ind6D;
@@ -108,14 +130,13 @@ void distrib_getG(COMPLEX *g, const COMPLEX *h) {
 };
 
 /***************************************
- * distrib_getXGrad(const COMPLEX *in, COMPLEX *out):
- *  Computes gradient in kx direction as following:
- *  grad(f) = -2 * pi * i * kx * f
- *  args:
- *  COMPLEX *in  : 6D data array gradient of which is going to be taken
- *  COMPLEX *out : 6D data gradient array
+ * \fn void distrib_getXGrad(const COMPLEX *in, COMPLEX *out):
+ * \brief Computes gradient in kx direction
+ * \param in: complex array. Distribution function of which gradient will be taken
+ * \param out: complex array, where gradient is stored
  *
- *  return:
+ *  Computes gradient in kx direction as following:\n
+ *  grad(f) = i * kx * f
  *
  ***************************************/
 void distrib_getXGrad(const COMPLEX *in, COMPLEX *out) {
@@ -135,14 +156,13 @@ void distrib_getXGrad(const COMPLEX *in, COMPLEX *out) {
 };
 
 /***************************************
- * distrib_getYGrad(const COMPLEX *in, COMPLEX *out):
- *  Computes gradient in ky direction as following:
- *  grad(f) = -2 * pi * i * ky * f
- *  args:
- *  COMPLEX *in  : 6D data array gradient of which is going to be taken
- *  COMPLEX *out : 6D data gradient array
+ * \fn void distrib_getYGrad(const COMPLEX *in, COMPLEX *out):
+ * \brief Computes gradient in ky direction
+ * \param in: complex array. Distribution function of which gradient will be taken
+ * \param out: complex array, where gradient is stored
  *
- *  return:
+ *  Computes gradient in ky direction as following:\n
+ *  grad(f) = i * ky * f
  *
  ***************************************/
 void distrib_getYGrad(const COMPLEX *in, COMPLEX *out) {
@@ -162,14 +182,13 @@ void distrib_getYGrad(const COMPLEX *in, COMPLEX *out) {
 };
 
 /***************************************
- * distrib_getZGrad(const COMPLEX *in, COMPLEX *out):
- *  Computes gradient in kz direction as following:
- *  grad(f) = -2 * pi * i * kz * f
- *  args:
- *  COMPLEX *in  : 6D data array gradient of which is going to be taken
- *  COMPLEX *out : 6D data gradient array
+ * \fn void distrib_getZGrad(const COMPLEX *in, COMPLEX *out):
+ * \brief Computes gradient in kz direction
+ * \param in: complex array. Distribution function of which gradient will be taken
+ * \param out: complex array, where gradient is stored
  *
- *  return:
+ *  Computes gradient in kz direction as following:\n
+ *  grad(f) = i * kz * f
  *
  ***************************************/
 void distrib_getZGrad(const COMPLEX *in, COMPLEX *out) {
@@ -189,7 +208,20 @@ void distrib_getZGrad(const COMPLEX *in, COMPLEX *out) {
 };
 
 /***************************************
- * distrib_enforceReality
+ * \fn void distrib_enforceReality(COMPLEX *f)
+ * \brief enforces reality condition on distribution function array
+ * \param f: complex array for which reality condition will be forced.
+ *
+ * Enforces reality condition f(k) = conj(f(-k)) in plane kz = 0.
+ * For a given kx, it first checks where modes -kx are located using the
+ * #mpi_whereIsX function:\n
+ * <tt> where_neg = mpi_whereIsX[kxNeg * 2];</tt>\n
+ * If -kx is stored on a different processor,
+ * MPI_VECTOR with a 4D data slice f(kx,kz = 0) is sent to this processor, to the <tt>buffer</tt> array: \n
+ * <tt>mpi_sendVector(&f[ind6D],buffer,where_pos,where_neg);</tt>\n
+ * if the data stored on the same processor, no vector is being sent.
+ * Reality condition is fulfilled in a loop over all other coordinates:\n
+ * <tt>f[ind6D_neg] = conj(buffer[ind6D_pos]);</tt>
  ***************************************/
 void distrib_enforceReality(COMPLEX *f){
     size_t local_kxPosInd;
@@ -252,7 +284,12 @@ void distrib_enforceReality(COMPLEX *f){
 };
 
 /***************************************
- * distrib_setZeroNHalf(COMPLEX *f)
+ * \fn void distrib_setZeroNHalf(COMPLEX *f)
+ * \brief sets all Nk/2 modes to zero
+ * \param f: complex array
+ *
+ * sets Nkx/2, Nky/2 and Nz/2 modes of distribution function to zero.
+ * Due to reality condition, for kz yhe last mode should be set to zero.
  ***************************************/
 void distrib_setZeroNHalf(COMPLEX *f){
     size_t ind6D;

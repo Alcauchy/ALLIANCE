@@ -1,3 +1,13 @@
+/**************************************
+* @file fields.c
+*   \brief field computation and manipulation module
+*
+*   Rerquired to compute
+*   \f$A_{||}(\mathbf{k}), B_{||}(\mathbf{k}), \phi(\mathbf{k})\f$
+*   potentials, as well as gyrokinetic potentials
+*   \f$\chi^{A}_s(\mathbf{k}),\chi^{B}_s(\mathbf{k}),\chi^{\phi}_s(\mathbf{k})\f$
+*
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 26/01/2022 created by Gene Gorbunov
 //                                   FIELDS
@@ -58,7 +68,11 @@ COMPLEX *g10;
 COMPLEX *g01;
 
 /***************************************
- * fields_init():
+ * \fn void fields_init():
+ * \brief intializes fields
+ *
+ * pre-computes some comstants required to compute fields.
+ * Called in #init_start function
  ***************************************/
 void fields_init() {
     global_nm_index = malloc(array_local_size.nm * sizeof(*global_nm_index));
@@ -263,7 +277,14 @@ void fields_init() {
 };
 
 /***************************************
- * fields_init():
+ * \fn void fields_getA(const COMPLEX *g)
+ * \brief compute A field
+ * \param g: 4D complex array (kx,ky,kz,s). Must be first Hermite and zeroth Laguerre moment of modified gyrokinetic distribution function g.
+ *
+ * computes
+ * \f$A_{||}(\mathbf{k})\f$
+ * potential from
+ * \f$g^1_{s0}\f$ (<tt>g</tt> parameter)
  ***************************************/
 void fields_getA(const COMPLEX *g) {
     size_t flatInd;
@@ -300,7 +321,16 @@ void fields_getA(const COMPLEX *g) {
 };
 
 /***************************************
- * fields_getB():
+ * \fn void fields_getB(const COMPLEX* g0, const COMPLEX* g1)
+ * \brief computes B potential
+ * \param g0: 4D complex array (kx,ky,kz,s). Zeroth Hermite and Laguerre moment of modified gyrokinetic distribution function.
+ * \param g1: 4D complex array (kx,ky,kz,s). Zeroth Hermite and first Laguerre moment of the modified distribution function.
+ *
+ * Computes
+ * \f$B_{\perp}(\mathbf{k})\f$
+ * from
+ * \f$g^0_{s0}\f$ (<tt>g0</tt> parameter) and
+ * \f$g^1_{s0}\f$ (<tt>g1</tt> parameter).
  ***************************************/
 void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
     size_t ind2D;
@@ -370,7 +400,16 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
 };
 
 /***************************************
- * fields_getPhi():
+ * \fn void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1)
+ * \brief computes phi potential
+ * \param g0: 4D complex array (kx,ky,kz,s). Zeroth Hermite and Laguerre moment of modified gyrokinetic distribution function.
+ * \param g1: 4D complex array (kx,ky,kz,s). Zeroth Hermite and first Laguerre moment of the modified distribution function.
+ *
+ * Computes
+ * \f$\phi(\mathbf{k})\f$
+ * from
+ * \f$g^0_{s0}\f$ (<tt>g0</tt> parameter) and
+ * \f$g^1_{s0}\f$ (<tt>g1</tt> parameter).
  ***************************************/
 void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
     size_t ind2D;
@@ -441,7 +480,13 @@ void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
 };
 
 /***************************************
- * fields_getFields():
+ * \fn void fields_getFields(COMPLEX *g00, COMPLEX *g10, COMPLEX *g01)
+ * \brief wrapper to get all the fields simultaneously
+ * \param g00: 4D complex array (kx,ky,kz,s). Zeroth Hermite and Laguerre moment of modified gyrokinetic distribution function.
+ * \param g10: 4D complex array (kx,ky,kz,s). Must be first Hermite and zeroth Laguerre moment of modified gyrokinetic distribution function g.
+ * \param g01: 4D complex array (kx,ky,kz,s). Zeroth Hermite and first Laguerre moment of the modified distribution function.
+ *
+ * Wrapper for functions #fields_getPhi, #fields_getB, #fields_getA.
  ***************************************/
 void fields_getFields(COMPLEX *g00, COMPLEX *g10, COMPLEX *g01) {
     fields_getPhi(g00,g10);
@@ -450,7 +495,13 @@ void fields_getFields(COMPLEX *g00, COMPLEX *g10, COMPLEX *g01) {
 };
 
 /***************************************
- * fields_getChi():
+ * \fn void fields_getChi():
+ * \brief computes gyrokinetic potentials chi
+ *
+ * Wrapper for functions
+ * #fields_getChiPhi,
+ * #fields_getChiA,
+ * #fields_getChiB
  ***************************************/
 void fields_getChi() {
     switch (systemType)
@@ -467,7 +518,10 @@ void fields_getChi() {
 };
 
 /***************************************
- * fields_getChiPhi():
+ * \fn fields_getChiPhi()
+ * \brief computes chiPhi gyrokinetic potential from phi potential
+ *
+ * computes \f$chi^{\phi}_s (\mathbf{k})\f$
  ***************************************/
 void fields_getChiPhi(){
     size_t ind3D = 0;
@@ -495,7 +549,10 @@ void fields_getChiPhi(){
 }
 
 /***************************************
- * fields_getChiB():
+ * \fn void fields_getChiB()
+ * \brief computes chiB gyrokinetic potential from B potential
+ *
+ * computes \f$ \chi^{B}_s (\mathbf{k})\f$
  ***************************************/
 void fields_getChiB(){
     size_t ind3D;
@@ -525,7 +582,10 @@ void fields_getChiB(){
 }
 
 /***************************************
- * fields_getChiA():
+ * \fn void fields_getChiA()
+ * \brief computes chiA gyrokinetic potential from A potential
+ *
+ * computes \f$chi^{A}_s (\mathbf{k})\f$
  ***************************************/
 void fields_getChiA(){
     size_t ind3D = 0;
@@ -553,7 +613,16 @@ void fields_getChiA(){
 }
 
 /***************************************
- * fields_sendG(COMPLEX *g):
+ * \fn fields_sendG(COMPLEX *g)
+ * \param g: complex array. Modified or non-modified gyrokinetic distribution function
+ * \brief sends moments of gyrokinetic distribution function which are required to compute fields
+ *
+ * sends
+ * \f$g^{1}_{s0}(\mathbf{k})f\f$,
+ * \f$g^{0}_{s1}(\mathbf{k})f\f$,
+ * \f$g^{0}_{s0}(\mathbf{k})f\f$
+ *
+ * to all processes to compute potentials locally.
  ***************************************/
 void fields_sendG(COMPLEX *g){
     /* fill buffers with data from processor which has required data */
@@ -621,7 +690,13 @@ void fields_sendG(COMPLEX *g){
 };
 
 /***************************************
- * fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01):
+ * \fn void fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01)
+ * \brief wrapper to get all the fields simultaneously, computed from gyrokinetic distribution function
+ * \param h00: 4D complex array (kx,ky,kz,s). Zeroth Hermite and Laguerre moment of gyrokinetic distribution function.
+ * \param h10: 4D complex array (kx,ky,kz,s). Must be first Hermite and zeroth Laguerre moment of gyrokinetic distribution function h.
+ * \param h01: 4D complex array (kx,ky,kz,s). Zeroth Hermite and first Laguerre moment of the distribution function.
+ *
+ * Wrapper for functions #fields_getPhiFromH, #fields_get_BFromH, #fields_getAFromH.
  ***************************************/
 void fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01){
     fields_getPhiFromH(h00);
@@ -630,7 +705,14 @@ void fields_getFieldsFromH(COMPLEX *h00, COMPLEX *h10, COMPLEX *h01){
 };
 
 /***************************************
- * fields_getAFromH(const COMPLEX* h)
+ * \fn void fields_getAFromH(const COMPLEX* h)
+ * \brief compute A field
+ * \param h: 4D complex array (kx,ky,kz,s). Must be first Hermite and zeroth Laguerre moment of gyrokinetic distribution function h.
+ *
+ * computes
+ * \f$A_{||}(\mathbf{k})\f$
+ * potential from
+ * \f$h^1_{s0}\f$ (<tt>h</tt> parameter)
  ***************************************/
 void fields_getAFromH(const COMPLEX* h){
     size_t flatInd;
@@ -676,7 +758,16 @@ void fields_getAFromH(const COMPLEX* h){
 };
 
 /***************************************
- * fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1)
+ * \fn void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1)
+ * \brief computes B potential
+ * \param h0: 4D complex array (kx,ky,kz,s). Zeroth Hermite and Laguerre moment of gyrokinetic distribution function.
+ * \param h1: 4D complex array (kx,ky,kz,s). Zeroth Hermite and first Laguerre moment of distribution function.
+ *
+ * Computes
+ * \f$B_{\perp}(\mathbf{k})\f$
+ * from
+ * \f$h^0_{s0}\f$ (<tt>h0</tt> parameter) and
+ * \f$h^1_{s0}\f$ (<tt>h1</tt> parameter).
  ***************************************/
 void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
     size_t ind4D;
@@ -715,7 +806,14 @@ void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
 };
 
 /***************************************
- * fields_getPhiFromH(const COMPLEX* h)
+ * \fn void fields_getPhiFromH(const COMPLEX* h)
+ * \brief computes phi potential
+ * \param h: 4D complex array (kx,ky,kz,s). Zeroth Hermite and Laguerre moment of gyrokinetic distribution function.
+ *
+ * Computes
+ * \f$\phi(\mathbf{k})\f$
+ * from
+ * \f$h^0_{s0}\f$ (<tt>h</tt> parameter)
  ***************************************/
 void fields_getPhiFromH(const COMPLEX* h){
     size_t ind4D;
@@ -770,7 +868,14 @@ void fields_getPhiFromH(const COMPLEX* h){
 };
 
 /***************************************
- * fields_getGradX(COMPLEX *out)
+ * \fn void fields_getGradX(COMPLEX *out)
+ * \brief computes chi gradient in x direction
+ * \param out: output complex array of size (kx,ky,kz,s,Nfields).
+ *
+ * computes gradient in x direction for chi potentials.
+ * <tt>Nfields<\tt> can be 1 or 3,
+ * and chosen automatically at start of the simulation
+ * depending on the simulation type (electrostatic or electromagnetic)
  ***************************************/
 void fields_getGradX(COMPLEX *out){
     size_t ind4D;
@@ -816,7 +921,14 @@ void fields_getGradX(COMPLEX *out){
 }
 
 /***************************************
- * fields_getGradY(COMPLEX *out)
+ * \fn void fields_getGradY(COMPLEX *out)
+ * \brief computes chi gradient in y direction
+ * \param out: output complex array of size (kx,ky,kz,s,Nfields).
+ *
+ * computes gradient in y direction for chi potentials.
+ * <tt>Nfields<\tt> can be 1 or 3,
+ * and chosen automatically at start of the simulation
+ * depending on the simulation type (electrostatic or electromagnetic)
  ***************************************/
 void fields_getGradY(COMPLEX *out){
     size_t ind4D;

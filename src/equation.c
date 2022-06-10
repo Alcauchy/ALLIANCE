@@ -1,3 +1,9 @@
+/**************************************
+* @file equation.c
+*   \brief equation module
+*
+*   module required to compute RHS of the equation.
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 26/01/2022 created by Gene Gorbunov
 //                                   EQUATION
@@ -22,7 +28,14 @@
 #define CHI_B 2
 
 /***************************************
- * equation_getLinearTerm()
+ * \fn void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, const COMPLEX *minus_boundary, COMPLEX *out)
+ * \brief computes linear term
+ * \param in: complex array
+ * \param out: complex array
+ * \param plus_boundary: complex array
+ * \param minus_boundary: complex array
+ *
+ * computes linear term <tt>out</tt> from distribution function <tt> in </tt>.
  ***************************************/
 void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, const COMPLEX *minus_boundary, COMPLEX *out) {
     size_t ind6D;
@@ -76,7 +89,18 @@ void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, con
 };
 
 /***************************************
- * equation_getNonlinearElectromagnetic(double *in, double *chiAr)
+ * \fn void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out, double sign)
+ * \brief returns nonlinear electromagnetic term
+ * \param in: input double array
+ * \param chiAr: input double array
+ * \param out: output double array
+ * \param sign: should be 1 or -1
+ *
+ * performs multiplication between input 6D complex array <tt>in</tt> and
+ * gyrokinetic potential array <tt>chiAr</tt>, in such way that the structure of the product
+ * is the same as nonlinear term of drift-kinetic equations.
+ * Used by #equation_getNonlinearProduct. <tt>sign</tt> is used to determine the sign of the resulting product.
+ * See #equation_getNonlinearTerm for explanation.
  ***************************************/
 void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out, double sign) {
     size_t indH;
@@ -161,7 +185,14 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
 };
 
 /***************************************
- * equation_getNonlinearElectrostatic(double *in, double *chiAr)
+ * \fn void equation_getNonlinearElectrostatic(double *in, double *chiAr, double *out, double sign)
+ * \brief returns nonlinear electrostatic term
+ * \param in: input double array
+ * \param chiAr: input double array
+ * \param out: output double array
+ * \param sign: should be 1 or -1
+ *
+ * see #equation_getNonlinearElectromagnetic for explanation
  ***************************************/
 void equation_getNonlinearElectrostatic(double *in, double *chiAr, double *out, double sign) {
     size_t indH;
@@ -185,7 +216,15 @@ void equation_getNonlinearElectrostatic(double *in, double *chiAr, double *out, 
 };
 
 /***************************************
- * equation_getNonlinearProduct(double *in, double *chiAr, double *out, double sign)
+ * \fn equation_getNonlinearProduct(double *in, double *chiAr, double *out, double sign)
+ * \brief chooses between computing electrostatic or electromagnetic term
+ * \param in: input double array
+ * \param chiAr: input double array
+ * \param out: output double array
+ * \param sign: should be 1 or -1
+ *
+ * depending on flag <tt>systemType</tt> provided by user in parameter file, chooses between
+ * #equation_getNonlinearElectrostatic and #equation_getNonlinearElectromagnetic
  ***************************************/
 void equation_getNonlinearProduct(double *in, double *chiAr, double *out, double sign){
     switch(systemType)
@@ -203,7 +242,38 @@ void equation_getNonlinearProduct(double *in, double *chiAr, double *out, double
 }
 
 /***************************************
- * equation_getNonlinearTerm()
+ * \fn void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out)
+ * \brief computes nonlinear term
+ * \param h: input complex array
+ * \param out: output complex array
+ *
+ * function returns nonlinear term.  First it takes  y gradient of distribution function
+ * <tt>h</tt>, and x gradient of gyrokinetic potentials chi, and transforms them to real space:\n
+ * <tt>
+ * distrib_getYGrad(h, fftw_hBuf); \n
+ * fields_getGradX(fftw_chiBuf); \n
+ * fftw_c2r(); \n
+ * fftw_c2r_chi(); \n
+ * </tt>
+ * after that, it computes
+ * \f$\frac{\partial h}{\partial y} \frac{\partial \chi}{\partial x}\f$
+ * part of the poisson brackets:
+ * <tt> \n
+ * equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, 1.);
+ * </tt> \n
+ * with the result stored in <tt>buffer</tt>
+ * after that, it computes x gradient of <tt>h</tt> and y gradient of gyrokinetic potential chi,
+ * and transforms results to real space:\n
+ * <tt>
+ * distrib_getXGrad(h, fftw_hBuf);\n
+ * fields_getGradY(fftw_chiBuf);\n
+ * fftw_c2r();\n
+ * fftw_c2r_chi();\n
+ * </tt>
+ * and computes second part of the poisson brackets
+ * \f$-\frac{\partial h}{\partial x} \frac{\partial \chi}{\partial y}\f$
+ * and adds the result to <tt>buffer</tt>.
+ * <tt>buffer</tt> is then transformed back to Fourier space, and dealiasing is performed.
  ***************************************/
 void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     size_t ind6D;
@@ -298,7 +368,8 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
 
 
 /***************************************
- * equation_getRHS()
+ * \fn void equation_getRHS()
+ * \brief computes right hand side of the equation.
  ***************************************/
 void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     /* allocating memory for buffers */
