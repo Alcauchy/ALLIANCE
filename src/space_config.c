@@ -1,3 +1,9 @@
+/**************************************
+* @file space_config.c
+* \brief space configuration module
+*
+* creates k and m spaces
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 03/02/2022 created by Gene Gorbunov
 //                                   SPACE CONFIGURATION
@@ -30,12 +36,8 @@ COMPLEX *space_iKy;
 COMPLEX *space_iKz;
 
 /***************************************
- * space_init():
- * initializes wave space. Called in init_start() function.
- *
- *  args:
- *
- *  return:
+ * \fn void space_init():
+ * \brief initializes wave space. Called in init_start() function.
  *
  ***************************************/
 void space_init() {
@@ -48,20 +50,20 @@ void space_init() {
 }
 
 /***************************************
- * space_generateWaveSpace():
+ * \fn void space_generateWaveSpace():
+ * \brief generates wave space.
+ *
  *  generates wave number arrays space_kx, space_ky, space_kz
  *  of lengths nkx,nky,nkz for a numerical box of size [lx, ly, lz]
- *  in kx,ky,kz directions as following:
- *  [0, pi / (nkx * lx), 2 pi / (nkx * lx), ... , (n / 2 + 1) pi / (nkx * lx), - (n / 2) pi / (nkx * lx), ... ,  - pi / (nkx * lx)]
- *
- *  generates arrays space_iKx, space_iKy, space_iKz,
- *  of lengths nkx,nky,nkz. These arrays are later used to compute gradients:
- *  space_iKx =  i * space_kx, etc.
- *
- *  args:
- *
- *  return:
- *
+ *  in kx,ky,kz directions as following:\n
+ * <tt> [0, pi / lx, 2 pi / lx, ... , (n / 2 + 1) pi / lx, - (n / 2) pi / lx, ... ,  - pi / lx] </tt>
+ *  generates arrays <tt>space_iKx</tt>, <tt>space_iKy</tt>, <tt>space_iKz</tt>,
+ *  of lengths nkx,nky,nkz. These arrays are later used to compute gradients by
+ *  #fields_getGradX,
+ *  #fields_getGradY,
+ *  #distrib_getXGrad,
+ *  #distrib_getYGrad,
+ *  #distrib_getZGrad.
  ***************************************/
 void space_generateWaveSpace() {
     space_kx = malloc(array_local_size.nkx *
@@ -140,7 +142,10 @@ void space_generateWaveSpace() {
 };
 
 /***************************************
- * space_generateMSpace()
+ * \fn space_generateMSpace()
+ * \brief generates Hermite space.
+ *
+ * to be added
  ***************************************/
 void space_generateMSpace(){
     space_sqrtM = malloc((array_local_size.nm + 1)  * sizeof(*space_sqrtM));
@@ -152,7 +157,10 @@ void space_generateMSpace(){
 }
 
 /***************************************
- * free_wavespace()
+ * \fn free_wavespace()
+ * \brief deallocates all the arrays.
+ *
+ * to be added...
  ***************************************/
 void free_wavespace() {
     free(space_kx);
