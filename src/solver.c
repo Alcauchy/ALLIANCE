@@ -42,8 +42,10 @@ void solver_init() {
 };
 
 /***************************************
- * \fn void solver_makeStep(COMPLEX *g):
+ * \fn void solver_makeStep(COMPLEX **g, COMPLEX *h):
  * \brief iterate solver forward
+ * \param g: address of the 6D complex array. Modified gyrokinetic distribution function
+ * \param h: 6D complex array. Gyrokinetic distribution function
  *
  * solves one simulation time step
  ***************************************/
