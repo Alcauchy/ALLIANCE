@@ -1,3 +1,8 @@
+/**************************************
+* @file variables.c
+* \brief stores physical variables
+*
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 09/02/2022 created by Gene Gorbunov
 //                                   VARIABLES
@@ -19,7 +24,8 @@ double *var_J0;
 double *var_J1;
 
 /***************************
- *  var_init()
+ *  \fn void var_init()
+ *  \brief initializes variables
  * *************************/
 void var_init(){
     var_varInit();
@@ -28,7 +34,12 @@ void var_init(){
 };
 
 /***************************
- *  var_getJ0()
+ * \fn void var_getJ0()
+ * \brief generates J0.
+ *
+ * generates zeroth Laguerre moment
+ * #var_J0 of Bessel function used
+ * for gyroaveraging.
  * *************************/
 void var_getJ0(){
     var_J0 = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.ns * sizeof(*var_J0));
@@ -39,7 +50,12 @@ void var_getJ0(){
 }
 
 /***************************
- *  var_getJ1()
+ * \fn void var_getJ1()
+ * \brief generates J1.
+ *
+ * generates first Laguerre moment
+ * #var_J1 of Bessel function used
+ * for gyroaveraging.
  * *************************/
 void var_getJ1(){
     var_J1 = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.ns * sizeof(*var_J1));
@@ -58,7 +74,9 @@ void var_getJ1(){
 }
 
 /***************************
- *  var_getJIndex()
+ * \fn size_t var_getJIndex(size_t ikx, size_t iky, size_t is)
+ * \brief returns index to get data from #var_J0 and #var_J1
+ *
  * *************************/
 size_t var_getJIndex(size_t ikx, size_t iky, size_t is){
     return ikx * array_local_size.nky * array_local_size.ns +
@@ -67,7 +85,8 @@ size_t var_getJIndex(size_t ikx, size_t iky, size_t is){
 };
 
 /***************************
- *  var_varInit()
+ *  \fn void var_varInit()
+ *  \brief initializes physical variables
  * *************************/
 void var_varInit(){
     var_var.m = malloc(parameters.ns * sizeof(*var_var.m));
@@ -87,7 +106,7 @@ void var_varInit(){
         var_var.T[i] = parameters.temperature[i];
         var_var.n[i] = parameters.density[i];
         var_var.vT[i] = sqrt(2.* var_var.T[i]/var_var.m[i]);
-        var_var.rho[i] = sqrt(var_var.m[i]/var_var.m[0]);
+        var_var.rho[i] = sqrt(var_var.m[i]);
     }
 
     for(size_t ix = 0; ix < array_local_size.nkx; ix++)

@@ -1,3 +1,9 @@
+/**************************************
+* @file utils_hdf.c
+* \brief hdf module
+*
+* contains HDF related routines to save and read hdf files
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 16/12/2021 created by Gene Gorbunov
 //                                   HDF5 UTILITIES
@@ -7,7 +13,7 @@
 // hdf_create_file_r
 // hdf_initField
 // hdf_saveFieldA
-//hdf_saveField_r
+// hdf_saveField_r
 // hdf_saveFieldB
 // hdf_saveFieldPhi
 // hdf_saveData

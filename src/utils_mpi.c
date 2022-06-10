@@ -1,3 +1,9 @@
+/**************************************
+* @file utils_mpi.c
+* \brief mpi module
+*
+* module to generate mpi topology and other mpi related routines
+***************************************/
 ////////////////////////////////////////////////////////////////////////////////
 // 06/12/2021 created by Gene Gorbunov
 //                                   MPI UTILITIES
