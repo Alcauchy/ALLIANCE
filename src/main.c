@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     distrib_getG(g, h);
     double free_energy0;
     for (int it = 0; it < solver.Nt; it++) {
-        hdf_saveData(g, it);
+        hdf_saveData(h, it);
         if(it%10 == 0) printf("it = %d\n", it);
         //solver_updateDt();
         if (parameters.save_diagnostics && it % parameters.iter_diagnostics == 0) {
