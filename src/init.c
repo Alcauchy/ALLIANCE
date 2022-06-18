@@ -37,9 +37,8 @@ enum initial initialConditions;
 * initializes all the modules required for ALLIANCE to work.
  ***************************************/
 void init_start(char *filename){
-    srand(time(NULL));
     mpi_init();
-    srand(mpi_my_rank);
+    srand(0);
     read_parameters(filename);
     init_initEnums();
     mpi_generateTopology();
@@ -116,23 +115,30 @@ void fill_rand(COMPLEX *ar1) {
         ar1[i] = 0;//cexp(2. * M_PI *1.j * (double) rand() / (double) (RAND_MAX)) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
                 //((0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
     }
-    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
-        for (size_t iy = 0; iy < array_local_size.nky; iy++){
-            for (size_t iz = 0; iz < array_local_size.nkz; iz++){
-                for (size_t im = 0; im < array_local_size.nm; im++){
-                    for (size_t il = 0; il < array_local_size.nl; il++){
-                        for (size_t is = 0; is < array_local_size.ns; is++){
-                            size_t ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                            size_t ind3D = ix * array_local_size.nky * array_local_size.nkz +
-                                            iy * array_local_size.nkz +
-                                            iz;
-                            double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
-                            ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
-                            if (space_kSq[ind3D] > 1e-10){
-                                double amplitude = sqrt(init_energySpec(sqrt(space_kSq[ind3D]), 0, 0.00001, 2.) / 2.0/ M_PI);
-                                ar1[ind6D] *=amplitude;
+    for (size_t ix = 0; ix < array_global_size.nkx; ix++){
+        for (size_t iy = 0; iy < array_global_size.nky; iy++){
+            for (size_t iz = 0; iz < array_global_size.nkz; iz++){
+                for (size_t im = 0; im < array_global_size.nm; im++){
+                    for (size_t il = 0; il < array_global_size.nl; il++){
+                        for (size_t is = 0; is < array_global_size.ns; is++){
+                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank){
+                                size_t ix_local = mpi_whereIsX[2 * ix + 1];
+                                size_t im_local = mpi_whereIsM[2 * im + 1];
+                                size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
+                                size_t ind3D = ix_local * array_local_size.nky * array_local_size.nkz +
+                                               iy * array_local_size.nkz +
+                                               iz;
+                                double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
+                                ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
+                                if (space_kSq[ind3D] > 1e-10){
+                                    double amplitude = sqrt(init_energySpec(sqrt(space_kSq[ind3D]), 0, 1., .5) / 2.0/ M_PI);
+                                    ar1[ind6D] *=amplitude;
+                                }
+                                if(global_nkx_index[ix_local] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
                             }
-                            if(global_nkx_index[ix] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
+                            else{
+                                rand();
+                            }
                         }
                     }
                 }
@@ -140,6 +146,7 @@ void fill_rand(COMPLEX *ar1) {
         }
     }
 }
+
 
 /***************************************
  * \fn void fill_randM0(COMPLEX *data)
@@ -242,9 +249,9 @@ void init_conditions(COMPLEX *data){
             printf("[MPI process %d] error with initial conditions! Aborting...",mpi_my_rank);
             exit(1);
     }
+    dealiasing23(data);
     distrib_enforceReality(data);
     distrib_setZeroNHalf(data);
-    dealiasing23(data);
 };
 
 /***************************************

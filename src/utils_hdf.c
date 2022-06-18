@@ -1836,7 +1836,7 @@ void hdf_readData(char *filename, COMPLEX *h) {
     file_id = H5Fopen(filename,H5F_ACC_RDONLY,plist_id);
     H5Pclose(plist_id);
     /*open dataset*/
-    dset_id = H5Dopen2(file_id, "h", H5P_DEFAULT);
+    dset_id = H5Dopen2(file_id, "g", H5P_DEFAULT);
     file_space = H5Dget_space(dset_id);
     H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset, stride, count, chunk_dims_c);
     memory_space = H5Screate_simple(hdf_rank, chunk_dims_c, NULL);

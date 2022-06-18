@@ -20,9 +20,9 @@
 #include <complex.h>
 
 #define MINUS_I -1.j
-double space_Lx = 100;
-double space_Ly = 100;
-double space_Lz = 100;
+double space_Lx = 100.0;
+double space_Ly = 100.0;
+double space_Lz = 100.0;
 double *space_kx;
 double *space_ky;
 double *space_kz;
@@ -30,6 +30,9 @@ double *space_kPerp;
 double *space_kPerp2;
 double *space_kSq;
 double *space_sqrtM;
+double *space_zerosKx;
+double *space_zerosKy;
+double *space_zerosKz;
 size_t *space_globalMIndex;
 COMPLEX *space_iKx;
 COMPLEX *space_iKy;
@@ -88,6 +91,10 @@ void space_generateWaveSpace() {
     space_kSq = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz *
                           sizeof(*space_kPerp2));
 
+    space_zerosKx = malloc(array_local_size.nkx * sizeof(*space_zerosKx));
+    space_zerosKy = malloc(array_local_size.nky * sizeof(*space_zerosKy));
+    space_zerosKz = malloc(array_local_size.nkz * sizeof(*space_zerosKz));
+
     double deltaKx = 2.* M_PI / ( space_Lx);
     double deltaKy = 2.* M_PI / ( space_Ly);
     double deltaKz = 2. * M_PI / ( space_Lz);
@@ -99,7 +106,13 @@ void space_generateWaveSpace() {
             space_kx[ix] = deltaKx * ((double) global_nkx_index[ix] - (double) array_global_size.nkx);
         }
         space_iKx[ix] = 1.j * space_kx[ix];
-        //printf("[MPI process %d] kx[%d] = %f\n",mpi_my_rank, ix, space_kx[ix]);
+        //filling space_zerosKx array either with zeros or ones
+        if(fabs(space_kx[ix]) > deltaKx * array_global_size.nkx/3.){
+            space_zerosKx[ix] = 0.;
+        }
+        else{
+            space_zerosKx[ix] = 1.;
+        }
     }
     printf("[MPI process %d] kx generated \n", mpi_my_rank);
 
@@ -110,13 +123,28 @@ void space_generateWaveSpace() {
             space_ky[iy] = deltaKy * ((double) iy - (double) array_global_size.nky);
         }
         space_iKy[iy] = 1.j * space_ky[iy];
-        //printf("[MPI process %d] ky[%d] = %f\n",mpi_my_rank, iy, space_ky[iy]);
+        //filling space_zerosKy array either with zeros or ones
+        if(fabs(space_ky[iy]) > deltaKy * array_global_size.nky/3.){
+            space_zerosKy[iy] = 0.;
+            //printf("ky[%d] = 0 for %f\n", iy, space_ky[iy]);
+        }
+        else{
+            space_zerosKy[iy] = 1.;
+        }
     }
     //space_iKy[1] = (0,0);
     printf("[MPI process %d] ky generated \n", mpi_my_rank);
     for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
         space_kz[iz] = deltaKz * iz;
         space_iKz[iz] = 1.j * space_kz[iz];
+        //filling space_zerosKz array either with zeros or ones
+        if(fabs(space_ky[iz]) > deltaKz * array_global_size.nz/3.){
+            space_zerosKz[iz] = 0.;
+            printf("kz[%d] = 0 for %f\n", iz, space_kz[iz]);
+        }
+        else{
+            space_zerosKz[iz] = 1.;
+        }
         //printf("[MPI process %d] kz[%d] = %f\n ",mpi_my_rank, iz, space_kz[iz]);
     }
     printf("[MPI process %d] kz generated \n", mpi_my_rank);

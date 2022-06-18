@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     fields_getChi();
     distrib_getG(g, h);
     double free_energy0;
-    for (int it = 0; it < solver.Nt; it++) {
+    for (int it = 0; it <= solver.Nt; it++) {
         hdf_saveData(h, it);
         if(it%10 == 0) printf("it = %d\n", it);
         //solver_updateDt();
@@ -47,37 +47,37 @@ int main(int argc, char **argv) {
             //
             // saving fields and everything
             //
-            /*char name[64];
+            char name[64];
             //save g and h
             sprintf(name, "%s%s%s%d%s", ".","/","g_",it,".h5");
-            //hdf_create_file_c(name,g);
+            hdf_create_file_c(name,g);
             sprintf(name, "%s%s%s%d%s", ".","/","h_",it,".h5");
-            //hdf_create_file_c(name,h);
+            hdf_create_file_c(name,h);
             // save real g and h
-            fftw_copy_buffer_c(fftw_hBuf,g);
-            fftw_c2r();
-            sprintf(name, "%s%s%s%d%s", ".","/","gr_",it,".h5");
+            //fftw_copy_buffer_c(fftw_hBuf,g);
+            //fftw_c2r();
+            //sprintf(name, "%s%s%s%d%s", ".","/","gr_",it,".h5");
             //hdf_create_file_r(name,fftw_hBuf);
 
-            fftw_copy_buffer_c(fftw_hBuf,h);
-            fftw_c2r();
-            sprintf(name, "%s%s%s%d%s", ".","/","hr_",it,".h5");
+            //fftw_copy_buffer_c(fftw_hBuf,h);
+            //fftw_c2r();
+            //sprintf(name, "%s%s%s%d%s", ".","/","hr_",it,".h5");
             //hdf_create_file_r(name,fftw_hBuf);
 
             // save fields
-            fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
+            //fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
             //fftw_c2r_field();
-            sprintf(name, "%s%s%s%d%s", ".","/","phir_",it,".h5");
+            //sprintf(name, "%s%s%s%d%s", ".","/","phir_",it,".h5");
             //hdf_saveField_r(fftw_field,name);
 
-            fftw_copyFieldBuf_c(fftw_field,fields_fields.A);
+            //fftw_copyFieldBuf_c(fftw_field,fields_fields.A);
             //fftw_c2r_field();
-            sprintf(name, "%s%s%s%d%s", ".","/","Ar_",it,".h5");
+            //sprintf(name, "%s%s%s%d%s", ".","/","Ar_",it,".h5");
             //hdf_saveField_r(fftw_field,name);
 
-            fftw_copyFieldBuf_c(fftw_field,fields_fields.B);
+            //fftw_copyFieldBuf_c(fftw_field,fields_fields.B);
             //fftw_c2r_field();
-            sprintf(name, "%s%s%s%d%s", ".","/","Br_",it,".h5");
+            //sprintf(name, "%s%s%s%d%s", ".","/","Br_",it,".h5");
             //hdf_saveField_r(fftw_field,name);*/
 
             if (it == 0) free_energy0 = diag_freeEnergy;
@@ -87,6 +87,7 @@ int main(int argc, char **argv) {
         solver_makeStep(&g, h);
         //printf("2)1st = %p, 2nd = %p\n", g, rk4.g_buf);
     }
+
     //test_linearRHS();
     //test_inplaceFFTW_chi();
 

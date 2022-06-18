@@ -37,6 +37,7 @@ int m_neighbour_ranks[2];               // ranks of the neighbours
 int mpi_sub_buf_size;                   // buffer size needed to exchange m+1 and m-1 Hermite moments
 int mpi_sub_buf_size_r;                 // buffer size needed to exchange m+1 and m-1 Hermite moments of real type
 int *mpi_whereIsX;                       // arrays which returns the rank of a process which has a required kx
+int *mpi_whereIsM;
 size_t mpi_vectorSliceLength;
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
 MPI_Comm mpi_row_comm;                  // row communicator (kx direction)
@@ -215,7 +216,8 @@ void mpi_splitInRows(){
     mpi_my_row_rank = mpi_my_coords[1];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
     printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
-    mpi_whereIsX = malloc(2 * array_global_size.nkx * sizeof(mpi_whereIsX));
+    mpi_whereIsX = malloc(2 * array_global_size.nkx * sizeof(*mpi_whereIsX));
+    mpi_whereIsM = malloc(2 * array_global_size.nm * sizeof(*mpi_whereIsM));
     for(int iproc = 0; iproc < mpi_dims[1]; iproc++){
         int ilocal = 0;
         if(iproc != mpi_dims[1] - 1){
@@ -233,7 +235,25 @@ void mpi_splitInRows(){
             }
         }
     }
+    for(int iproc = 0; iproc < mpi_dims[0]; iproc++){
+        int ilocal = 0;
+        if(iproc != mpi_dims[0] - 1){
+            for (int im = array_global_size.nm/mpi_dims[0] * iproc; im < array_global_size.nm/mpi_dims[0] * (iproc + 1); im++){
+                mpi_whereIsM[im * 2 + 0] = iproc;
+                mpi_whereIsM[im * 2 + 1] = ilocal;
+                ilocal++;
+            }
+        }
+        else{
+            for (int im = array_global_size.nm/mpi_dims[0] * iproc; im < array_global_size.nm; im++){
+                mpi_whereIsM[im * 2 + 0] = iproc;
+                mpi_whereIsM[im * 2 + 1] = ilocal;
+                ilocal++;
+            }
+        }
+    }
     if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nkx; ii++) printf("[MPI process %d] x = %zu is located at %d proc and local ix = %d\n",mpi_my_rank, ii, mpi_whereIsX[2 * ii], mpi_whereIsX[2 * ii + 1]);
+    if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nm; ii++) printf("[MPI process %d] m = %zu is located at %d proc and local im = %d\n",mpi_my_rank, ii, mpi_whereIsM[2 * ii], mpi_whereIsM[2 * ii + 1]);
     // create mpi vector type to use for enforcing reality condition
     mpi_vectorSliceLength = array_local_size.nky*array_local_size.nl * array_local_size.nm * array_local_size.ns;
     MPI_Type_vector(array_local_size.nky,

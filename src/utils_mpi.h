@@ -29,6 +29,7 @@ extern int mpi_my_col_rank;            // rank of the process in Hermite directi
 extern int mpi_my_coords[2];           // coordinates of the process in 2D topology
 extern int mpi_dims[];                 // size of the dimensions, 0th dimension is for Hermite parallelization, and 1st dimension is for kx.
 extern int *mpi_whereIsX;
+extern int *mpi_whereIsM;
 extern MPI_Comm mpi_cube_comm;         // 2D topology communicator
 extern MPI_Comm mpi_row_comm;          // row communicator (kx direction)
 extern MPI_Comm mpi_col_comm;          // column communicator (Hermite direction)
