@@ -36,7 +36,7 @@
 #define FFTW_RANK 3
 #define CHI_EL 1
 #define CHI_EM 3
-#define VERBOSE 0
+#define VERBOSE 1
 
 
 
@@ -44,13 +44,15 @@ ptrdiff_t size_c[3];                            // full size of complex array
 ptrdiff_t size_r[3];                            // full size of real array
 ptrdiff_t howmany;                              // how many 3D transforms of box of size (nkx,nky,nkz) to perform
 ptrdiff_t howmany_chi;
-ptrdiff_t local_size, local_n0, local_0_start;  // local size, local start and local kx block size on a given processor
+ptrdiff_t local_size, local_n0,local_n1,local_1_start, local_0_start;  // local size, local start and local kx block size on a given processor
 ptrdiff_t local_size_chi, local_n0_chi, local_0_start_chi;  // local size, local start and local kx block size on a given processor
 ptrdiff_t local_size_field, local_n0_field, local_0_start_field;
 fftw_plan plan_c2r, plan_r2c;                   // plans needed to perform complex to real and real to complex transforms
+fftw_plan plan_transposeToXY, plan_transposeToYX;
 fftw_plan plan_c2r_chi, plan_r2c_chi;                   // plans needed to perform complex to real and real to complex transforms
 fftw_plan plan_c2r_field, plan_r2c_field;
 COMPLEX* fftw_hBuf;                                   // complex data array buffer; used for in-place
+double *fftw_hBufr;
 COMPLEX* fftw_chiBuf;                             // complex data array buffer for chi transformation;
 COMPLEX *fftw_field;                              //complex data to transform fields
 double fftw_norm;                               //normalization coefficient for backward fft transform
@@ -67,21 +69,27 @@ void fftw_init(MPI_Comm communicator){
     size_c[0] = array_global_size.nkx;
     size_c[1] = array_global_size.nky;
     size_c[2] = array_global_size.nkz;
-    size_r[0] = array_global_size.nkx;
-    size_r[1] = array_global_size.nky;
+    size_r[0] = array_global_size.ny;
+    size_r[1] = array_global_size.nkx;
     size_r[2] = array_global_size.nz;
+    //size_r[0] = array_global_size.nkx;
+    //size_r[1] = array_global_size.nky;
+    //size_r[2] = array_global_size.nz;
 
     /*creating plans for full 6D transforms*/
     fftw_norm = 1./(array_global_size.nkx * array_global_size.nky * array_global_size.nz);
 
     howmany = array_local_size.nm * array_local_size.nl * array_local_size.ns;
-    local_size = fftw_mpi_local_size_many(FFTW_RANK,
+    local_size = fftw_mpi_local_size_many_transposed(FFTW_RANK,
                                           size_c,
                                           howmany,
                                           array_local_size.nkx,
+                                          array_local_size.ny,
                                           communicator,
                                           &local_n0,
-                                          &local_0_start); // getting local size stored on each processor;
+                                          &local_0_start,
+                                          &local_n1,
+                                          &local_1_start); // getting local size stored on each processor;
     printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
 
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
@@ -91,26 +99,40 @@ void fftw_init(MPI_Comm communicator){
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);
-    int flags_c2r = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_OUT;
-    int flags_r2c = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_IN;
+    fftw_hBufr = fftw_alloc_real(2*local_size);
+    int flags_c2r = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_IN;
+    int flags_r2c = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_OUT;
     plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                           size_r,
                                           howmany,
                                           local_n0,
-                                          FFTW_MPI_DEFAULT_BLOCK,
+                                          local_n1,
                                           fftw_hBuf,
                                           fftw_hBuf,
                                           communicator,
-                                          FFTW_ESTIMATE);
+                                          flags_c2r);
     plan_r2c = fftw_mpi_plan_many_dft_r2c(FFTW_RANK,
                                           size_r,
                                           howmany,
+                                          local_n1,
                                           local_n0,
-                                          FFTW_MPI_DEFAULT_BLOCK,
                                           fftw_hBuf,
                                           fftw_hBuf,
                                           communicator,
-                                          FFTW_ESTIMATE);
+                                          flags_r2c);
+    plan_transposeToXY = fftw_mpi_plan_many_transpose(size_r[0],size_r[1],
+                                                      howmany*(size_r[2] + 2),
+                                                      local_n1,local_n0,
+                                                      fftw_hBuf,fftw_hBuf,
+                                                      communicator,
+                                                      FFTW_ESTIMATE);
+
+    plan_transposeToYX = fftw_mpi_plan_many_transpose(size_r[1],size_r[0],
+                                                      howmany*(size_r[2] + 2),
+                                                      local_n0,local_n1,
+                                                      fftw_hBuf,fftw_hBuf,
+                                                      communicator,
+                                                      FFTW_ESTIMATE);
 
     /*preparing chi transform*/
     howmany_chi = array_local_size.ns;
@@ -295,17 +317,16 @@ void fftw_kill(){
  * copies real data <tt>from</tt> array to array <tt>to</tt>
  ***************************************/
 void fftw_copy_buffer_r(double *to, double *from){
-    for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
-        for(size_t iky = 0; iky < array_local_size.nky; iky++){
+    for(size_t iky = 0; iky < array_local_size.ny; iky++){
+        for(size_t ikx = 0; ikx < array_local_size.nx; ikx++){
             for(size_t iz = 0; iz < array_local_size.nz+2; iz++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
                     for(size_t il = 0; il < array_local_size.nl; il++){
                         for(size_t is = 0; is <array_local_size.ns; is++){
-                            to[get_flat_r(is, il, im, ikx, iky, iz)] = from[get_flat_r(is, il, im, ikx, iky, iz)];
+                                to[get_flat_r(is, il, im, ikx, iky, iz)] = from[get_flat_r(is, il, im, ikx, iky, iz)];
                         }
                     }
                 }
-
             }
         }
     }
@@ -551,4 +572,20 @@ void dealiasing23(COMPLEX *data_c){
             }
         }
     }
+}
+
+/***************************************
+ * \fn void fftw_transposeToXY()
+ * \brief transposes 6D array
+ ***************************************/
+void fftw_transposeToXY(){
+    fftw_execute(plan_transposeToXY);
+}
+
+/***************************************
+ * \fn void fftw_transposeToXY()
+ * \brief transposes 6D array
+ ***************************************/
+void fftw_transposeToYX(){
+    fftw_execute(plan_transposeToYX);
 }

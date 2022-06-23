@@ -31,6 +31,8 @@ void fftw_normalise_data_r(double *data);
 void fftw_normalise_field_r(double *data);
 void fftw_test_fill(double *ar,double f);                   // fills input real array with cos(2*pi*f*x).
 void dealiasing23(COMPLEX *data_c);                         // performs dealiasing by employing 2/3 rule. Turns all the aliased modes to zero.
+void fftw_transposeToXY();
+void fftw_transposeToYX();
 double cosinus(double f,int ix);                            // returns cos(2*pi*f*ix)
 
 extern COMPLEX *fftw_hBuf;

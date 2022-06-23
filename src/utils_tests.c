@@ -916,3 +916,49 @@ void test_CFL(){
     free(g);
     free(h);
 }
+
+/***************************
+*  test_transposedFFTW()
+* *************************/
+void test_transposedFFTW(){
+    COMPLEX *h = calloc(array_local_size.total_comp , sizeof(*h));
+    int kx_local,kx_localNeg;
+    int kx = 0;
+    int kxNeg = array_global_size.nkx - kx;
+    int proc, procNeg;
+    proc = mpi_whereIsX[2 * kx];
+    kx_local = mpi_whereIsX[2 * kx + 1];
+    procNeg = mpi_whereIsX[2*kxNeg];
+    kx_localNeg = mpi_whereIsX[2*kxNeg + 1];
+    if(mpi_my_row_rank == proc){
+        size_t iy = 2;
+        size_t ind6D = get_flat_c(0,0,0,kx_local,iy,0);
+        h[ind6D] = array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+        ind6D = get_flat_c(0,0,0,kx_local,array_global_size.nky - iy,0);
+        h[ind6D] = array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+    }
+    double *hr = h;
+    fftw_copy_buffer_c(fftw_hBuf,h);
+    fftw_c2r();
+    fftw_copy_buffer_r(h,fftw_hBuf);
+    double *hbuf = calloc(array_local_size.total_real , sizeof(*hbuf));
+    fftw_copy_buffer_r(hbuf,fftw_hBuf);
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t ind6D = get_flat_r(0,0,0,0,iy,0);
+            printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    hdf_create_file_r("h.h5", hr);
+    fftw_transposeToXY();
+    fftw_transposeToYX();
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t ind6D = get_flat_r(0,0,0,0,iy,0);
+            printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    //fftw_r2c();
+}

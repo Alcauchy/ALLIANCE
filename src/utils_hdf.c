@@ -253,6 +253,9 @@ void hdf_create_file_c(char *filename, COMPLEX *data){
  *  hdf_create_file_r
  * *************************/
 void hdf_create_file_r(char *filename, double *data){
+    //transpose the data
+    fftw_copy_buffer_r(fftw_hBuf,data);
+    fftw_transposeToXY();
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
     hid_t file_space, memory_space;
@@ -276,7 +279,7 @@ void hdf_create_file_r(char *filename, double *data){
     status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset, stride, count, chunk_dims_r);
     plist_id = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, data);
+    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, (double*)fftw_hBuf);
 
     H5Dclose(dset_id);
     H5Sclose(file_space);

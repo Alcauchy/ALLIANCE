@@ -24,4 +24,5 @@ void test_enforceZero();
 void test_fieldsFFT();
 void test_everything();
 void test_RHS();
+void test_transposedFFTW();
 #endif //ALLIANCE_ALPHA_1_0_UTILS_TESTS_H

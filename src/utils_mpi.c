@@ -101,12 +101,13 @@ void mpi_createTopology() {
  * *************************/
 void mpi_getLocalArraySize() {
     array_local_size.nkx = array_global_size.nkx / mpi_dims[1];
-    array_local_size.ny = array_global_size.ny / mpi_dims[1];
     array_local_size.nky = array_global_size.nky;
     array_local_size.nkz = array_global_size.nkz;
     array_local_size.nm = array_global_size.nm / mpi_dims[0];
     array_local_size.nl = array_global_size.nl;
     array_local_size.ns = array_global_size.ns;
+    array_local_size.nx = array_global_size.nkx;
+    array_local_size.ny = array_global_size.ny / mpi_dims[1];
     array_local_size.nz = array_global_size.nz;
     if (mpi_my_coords[0] == mpi_dims[0] - 1) {
         array_local_size.nm = array_global_size.nm - array_global_size.nm / mpi_dims[0] * (mpi_my_coords[0]);
@@ -123,7 +124,7 @@ void mpi_getLocalArraySize() {
                                   array_local_size.nl *
                                   array_local_size.ns;
 
-    array_local_size.total_real = array_local_size.nkx *
+    array_local_size.total_real = array_local_size.nx *
                                   array_local_size.ny *
                                   (array_local_size.nz + 2) *
                                   array_local_size.nm *
@@ -172,13 +173,13 @@ void mpi_getLocalArrayOffsets() {
 
     array_offset.s = 1.0;
 
-    array_offset.x = array_local_size.ny *
-                     (array_local_size.nz + 2) *
+    array_offset.x = (array_local_size.nz + 2) *
                      array_local_size.nm *
                      array_local_size.nl *
                      array_local_size.ns;
 
-    array_offset.y = (array_local_size.nz + 2) *
+    array_offset.y = array_local_size.nx *
+                    (array_local_size.nz + 2) *
                      array_local_size.nm *
                      array_local_size.nl *
                      array_local_size.ns;

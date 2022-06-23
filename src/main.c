@@ -23,8 +23,8 @@ int main(int argc, char **argv) {
     }
 
     init_start(filename);
-    //hdf_createFiles();
-
+    hdf_createFiles();
+    test_transposedFFTW();
     /*COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);

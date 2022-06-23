@@ -157,8 +157,8 @@ size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is) {
  * 6D array to get a required element at position (is,il,im,ix,iy,iz).
  ***************************************/
 size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz) {
-    return ix * array_offset.x +
-           iy * array_offset.y +
+    return iy * array_offset.y +
+           ix * array_offset.x +
            iz * array_offset.z +
            im * array_offset.m +
            il * array_offset.l +
