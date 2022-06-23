@@ -29,6 +29,7 @@ void init_global_size() {
     array_global_size.nkx = parameters.nkx;
     array_global_size.nky = parameters.nky;
     array_global_size.nkz = parameters.nz / 2 + 1;
+    array_global_size.ny = parameters.nky;
     array_global_size.nz = parameters.nz;
     array_global_size.nm = parameters.nm;
     array_global_size.nl = parameters.nl;
@@ -254,10 +255,10 @@ void read_parameters(char *filename) {
         }
     }
     init_global_size();
-    if (parameters.initial == 1)
-    {
-        read_parametersFromFile(parameters.from_simulationName);
-    }
+   // if (parameters.initial == 1)
+   // {
+    //    read_parametersFromFile(parameters.from_simulationName);
+   // }
 }
 
 /***************************************

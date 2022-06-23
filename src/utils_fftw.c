@@ -91,7 +91,8 @@ void fftw_init(MPI_Comm communicator){
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);
-
+    int flags_c2r = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_OUT;
+    int flags_r2c = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_IN;
     plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                           size_r,
                                           howmany,
@@ -135,7 +136,6 @@ void fftw_init(MPI_Comm communicator){
     fftw_chiBuf = fftw_alloc_complex(local_size_chi);
     for (size_t ii = 0; ii < local_size_chi; ii++) fftw_chiBuf[ii] = 0;
     //fftw_chiBuf = fftw_alloc_real(2 * local_size_chi);
-
     plan_c2r_chi = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                               size_r,
                                               howmany_chi,

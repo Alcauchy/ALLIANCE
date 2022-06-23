@@ -23,9 +23,9 @@ int main(int argc, char **argv) {
     }
 
     init_start(filename);
-    hdf_createFiles();
+    //hdf_createFiles();
 
-    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    /*COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
     fields_sendG(h);
@@ -47,12 +47,17 @@ int main(int argc, char **argv) {
             //
             // saving fields and everything
             //
-            char name[64];
-            //save g and h
-            sprintf(name, "%s%s%s%d%s", ".","/","g_",it,".h5");
-            hdf_create_file_c(name,g);
-            sprintf(name, "%s%s%s%d%s", ".","/","h_",it,".h5");
-            hdf_create_file_c(name,h);
+            if (parameters.save_diagnostics && it % 1000 == 0){
+                char name[64];
+                //save g and h
+                sprintf(name, "%s%s%s%d%s", ".","/","g_",it,".h5");
+                hdf_create_file_c(name,g);
+                sprintf(name, "%s%s%s%d%s", ".","/","h_",it,".h5");
+                hdf_create_file_c(name,h);
+
+            }
+
+
             // save real g and h
             //fftw_copy_buffer_c(fftw_hBuf,g);
             //fftw_c2r();
@@ -80,13 +85,13 @@ int main(int argc, char **argv) {
             //sprintf(name, "%s%s%s%d%s", ".","/","Br_",it,".h5");
             //hdf_saveField_r(fftw_field,name);*/
 
-            if (it == 0) free_energy0 = diag_freeEnergy;
-            if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/free_energy0);
-        }
+           // if (it == 0) free_energy0 = diag_freeEnergy;
+           // if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/free_energy0);
+       // }
         //printf("1)1st = %p, 2nd = %p\n", g, rk4.g_buf);
-        solver_makeStep(&g, h);
+       // solver_makeStep(&g, h);
         //printf("2)1st = %p, 2nd = %p\n", g, rk4.g_buf);
-    }
+    //}
 
     //test_linearRHS();
     //test_inplaceFFTW_chi();

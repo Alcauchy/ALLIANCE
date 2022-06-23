@@ -42,7 +42,6 @@ void init_start(char *filename){
     read_parameters(filename);
     init_initEnums();
     mpi_generateTopology();
-    //mpi_getLocalArraySize();
     mpi_initMExchange();
     fftw_init(mpi_row_comm);
     space_init();
@@ -121,7 +120,7 @@ void fill_rand(COMPLEX *ar1) {
                 for (size_t im = 0; im < array_global_size.nm; im++){
                     for (size_t il = 0; il < array_global_size.nl; il++){
                         for (size_t is = 0; is < array_global_size.ns; is++){
-                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank){
+                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && im == 0 ){
                                 size_t ix_local = mpi_whereIsX[2 * ix + 1];
                                 size_t im_local = mpi_whereIsM[2 * im + 1];
                                 size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
