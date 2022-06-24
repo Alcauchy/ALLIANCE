@@ -936,6 +936,9 @@ void test_transposedFFTW(){
         h[ind6D] = array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
         ind6D = get_flat_c(0,0,0,kx_local,array_global_size.nky - iy,0);
         h[ind6D] = array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+
+        size_t indChi = getIndChiBufEM_c(kx_local,iy,0,0,0);
+        fftw_chiBuf[indChi] =  array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
     }
     double *hr = h;
     fftw_copy_buffer_c(fftw_hBuf,h);
@@ -957,8 +960,9 @@ void test_transposedFFTW(){
         for (size_t iy = 0; iy < array_local_size.ny;iy++){
             size_t ind6D = get_flat_r(0,0,0,0,iy,0);
             printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
-            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
         }
     }
+    fftw_c2r_chi();
+    fftw_r2c_chi();
     //fftw_r2c();
 }

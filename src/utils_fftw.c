@@ -44,15 +44,16 @@ ptrdiff_t size_c[3];                            // full size of complex array
 ptrdiff_t size_r[3];                            // full size of real array
 ptrdiff_t howmany;                              // how many 3D transforms of box of size (nkx,nky,nkz) to perform
 ptrdiff_t howmany_chi;
-ptrdiff_t local_size, local_n0,local_n1,local_1_start, local_0_start;  // local size, local start and local kx block size on a given processor
-ptrdiff_t local_size_chi, local_n0_chi, local_0_start_chi;  // local size, local start and local kx block size on a given processor
-ptrdiff_t local_size_field, local_n0_field, local_0_start_field;
+ptrdiff_t local_size, local_nx,local_ny,local_y_start, local_x_start;  // local size, local start and local kx block size on a given processor
+ptrdiff_t local_size_chi, local_nx_chi, local_x_start_chi, local_ny_chi, local_y_start_chi;  // local size, local start and local kx block size on a given processor
+ptrdiff_t local_size_field, local_nx_field, local_x_start_field, local_ny_field, local_y_start_field;
 fftw_plan plan_c2r, plan_r2c;                   // plans needed to perform complex to real and real to complex transforms
 fftw_plan plan_transposeToXY, plan_transposeToYX;
 fftw_plan plan_c2r_chi, plan_r2c_chi;                   // plans needed to perform complex to real and real to complex transforms
+fftw_plan plan_transposeToXY_chi, plan_transposeToYX_chi;
 fftw_plan plan_c2r_field, plan_r2c_field;
+fftw_plan plan_transposeToXY_field, plan_transposeToYX_field;
 COMPLEX* fftw_hBuf;                                   // complex data array buffer; used for in-place
-double *fftw_hBufr;
 COMPLEX* fftw_chiBuf;                             // complex data array buffer for chi transformation;
 COMPLEX *fftw_field;                              //complex data to transform fields
 double fftw_norm;                               //normalization coefficient for backward fft transform
@@ -86,10 +87,10 @@ void fftw_init(MPI_Comm communicator){
                                           array_local_size.nkx,
                                           array_local_size.ny,
                                           communicator,
-                                          &local_n0,
-                                          &local_0_start,
-                                          &local_n1,
-                                          &local_1_start); // getting local size stored on each processor;
+                                          &local_nx,
+                                          &local_x_start,
+                                          &local_ny,
+                                          &local_y_start); // getting local size stored on each processor;
     printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
 
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
@@ -99,14 +100,13 @@ void fftw_init(MPI_Comm communicator){
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);
-    fftw_hBufr = fftw_alloc_real(2*local_size);
     int flags_c2r = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_IN;
     int flags_r2c = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_OUT;
     plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                           size_r,
                                           howmany,
-                                          local_n0,
-                                          local_n1,
+                                          local_nx,
+                                          local_ny,
                                           fftw_hBuf,
                                           fftw_hBuf,
                                           communicator,
@@ -114,23 +114,23 @@ void fftw_init(MPI_Comm communicator){
     plan_r2c = fftw_mpi_plan_many_dft_r2c(FFTW_RANK,
                                           size_r,
                                           howmany,
-                                          local_n1,
-                                          local_n0,
+                                          local_ny,
+                                          local_nx,
                                           fftw_hBuf,
                                           fftw_hBuf,
                                           communicator,
                                           flags_r2c);
-    plan_transposeToXY = fftw_mpi_plan_many_transpose(size_r[0],size_r[1],
+    plan_transposeToXY = fftw_mpi_plan_many_transpose(size_r[0], size_r[1],
                                                       howmany*(size_r[2] + 2),
-                                                      local_n1,local_n0,
-                                                      fftw_hBuf,fftw_hBuf,
+                                                      local_ny, local_nx,
+                                                      fftw_hBuf, fftw_hBuf,
                                                       communicator,
                                                       FFTW_ESTIMATE);
 
-    plan_transposeToYX = fftw_mpi_plan_many_transpose(size_r[1],size_r[0],
+    plan_transposeToYX = fftw_mpi_plan_many_transpose(size_r[1], size_r[0],
                                                       howmany*(size_r[2] + 2),
-                                                      local_n0,local_n1,
-                                                      fftw_hBuf,fftw_hBuf,
+                                                      local_nx, local_ny,
+                                                      fftw_hBuf, fftw_hBuf,
                                                       communicator,
                                                       FFTW_ESTIMATE);
 
@@ -147,13 +147,18 @@ void fftw_init(MPI_Comm communicator){
             printf("ERROR DEFINING NUMBER OF TRANSFORMS FOR CHI, ABORTING...\n");
             exit(1);
     }
-    local_size_chi = fftw_mpi_local_size_many(FFTW_RANK,
-                                          size_c,
-                                          howmany_chi,
-                                          array_local_size.nkx,
-                                          communicator,
-                                          &local_n0_chi,
-                                          &local_0_start_chi); // getting local size stored on each processor;
+    local_size_chi = fftw_mpi_local_size_many_transposed(FFTW_RANK,
+                                                         size_c,
+                                                         howmany_chi,
+                                                         array_local_size.nkx,
+                                                         array_local_size.ny,
+                                                         communicator,
+                                                         &local_nx_chi,
+                                                         &local_x_start_chi,
+                                                         &local_ny_chi,
+                                                         &local_y_start_chi); // getting local size stored on each processor;
+
+
     printf("[MPI process %d] CHI TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_chi, howmany_chi);
     fftw_chiBuf = fftw_alloc_complex(local_size_chi);
     for (size_t ii = 0; ii < local_size_chi; ii++) fftw_chiBuf[ii] = 0;
@@ -161,21 +166,21 @@ void fftw_init(MPI_Comm communicator){
     plan_c2r_chi = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                               size_r,
                                               howmany_chi,
-                                              local_n0_chi,
-                                              FFTW_MPI_DEFAULT_BLOCK,
+                                              local_nx_chi,
+                                              local_ny_chi,
                                               fftw_chiBuf,
                                               fftw_chiBuf,
                                               communicator,
-                                              FFTW_ESTIMATE);
+                                              flags_c2r);
     plan_r2c_chi = fftw_mpi_plan_many_dft_r2c(FFTW_RANK,
                                               size_r,
                                               howmany_chi,
-                                              local_n0_chi,
-                                              FFTW_MPI_DEFAULT_BLOCK,
+                                              local_ny_chi,
+                                              local_nx_chi,
                                               fftw_chiBuf,
                                               fftw_chiBuf,
                                               communicator,
-                                              FFTW_ESTIMATE);
+                                              flags_r2c);
 
     /* preparing field transform */
     //getting local size
@@ -184,8 +189,8 @@ void fftw_init(MPI_Comm communicator){
                                                 1,
                                                 array_local_size.nkx,
                                                 communicator,
-                                                &local_n0_field,
-                                                &local_0_start_field);
+                                                &local_nx_field,
+                                                &local_x_start_field);
     printf("[MPI process %d] FIELD TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_field, 1);
     fftw_field = fftw_alloc_complex(local_size_field);
     //creating r2c and c2r plans
@@ -476,14 +481,14 @@ void fftw_copyFieldBuf_c(COMPLEX *to, COMPLEX *from){
  ***************************************/
 double cosinus(double f,int ix){
 
-    return cos((double)2. * M_PI * f / array_global_size.nkx * (local_0_start + ix));
+    return cos((double)2. * M_PI * f / array_global_size.nkx * (local_x_start + ix));
 }
 
 /***************************************
  *  fftw_test_fill(double *ar,double f)
  ***************************************/
 void fftw_test_fill(double *ar,double f){
-    for(int i = 0; i<local_n0;i++){
+    for(int i = 0; i < local_nx; i++){
         for(int j = 0; j<array_local_size.nky;j++){
             for(int k = 0; k<array_local_size.nz;k++){
                 ar[get_flat_r(0,0,0,i,j,k)] = cosinus(f,i);
