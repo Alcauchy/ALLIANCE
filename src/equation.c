@@ -317,13 +317,6 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     size_t indA;
     size_t chi_buf_size;
     size_t chi_buf_size_r;
-    double *h_r = calloc(array_local_size.total_real, sizeof(*h_r));
-    //
-    // CHECKS DELETE LATER WHEN NOT NEEDED
-    //
-    fftw_copy_buffer_c(fftw_hBuf,h);
-    fftw_c2r();
-    fftw_copy_buffer_r(h_r,fftw_hBuf);
     double *buffer = calloc(array_local_size.total_real, sizeof(*buffer));
     //
     // take gradient: dh/dx and dchi/dy
@@ -335,32 +328,20 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     fftw_c2r();
     fftw_c2r_chi();
-    //printf("[MPI process %d] fftw of dh/dx and dchi/dy is done\n",mpi_my_rank);
     //
     //compute product, first part
     //
     equation_getNonlinearProduct((double *)fftw_hBuf, (double *)fftw_chiBuf, buffer, 1.);
-    double tot = 0;
-    double totb = 0;
-    for (size_t ii = 0; ii < array_local_size.total_real; ii++)
-    {
-        tot += h_r[ii] * buffer[ii];
-        totb += buffer[ii];
-    }
-    //printf("[MPI process %d] total before minus = %.10e\n", mpi_my_rank, totb);
-    //printf("[MPI process %d] total flux before minus= %.10e\n", mpi_my_rank, tot);
     //
     // take gradient: dh/dy and dchi/dx
     //
     distrib_getXGrad(h, fftw_hBuf);
-    //for (size_t ii = 0; ii < array_local_size.total_comp; ii++) printf("[MPI process %d] buf = %f\n",mpi_my_rank, fftw_hBuf[ii]);
     fields_getGradY(fftw_chiBuf);
     //
     // transform those gradients
     //
     fftw_c2r();
     fftw_c2r_chi();
-    //printf("[MPI process %d] fftw of dh/dy and dchi/dx is done\n",mpi_my_rank);
     //
     //compute product, second part
     //
@@ -369,25 +350,6 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     // make ifftw of the computed product
     //
     fftw_copy_buffer_r((double *)fftw_hBuf, buffer);
-    //tot = 0;
-    totb = 0;
-    for (size_t ii = 0; ii < array_local_size.total_real; ii++)
-    {
-        tot += h_r[ii] * buffer[ii];
-        totb += buffer[ii];
-    }
-    //printf("[MPI process %d] total after minus = %.10e\n", mpi_my_rank,totb);
-    double total_reduced = 0;
-    MPI_Allreduce(&tot,
-                  &total_reduced,
-                  1,
-                  MPI_DOUBLE,
-                  MPI_SUM,
-                  MPI_COMM_WORLD);
-    //if (mpi_my_rank == 0 ) printf("[MPI process %d] total flux after minus = %.10e\n", mpi_my_rank, total_reduced);
-    fftw_r2c();
-
-    //printf("[MPI process %d] inverse fftw of the nonlinear product is done\n",mpi_my_rank);
     //
     // add it to RHS
     //
@@ -397,7 +359,6 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     //
     dealiasing23(out);
     free(buffer);
-    free(h_r);
 };
 
 

@@ -36,7 +36,7 @@
 #define FFTW_RANK 3
 #define CHI_EL 1
 #define CHI_EM 3
-#define VERBOSE 1
+#define VERBOSE 0
 
 
 

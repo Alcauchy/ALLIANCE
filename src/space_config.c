@@ -140,7 +140,7 @@ void space_generateWaveSpace() {
         //filling space_zerosKz array either with zeros or ones
         if(fabs(space_ky[iz]) > deltaKz * array_global_size.nz/3.){
             space_zerosKz[iz] = 0.;
-            printf("kz[%d] = 0 for %f\n", iz, space_kz[iz]);
+            //printf("kz[%d] = 0 for %f\n", iz, space_kz[iz]);
         }
         else{
             space_zerosKz[iz] = 1.;

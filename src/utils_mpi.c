@@ -206,10 +206,10 @@ void mpi_findHermiteNeighbours() {
     MPI_Cart_shift(mpi_cube_comm, 0, 1, &m_neighbour_ranks[MINUS], &m_neighbour_ranks[PLUS]);
     for (int i = 0; i < 2; i++) {
         if (m_neighbour_ranks[i] == MPI_PROC_NULL)
-            printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have no %s neighbour in m.\n", mpi_my_rank,
+            if(VERBOSE) printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have no %s neighbour in m.\n", mpi_my_rank,
                    mpi_my_coords[0], mpi_my_coords[1], neighbour_names[i]);
         else
-            printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have a %s neighbour in m: process %d.\n",
+        if(VERBOSE) printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have a %s neighbour in m: process %d.\n",
                    mpi_my_rank, mpi_my_coords[0], mpi_my_coords[1], neighbour_names[i], m_neighbour_ranks[i]);
     }
 }
@@ -220,7 +220,7 @@ void mpi_findHermiteNeighbours() {
 void mpi_splitInRows(){
     mpi_my_row_rank = mpi_my_coords[1];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
-    printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
+    if(VERBOSE) printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
     mpi_whereIsX = malloc(2 * array_global_size.nkx * sizeof(*mpi_whereIsX));
     mpi_whereIsY = malloc(2 * array_global_size.ny * sizeof(*mpi_whereIsY));
     mpi_whereIsM = malloc(2 * array_global_size.nm * sizeof(*mpi_whereIsM));
@@ -276,9 +276,6 @@ void mpi_splitInRows(){
             }
         }
     }
-    //if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nkx; ii++) printf("[MPI process %d] x = %zu is located at %d proc and local ix = %d\n",mpi_my_rank, ii, mpi_whereIsX[2 * ii], mpi_whereIsX[2 * ii + 1]);
-    //if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nm; ii++) printf("[MPI process %d] m = %zu is located at %d proc and local im = %d\n",mpi_my_rank, ii, mpi_whereIsM[2 * ii], mpi_whereIsM[2 * ii + 1]);
-    if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.ny; ii++) printf("[MPI process %d] y = %zu is located at %d proc and local iy = %d\n",mpi_my_rank, ii, mpi_whereIsY[2 * ii], mpi_whereIsY[2 * ii + 1]);
     // create mpi vector type to use for enforcing reality condition
     mpi_vectorSliceLength = array_local_size.nky * array_local_size.nl * array_local_size.nm * array_local_size.ns;
     MPI_Type_vector(array_local_size.nky,
@@ -296,7 +293,7 @@ void mpi_splitInRows(){
 void mpi_splitInCols(){
     mpi_my_col_rank = mpi_my_coords[0];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[1], mpi_my_col_rank, &mpi_col_comm);
-    printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_col_rank);
+    if(VERBOSE) printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_col_rank);
 };
 
 /***************************

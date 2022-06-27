@@ -38,21 +38,37 @@ enum initial initialConditions;
  ***************************************/
 void init_start(char *filename){
     mpi_init();
-    srand(0);
+
     read_parameters(filename);
-    init_initEnums();
-    mpi_generateTopology();
-    mpi_initMExchange();
-    fftw_init(mpi_row_comm);
+    init_computation();
+    init_physicalSystem();
+    init_printParameters();
+};
+
+/****************************************
+* \fn void init_physicalSystem()
+* \brief initialization of physical system and parameters
+ ***************************************/
+void init_physicalSystem(){
     space_init();
     diag_initSpec();
     var_init();
     fields_init();
-    hdf_init();
     solver_init();
-    init_printParameters();
 };
 
+/****************************************
+* \fn void init_computation()
+* \brief initialize hdf, fftw and mpi
+ ***************************************/
+void init_computation(){
+    srand(0);
+    init_initEnums();
+    mpi_generateTopology();
+    mpi_initMExchange();
+    fftw_init(mpi_row_comm);
+    hdf_init();
+};
 /***************************************
  * \fn void init_printParameters()
  * \brief parameter output
@@ -236,8 +252,6 @@ void init_conditions(COMPLEX *data){
     {
         case RANDOM:
             fill_rand(data);
-            //fill_randM0(data);
-            //fill_randSingleKM(data);
             break;
 
         case FROMFILE:

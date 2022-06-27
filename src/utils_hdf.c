@@ -832,10 +832,8 @@ void hdf_createParamFile()
     hid_t dims_beta[1] = {1};
 
     plist_id = H5Pcreate(H5P_DATASET_CREATE);
-    //printf("hi\n");
     file_space = H5Screate_simple(rank_beta, dims_beta, NULL);
     dset_id = H5Dcreate(file_id,"parameters/beta", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
-    printf("hi\n");
     H5Pclose(plist_id);
     memory_space = H5Screate_simple(rank_beta, dims_beta, NULL);
     if(mpi_my_rank != CHECKPOINT_ROOT)
