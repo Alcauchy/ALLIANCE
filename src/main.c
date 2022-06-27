@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
     init_start(filename);
     hdf_createFiles();
-    test_transposedFFTW();
+    //test_transposedFFTW();
     /*COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
     //test_Poisson();
     //test_nonlinearTerm();
     //test_everything();
-    //test_RHS();
+    test_RHS();
     free_wavespace();
     fftw_kill();
     mpi_kill();

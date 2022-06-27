@@ -341,10 +341,14 @@ void mpi_initMExchange() {
     MPI_Type_commit(&mpi_subarray_type_minus);
 
     //Real data init exchange
+    dimensions_full[0] = array_local_size.ny;
+    dimensions_full[1] = array_local_size.nx;
     dimensions_full[2] = array_local_size.nz + 2;
+    dimensions_sub[0] = array_local_size.ny;
+    dimensions_sub[1] = array_local_size.nx;
     dimensions_sub[2] = array_local_size.nz + 2;
-    mpi_sub_buf_size_r = array_local_size.nkx *
-                         array_local_size.nky *
+    mpi_sub_buf_size_r = array_local_size.nx *
+                         array_local_size.ny *
                         (array_local_size.nz + 2) *
                          array_local_size.nl *
                          array_local_size.ns;
