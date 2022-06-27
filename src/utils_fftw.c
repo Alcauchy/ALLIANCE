@@ -182,33 +182,68 @@ void fftw_init(MPI_Comm communicator){
                                               communicator,
                                               flags_r2c);
 
+    plan_transposeToXY_chi = fftw_mpi_plan_many_transpose(size_r[0], size_r[1],
+                                                      howmany_chi * (size_r[2] + 2),
+                                                      local_ny, local_nx,
+                                                      fftw_chiBuf, fftw_chiBuf,
+                                                      communicator,
+                                                      FFTW_ESTIMATE);
+
+    plan_transposeToYX_chi = fftw_mpi_plan_many_transpose(size_r[1], size_r[0],
+                                                      howmany_chi * (size_r[2] + 2),
+                                                      local_nx, local_ny,
+                                                      fftw_chiBuf, fftw_chiBuf,
+                                                      communicator,
+                                                      FFTW_ESTIMATE);
+
     /* preparing field transform */
     //getting local size
-    local_size_field = fftw_mpi_local_size_many(FFTW_RANK,
-                                                size_c,
-                                                1,
-                                                array_local_size.nkx,
-                                                communicator,
-                                                &local_nx_field,
-                                                &local_x_start_field);
+    local_size_field = fftw_mpi_local_size_many_transposed(FFTW_RANK,
+                                                           size_c,
+                                                           1,
+                                                           array_local_size.nkx,
+                                                           array_local_size.ny,
+                                                           communicator,
+                                                           &local_nx_field,
+                                                           &local_x_start_field,
+                                                           &local_ny_field,
+                                                           &local_y_start_field);
+    //local_size_field = fftw_mpi_local_size_3d(size_c[0],size_c[1],size_c[2],communicator,array_local_size.nkx,&local_nx_field);
+
     printf("[MPI process %d] FIELD TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_field, 1);
+    //exit(0);
     fftw_field = fftw_alloc_complex(local_size_field);
+    for (size_t ii = 0; ii < local_size_field; ii++) fftw_field[ii] = 0;
     //creating r2c and c2r plans
-    plan_c2r_field = fftw_mpi_plan_dft_c2r_3d(size_r[0],
-                                              size_r[1],
-                                              size_r[2],
-                                              fftw_field,
-                                              fftw_field,
-                                              communicator,
-                                              FFTW_ESTIMATE);
+    plan_c2r_field =  fftw_mpi_plan_dft_c2r_3d(size_r[0],
+                                               size_r[1],
+                                               size_r[2],
+                                               fftw_field,
+                                               fftw_field,
+                                               communicator,
+                                               flags_c2r);
+
     plan_r2c_field = fftw_mpi_plan_dft_r2c_3d(size_r[0],
                                               size_r[1],
                                               size_r[2],
                                               fftw_field,
                                               fftw_field,
                                               communicator,
-                                              FFTW_ESTIMATE);
+                                              flags_r2c);
 
+    plan_transposeToXY_field = fftw_mpi_plan_many_transpose(size_r[0], size_r[1],
+                                                            (size_r[2] + 2),
+                                                          local_ny, local_nx,
+                                                          fftw_field, fftw_field,
+                                                          communicator,
+                                                          FFTW_ESTIMATE);
+
+    plan_transposeToYX_field = fftw_mpi_plan_many_transpose(size_r[0], size_r[1],
+                                                            (size_r[2] + 2),
+                                                            local_ny, local_nx,
+                                                            fftw_field, fftw_field,
+                                                            communicator,
+                                                            FFTW_ESTIMATE);
 }
 
 /***************************************
@@ -290,7 +325,7 @@ void fftw_c2r_field() {
     int start = MPI_Wtime();
     fftw_mpi_execute_dft_c2r(plan_c2r_field, fftw_field, fftw_field);
     fftw_normalise_field_r(fftw_field);
-    if (VERBOSE) printf("[MPI process %d] c2r transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
+    if (VERBOSE) printf("[MPI process %d] c2r field transform performed in t = %.2fs.!\n", mpi_my_rank,MPI_Wtime()-start);
 };
 
 /***************************************
@@ -373,11 +408,11 @@ void fftw_copyChiBuf_r(double *ar1, double *ar2){
     size_t ind;
     switch (systemType) {
         case ELECTROSTATIC:
-            for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
-                for(size_t iky = 0; iky < array_local_size.nky; iky++){
+            for(size_t iy = 0; iy < array_local_size.ny; iy++){
+                for(size_t ix = 0; ix < array_local_size.nx; ix++){
                     for(size_t iz = 0; iz < array_local_size.nz+2; iz++){
                         for(size_t is = 0; is <array_local_size.ns; is++){
-                            ind = getIndChiBufEL_r(ikx,iky,iz,is);
+                            ind = getIndChiBufEL_r(ix,iy,iz,is);
                             ar1[ind] = ar2[ind];
                         }
                     }
@@ -385,12 +420,12 @@ void fftw_copyChiBuf_r(double *ar1, double *ar2){
             }
             break;
         case ELECTROMAGNETIC:
-            for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
-                for(size_t iky = 0; iky < array_local_size.nky; iky++){
+            for(size_t iy = 0; iy < array_local_size.ny; iy++){
+                for(size_t ix = 0; ix < array_local_size.nx; ix++){
                     for(size_t iz = 0; iz < array_local_size.nz+2; iz++){
                         for(size_t is = 0; is <array_local_size.ns; is++){
                             for(size_t ifield = 0; ifield < CHI_EM; ifield++){
-                                ind = getIndChiBufEM_r(ikx,iky,iz,is,ifield);
+                                ind = getIndChiBufEM_r(ix,iy,iz,is,ifield);
                                 ar1[ind] = ar2[ind];
                             }
                         }
@@ -456,7 +491,7 @@ void fftw_copyChiBuf_c(COMPLEX *ar1, COMPLEX *ar2){
  * copies 3D data array <tt>from</tt> to <tt></tt>
  ***************************************/
 void fftw_copyFieldBuf_r(double *to, double *from){
-    for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2); ii++){
+    for (size_t ii = 0; ii < array_local_size.nx * array_local_size.ny * (array_local_size.nz + 2); ii++){
         to[ii] = from[ii];
     }
 }
@@ -529,12 +564,12 @@ void fftw_normalise_data_r(double *data) {
 void fftw_normalise_chi_r(double *data) {
     switch(systemType){
         case ELECTROSTATIC:
-            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.ns; i++) {
+            for(size_t i = 0; i < array_local_size.nx * array_local_size.ny * (array_local_size.nz + 2) * array_local_size.ns; i++) {
                 data[i] *= fftw_norm;
             }
             break;
         case ELECTROMAGNETIC:
-            for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.ns * 3; i++) {
+            for(size_t i = 0; i < array_local_size.nx * array_local_size.ny * (array_local_size.nz + 2) * array_local_size.ns * 3; i++) {
                 data[i] *= fftw_norm;
             }
             break;
@@ -550,7 +585,7 @@ void fftw_normalise_chi_r(double *data) {
  * normalises <tt>data</tt> by #fftw_norm.
  ***************************************/
 void fftw_normalise_field_r(double *data) {
-    for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * (array_local_size.nz + 2); i++) {
+    for(size_t i = 0; i < array_local_size.nx * array_local_size.ny * (array_local_size.nz + 2); i++) {
         data[i] *= fftw_norm;
     }
 }
@@ -593,4 +628,36 @@ void fftw_transposeToXY(){
  ***************************************/
 void fftw_transposeToYX(){
     fftw_execute(plan_transposeToYX);
+}
+
+/***************************************
+ * \fn void fftw_transposeToXY_chi()
+ * \brief transposes chi array
+ ***************************************/
+void fftw_transposeToXY_chi(){
+    fftw_execute(plan_transposeToXY_chi);
+}
+
+/***************************************
+ * \fn void fftw_transposeToXY_chi()
+ * \brief transposes chi array
+ ***************************************/
+void fftw_transposeToYX_chi(){
+    fftw_execute(plan_transposeToYX_chi);
+}
+
+/***************************************
+ * \fn void fftw_transposeToXY_field()
+ * \brief transposes field array
+ ***************************************/
+void fftw_transposeToXY_field(){
+    fftw_execute(plan_transposeToXY_field);
+}
+
+/***************************************
+ * \fn void fftw_transposeToYX_field()
+ * \brief transposes field array
+ ***************************************/
+void fftw_transposeToYX_field(){
+    fftw_execute(plan_transposeToYX_field);
 }

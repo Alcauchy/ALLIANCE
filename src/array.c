@@ -99,7 +99,7 @@ size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield
  * 1 to access \f$\chi^{A}(\mathbf{r})\f$ and 2 to access \f$\chi^{B}(\mathbf{r})\f$.
  ***************************************/
 size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield) {
-    return iy * array_local_size.ny * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
+    return iy * array_local_size.nx * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
            ix * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
            iz * array_local_size.ns * CHI_EM +
            is * CHI_EM + ifield;

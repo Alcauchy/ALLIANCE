@@ -376,6 +376,9 @@ void hdf_initChi(){
  *  hdf_createChiFile_r
  * *************************/
 void hdf_createChiFile_r(char *filename, double *data){
+    //transpose data before saving
+    fftw_copyChiBuf_r(fftw_chiBuf,data);
+    fftw_transposeToXY_chi();
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
     hid_t file_space, memory_space;
@@ -399,7 +402,7 @@ void hdf_createChiFile_r(char *filename, double *data){
     status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offsetChi_r, strideChi, countChi, chunk_dimsChi_r);
     plist_id = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, data);
+    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, fftw_chiBuf);
 
     H5Dclose(dset_id);
     H5Sclose(file_space);
@@ -518,6 +521,9 @@ void hdf_saveFieldA(char *filename){
  *  hdf_saveField_r
  * *************************/
 void hdf_saveField_r(double *f, char *filename){
+    //transpose data before saving
+    fftw_copyFieldBuf_r(fftw_field,f);
+    fftw_transposeToXY_field();
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
     hid_t file_space, memory_space;
@@ -541,7 +547,7 @@ void hdf_saveField_r(double *f, char *filename){
     status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offsetFields_r, strideFields, countFields, chunk_dimsFields_r);
     plist_id = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, f);
+    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, fftw_field);
 
     H5Dclose(dset_id);
     H5Sclose(file_space);

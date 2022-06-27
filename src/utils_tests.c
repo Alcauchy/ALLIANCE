@@ -939,6 +939,13 @@ void test_transposedFFTW(){
 
         size_t indChi = getIndChiBufEM_c(kx_local,iy,0,0,0);
         fftw_chiBuf[indChi] =  array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+        indChi = getIndChiBufEM_c(kx_local,array_global_size.nky - iy,0,0,0);
+        fftw_chiBuf[indChi] =  array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+
+        size_t ind3D = get_flatIndexComplex3D(kx_local,iy,0);//kx_local * array_local_size.nky * array_local_size.nkz + iy * array_local_size.nkz;
+        fftw_field[ind3D] = (array_global_size.nkx*array_global_size.nky*array_global_size.nz)/2.;
+        ind3D = kx_local * array_local_size.nky * array_local_size.nkz + (array_global_size.nky - iy) * array_local_size.nkz;
+        fftw_field[ind3D] = array_global_size.nx*array_global_size.ny*array_global_size.nz/2.;
     }
     double *hr = h;
     fftw_copy_buffer_c(fftw_hBuf,h);
@@ -949,7 +956,7 @@ void test_transposedFFTW(){
     if(mpi_my_coords[0] == 0){
         for (size_t iy = 0; iy < array_local_size.ny;iy++){
             size_t ind6D = get_flat_r(0,0,0,0,iy,0);
-            printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
+            //printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
             //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
         }
     }
@@ -959,10 +966,40 @@ void test_transposedFFTW(){
     if(mpi_my_coords[0] == 0){
         for (size_t iy = 0; iy < array_local_size.ny;iy++){
             size_t ind6D = get_flat_r(0,0,0,0,iy,0);
-            printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
+           // printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
         }
     }
     fftw_c2r_chi();
+    double *chi_r = fftw_chiBuf;
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t indChi = getIndChiBufEM_r(0,iy,0,0,0);
+            printf("[MPI process %d] chi[%zu] = %f\n",mpi_my_rank,iy,chi_r[indChi]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    fftw_transposeToXY_chi();
+    fftw_transposeToYX_chi();
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t indChi = getIndChiBufEM_r(0,iy,0,0,0);
+            printf("[MPI process %d] chi[%zu] = %f\n",mpi_my_rank,iy,chi_r[indChi]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
     fftw_r2c_chi();
-    //fftw_r2c();
+
+    // fftw transposed of fields
+    fftw_c2r_field();
+    double *f_r = fftw_field;
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t ind3D = iy * array_local_size.nx * (array_local_size.nz + 2);
+            printf("[MPI process %d] field[%zu] = %f\n",mpi_my_rank,iy,f_r[ind3D]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    fftw_transposeToXY_field();
+    fftw_transposeToYX_field();
+    fftw_r2c_field();
 }
