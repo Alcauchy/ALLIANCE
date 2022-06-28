@@ -350,6 +350,7 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out) {
     // make ifftw of the computed product
     //
     fftw_copy_buffer_r((double *)fftw_hBuf, buffer);
+    fftw_r2c();
     //
     // add it to RHS
     //
@@ -386,7 +387,7 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
 
     /* computing linear term */
-    equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
+    //equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
 
     /* computing nonlinear term */
     equation_getNonlinearTerm(in_h, out);
