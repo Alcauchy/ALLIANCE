@@ -21,15 +21,16 @@ struct system_param {
     size_t nl;
     size_t ns;
     size_t nz;
+    double Lx;
+    double Ly;
+    double Lz;
+
     int dealiasing;
     int electromagnetic;
     int adiabatic;
     int initial;
     char from_simulationName[128];
     double beta;
-    double Lx;
-    double Ly;
-    double Lz;
     double *mass;
     double *density;
     double *temperature;
@@ -52,6 +53,9 @@ struct system_param {
     int save_distrib;
     double firstShell;
     double lastShell;
+
+    int nproc_m;
+    int nproc_k;
 };
 
 extern struct system_param parameters;

@@ -269,6 +269,16 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.Lz);
                 if (mpi_my_rank == IO_RANK) printf("[MPI process %d] Lz = %f \n", mpi_my_rank, parameters.Lz);
             }
+            if (strcmp(tmp, "nproc_m") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.nproc_m);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] num of processes in m used is %d \n", mpi_my_rank, parameters.nproc_m);
+            }
+            if (strcmp(tmp, "nproc_k") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.nproc_k);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] num of processes in k used is %d \n", mpi_my_rank, parameters.nproc_k);
+            }
         }
     }
     init_global_size();

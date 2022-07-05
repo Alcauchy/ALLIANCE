@@ -24,6 +24,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "utils_mpi.h"
 #define VERBOSE 0
+#define IO_RANK 0
 #define SUBARRAY_COUNT 1
 #define SUBARRAY_M_SIZE 1
 #define SUBARRAY_DIMS 6
@@ -88,6 +89,17 @@ void mpi_createTopology() {
     int ndims = 2;
     int periods = {0, 0};
     int reorder = 1;
+
+    mpi_dims[0] = parameters.nproc_m;
+    mpi_dims[1] = parameters.nproc_k;
+    if( (mpi_dims[0]!=0 || mpi_dims[1]!=0) && (mpi_dims[0] * mpi_dims[1] != mpi_size && mpi_dims[0] * mpi_dims[1] != 0)){
+        printf("[MPI process %d] "
+               "nproc_m (%d) * nproc_k (%d) not equal to "
+               "mpi_size (%d), please change mpi configuration!\n",
+                mpi_my_rank,mpi_dims[0],mpi_dims[1],mpi_size);
+        exit(1);
+    }
+
     MPI_Dims_create(mpi_size, ndims, &mpi_dims);
     MPI_Cart_create(MPI_COMM_WORLD, ndims, &mpi_dims, &periods, reorder, &mpi_cube_comm);
     MPI_Cart_coords(mpi_cube_comm, mpi_my_rank, ndims, mpi_my_coords);

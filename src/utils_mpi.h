@@ -5,7 +5,7 @@
 #include <stdlib.h> //Standard C lib
 #include <mpi.h> // MPI
 #include "array.h"
-
+#include "parameters_io.h"
 
 void mpi_init();                        //initialize mpi environment
 void mpi_kill();                        //finalize mpi environment
