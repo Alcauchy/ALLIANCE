@@ -27,6 +27,9 @@ struct system_param {
     int initial;
     char from_simulationName[128];
     double beta;
+    double Lx;
+    double Ly;
+    double Lz;
     double *mass;
     double *density;
     double *temperature;

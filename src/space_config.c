@@ -20,9 +20,12 @@
 #include <complex.h>
 
 #define MINUS_I -1.j
-double space_Lx = 100.0;
-double space_Ly = 100.0;
-double space_Lz = 100.0;
+double space_Lx;
+double space_Ly;
+double space_Lz;
+double space_dx;
+double space_dy;
+double space_dz;
 double *space_kx;
 double *space_ky;
 double *space_kz;
@@ -94,6 +97,14 @@ void space_generateWaveSpace() {
     space_zerosKx = malloc(array_local_size.nkx * sizeof(*space_zerosKx));
     space_zerosKy = malloc(array_local_size.nky * sizeof(*space_zerosKy));
     space_zerosKz = malloc(array_local_size.nkz * sizeof(*space_zerosKz));
+
+    space_Lx = parameters.Lx;
+    space_Ly = parameters.Ly;
+    space_Lz = parameters.Lz;
+
+    space_dx = space_Lx / array_global_size.nx;
+    space_dy = space_Ly / array_global_size.ny;
+    space_dz = space_Lz / array_global_size.nz;
 
     double deltaKx = 2.* M_PI / ( space_Lx);
     double deltaKy = 2.* M_PI / ( space_Ly);
