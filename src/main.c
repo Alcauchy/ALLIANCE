@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
     init_start(filename);
     hdf_createFiles();
     //test_transposedFFTW();
-    /*COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
     fields_sendG(h);
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     for (int it = 0; it <= solver.Nt; it++) {
         hdf_saveData(h, it);
         if(it%10 == 0) printf("it = %d\n", it);
-        //solver_updateDt();
+        solver_updateDt();
         if (parameters.save_diagnostics && it % parameters.iter_diagnostics == 0) {
 
             fields_sendG(g);
@@ -85,13 +85,13 @@ int main(int argc, char **argv) {
             //sprintf(name, "%s%s%s%d%s", ".","/","Br_",it,".h5");
             //hdf_saveField_r(fftw_field,name);*/
 
-           // if (it == 0) free_energy0 = diag_freeEnergy;
-           // if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/free_energy0);
-       // }
+            if (it == 0) free_energy0 = diag_freeEnergy;
+            if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/free_energy0);
+        }
         //printf("1)1st = %p, 2nd = %p\n", g, rk4.g_buf);
-       // solver_makeStep(&g, h);
+        solver_makeStep(&g, h);
         //printf("2)1st = %p, 2nd = %p\n", g, rk4.g_buf);
-    //}
+    }
 
     //test_linearRHS();
     //test_inplaceFFTW_chi();

@@ -103,3 +103,63 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h) {
             exit(1);
     }
 };
+
+/***************************************
+ * \fn void solver_updateDt():
+ * \brief updates dt
+ *
+ * uses CFL condition for nonlinear time step
+ ***************************************/
+void solver_updateDt(){
+    double v_perp[2] = {0,0};
+    double v_temp;
+    size_t indChi;
+    double *vField;
+    vField = (double*) fftw_chiBuf;
+    switch(systemType){
+        case ELECTROSTATIC:
+
+            break;
+        case ELECTROMAGNETIC:
+            // compute vx
+            fields_getGradY(fftw_chiBuf);
+            fftw_c2r_chi();
+            for (size_t iy = 0; iy < array_local_size.ny; iy++){
+                for (size_t ix = 0; ix < array_local_size.nx; ix++){
+                    for (size_t iz = 0; iz < array_local_size.nz+2; iz++){
+                        for (size_t is = 0; is < array_local_size.ns; is++){
+                            for (size_t ifield = 0; ifield < 3; ifield++){
+                                indChi = getIndChiBufEM_r(ix,iy,iz,is,ifield);
+                                v_temp = fabs(vField[indChi]);
+                                if (ifield == 2) v_temp *= sqrt((array_global_size.nm + 1.)/2.);
+                                v_perp[0] = (v_perp[0] > v_temp) ? v_perp[0] : v_temp;
+                            }
+                        }
+                    }
+                }
+            }
+            // compute vy
+            fields_getGradX(fftw_chiBuf);
+            fftw_c2r_chi();
+            for (size_t iy = 0; iy < array_local_size.ny; iy++){
+                for (size_t ix = 0; ix < array_local_size.nx; ix++){
+                    for (size_t iz = 0; iz < array_local_size.nz+2; iz++){
+                        for (size_t is = 0; is < array_local_size.ns; is++){
+                            for (size_t ifield = 0; ifield < 3; ifield++){
+                                indChi = getIndChiBufEM_r(ix,iy,iz,is,ifield);
+                                v_temp = fabs(vField[indChi]);
+                                if (ifield == 2) v_temp *= sqrt((array_global_size.nm + 1.)/2.);
+                                v_perp[1] = (v_perp[1] > v_temp) ? v_perp[1] : v_temp;
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            exit(1);
+    }
+    MPI_Allreduce(MPI_IN_PLACE, &v_perp, 2, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    solver.dt = 0.5/( v_perp[0] / space_dx + v_perp[1] / space_dy);
+    if (mpi_my_rank == 0) printf("dt = %f\n", solver.dt);
+};
