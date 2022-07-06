@@ -279,6 +279,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.nproc_k);
                 if (mpi_my_rank == IO_RANK) printf("[MPI process %d] num of processes in k used is %d \n", mpi_my_rank, parameters.nproc_k);
             }
+            if (strcmp(tmp, "iter_dt") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.iter_dt);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] update dt every %d steps \n", mpi_my_rank, parameters.iter_dt);
+            }
         }
     }
     init_global_size();

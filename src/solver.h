@@ -5,14 +5,16 @@
 
 enum solverType {RK4};
 void solver_init(); // initialize solver depending on the choice.
-void solver_makeStep(COMPLEX **g, COMPLEX *h);
-void solver_updateDt();
+void solver_makeStep(COMPLEX **g, COMPLEX *h, int it);
+void solver_updateDt(int it);
 struct solver{
     double dt;
+    double curTime;
     double linDt;
     double nonlinDt;
     double dissipDt;
     int Nt;
+    int iter_dt;
 };
 struct rk4{
     COMPLEX* K_buf;

@@ -37,6 +37,7 @@ struct system_param {
     double *charge;
 
     double dt;
+    int iter_dt;
     int Nt;
 
     int compute_k;

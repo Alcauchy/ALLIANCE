@@ -26,6 +26,7 @@
 // hdf_createCheckpoint
 // hdf_initCheckpoints
 // hdf_dumpCheckpoint
+// hdf_dumpCheckpointReal
 // hdf_readData
 // hdf_saveDistrib
 // hdf_createSaveDirs
@@ -46,7 +47,7 @@
 #else
 #define PATH_SEPARATOR "/"
 #endif
-#define VERBOSE 1
+#define VERBOSE 0
 #define FILENAME_ID_LEN 128
 #define CHECKPOINT_ROOT 0
 #define PATH_LEN 128
@@ -689,6 +690,23 @@ void hdf_saveEnergy(int timestep)
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
+    /*write a timestep dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/time", H5P_DEFAULT);
+    /*open a dataset...*/
+    dspace_id = H5Dget_space(dset_id);
+    /*... and extend it*/
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&solver.curTime);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
     H5Fclose(file_id);
 }
 
@@ -740,7 +758,7 @@ void hdf_createParamFile()
     H5Pclose(plist_id);
     /*create a group for storing kx,ky and kz arrays*/
     group_id = H5Gcreate2(file_id,
-                          "/kSpace",
+                          "/geometry",
                           H5P_DEFAULT,
                           H5P_DEFAULT,
                           H5P_DEFAULT);
@@ -748,7 +766,7 @@ void hdf_createParamFile()
     /*create ky dataset*/
     dims[0] = array_local_size.nky;
     dspace_id = H5Screate_simple(1, dims, NULL);
-    dset_id = H5Dcreate2(file_id, "/kSpace/ky", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, H5P_DEFAULT,
+    dset_id = H5Dcreate2(file_id, "/geometry/ky", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, H5P_DEFAULT,
                             H5P_DEFAULT);
     H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, space_ky);
     H5Sclose(dspace_id);
@@ -756,7 +774,7 @@ void hdf_createParamFile()
     /*create kz dataset*/
     dims[0] = array_local_size.nkz;
     dspace_id = H5Screate_simple(1, dims, NULL);
-    dset_id = H5Dcreate2(file_id, "/kSpace/kz", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, H5P_DEFAULT,
+    dset_id = H5Dcreate2(file_id, "/geometry/kz", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, H5P_DEFAULT,
                          H5P_DEFAULT);
     H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, space_kz);
     H5Sclose(dspace_id);
@@ -766,7 +784,7 @@ void hdf_createParamFile()
     dimsf[0] = array_global_size.nkx;
     offsetKx[0] = offset[0];
     dspace_id = H5Screate_simple(1, dimsf, NULL);
-    dset_id = H5Dcreate2(file_id, "/kSpace/kx", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, H5P_DEFAULT,
+    dset_id = H5Dcreate2(file_id, "/geometry/kx", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, H5P_DEFAULT,
                          H5P_DEFAULT);
     H5Sclose(dspace_id);
     dspace_id = H5Screate_simple(1, dims, NULL);
@@ -780,6 +798,106 @@ void hdf_createParamFile()
     H5Sclose(dspace_id);
     H5Sclose(filespace);
     H5Dclose(dset_id);
+
+    //writing Lx
+    int rank_L = 1;
+    hid_t dims_L[1] = {1};
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_L, dims_L, NULL);
+    dset_id = H5Dcreate(file_id,"geometry/Lx", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_L, dims_L, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.Lx);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+    //writing Ly
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_L, dims_L, NULL);
+    dset_id = H5Dcreate(file_id,"geometry/Ly", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_L, dims_L, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.Ly);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+    //writing Lz
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_L, dims_L, NULL);
+    dset_id = H5Dcreate(file_id,"geometry/Lz", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_L, dims_L, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.Lz);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+    //writing dx
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_L, dims_L, NULL);
+    dset_id = H5Dcreate(file_id,"geometry/dx", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_L, dims_L, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &space_dx);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+    //writing dx
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_L, dims_L, NULL);
+    dset_id = H5Dcreate(file_id,"geometry/dy", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_L, dims_L, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &space_dy);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+    //writing dz
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_L, dims_L, NULL);
+    dset_id = H5Dcreate(file_id,"geometry/dz", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_L, dims_L, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &space_dz);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
     /* Close the group. */
     H5Gclose(group_id);
 
@@ -832,10 +950,8 @@ void hdf_createParamFile()
     hid_t dims_beta[1] = {1};
 
     plist_id = H5Pcreate(H5P_DATASET_CREATE);
-    //printf("hi\n");
     file_space = H5Screate_simple(rank_beta, dims_beta, NULL);
     dset_id = H5Dcreate(file_id,"parameters/beta", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
-    printf("hi\n");
     H5Pclose(plist_id);
     memory_space = H5Screate_simple(rank_beta, dims_beta, NULL);
     if(mpi_my_rank != CHECKPOINT_ROOT)
@@ -882,7 +998,6 @@ void hdf_createParamFile()
         H5Sselect_none(memory_space);
     }
     plist_id = H5Pcreate(H5P_DATASET_XFER);
-    //H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
     H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, parameters.temperature);
     H5Dclose(dset_id);
     H5Sclose(file_space);
@@ -952,7 +1067,7 @@ void hdf_createParamFile()
         plist_id = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 1, &chunk_spec_k[0]);
         dspace_id = H5Screate_simple(1,&dims_spec_k[0],&max_dims_k[0]);
-        dset_id = H5Dcreate2(file_id, "/spectra/dt", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+        dset_id = H5Dcreate2(file_id, "/spectra/time", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
                              H5P_DEFAULT);
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
@@ -1039,7 +1154,7 @@ void hdf_createParamFile()
         plist_id  = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 1, chunk_energy);
         dspace_id = H5Screate_simple(1,dims_energy,maxdims);
-        dset_id = H5Dcreate2(file_id, "/freeEnergy/dt", H5T_NATIVE_INT, dspace_id, H5P_DEFAULT, plist_id,
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/time", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
                              H5P_DEFAULT);
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
@@ -1117,6 +1232,23 @@ void hdf_saveKSpec(int timestep) {
     {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_INT,memspace, dspace_id,plist_id,&timestep);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    /*write a time dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/spectra/time", H5P_DEFAULT);
+    /*open a dataset...*/
+    dspace_id = H5Dget_space(dset_id);
+    /*... and extend it*/
+    H5Dset_extent(dset_id, &size[0]);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, &offset[0], NULL, &dims_ext[0], NULL);
+    memspace = H5Screate_simple(1,&dims_ext[0],NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&solver.curTime);
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
@@ -1225,6 +1357,7 @@ void hdf_createCheckpoint(COMPLEX *h, int timestep) {
 
     }
     hdf_dumpCheckpoint(h, timestep, hdf_newCheckpointName);
+    hdf_dumpCheckpointReal(h, timestep, hdf_newCheckpointName);
     hdf_checkpointCount++;
 };
 
@@ -1287,6 +1420,24 @@ void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename){
     H5Sclose(file_space);
     H5Pclose(plist_id);
 
+    /* writing current time information */
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    dset_id = H5Dcreate(file_id,"time", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &solver.curTime);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
     /* writing beta information */
     plist_id = H5Pcreate(H5P_DATASET_CREATE);
     file_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
@@ -1301,6 +1452,60 @@ void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename){
     plist_id = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
     H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.beta);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /* writing Lx information */
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    dset_id = H5Dcreate(file_id,"Lx", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.Lx);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /* writing Ly information */
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    dset_id = H5Dcreate(file_id,"Ly", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.Ly);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /* writing Lz information */
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    dset_id = H5Dcreate(file_id,"Lz", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_timestep, dims_timestep, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.Lz);
     H5Dclose(dset_id);
     H5Sclose(file_space);
     H5Pclose(plist_id);
@@ -1489,10 +1694,58 @@ void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename){
     H5Fclose(file_id);
 }
 
+/***************************
+ *  hdf_dumpCheckpointReal
+ * *************************/
+void hdf_dumpCheckpointReal(COMPLEX *h, int timestep, char *filename){
+    //fftw of h distribution function
+    fftw_copy_buffer_c(fftw_hBuf, h);
+    fftw_c2r();
+    fftw_transposeToXY();
+    double *hr = fftw_hBuf;
+    // write a dataset into it.
+    hid_t file_id, dset_id;
+    hid_t file_space, memory_space;
+    hid_t plist_id; //property list id
+    hid_t dims_timestep[1] = {1};
+    hid_t rank_timestep = 1;
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
+    H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
+    /* open file to read and write */
+    file_id = H5Fopen(filename,H5F_ACC_RDWR,plist_id);
+    H5Pclose(plist_id);
+    /* create file space and memory space. Memory space holds each process' data, file space going to hold whole data */
+    file_space = H5Screate_simple(hdf_rank, dataspace_dims_r, NULL);
+    memory_space = H5Screate_simple(hdf_rank, chunk_dims_r, NULL);
+
+    /*
+     * creating h dataset
+     */
+    plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
+    H5Pset_chunk(plist_id, hdf_rank, chunk_dims_c);
+    dset_id = H5Dcreate(file_id,"hr", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(file_space);
+    /* writing dataset collectively */
+    file_space = H5Dget_space(dset_id);
+    status = H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset, stride, count, chunk_dims_r);
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memory_space, file_space,plist_id, hr);
+    /*closing dataset identifier, memory space and file space*/
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Sclose(memory_space);
+    H5Pclose(plist_id);
+    H5Fclose(file_id);
+}
+
 void hdf_saveDistrib(COMPLEX* h, int timestep){
     char distrib_name[FILENAME_ID_LEN];
     sprintf(distrib_name, "%s%d.h5", DISTRIBUTION_FILENAME, timestep);
     hdf_dumpCheckpoint(h,  timestep, distrib_name);
+    hdf_dumpCheckpointReal(h,  timestep, distrib_name);
 };
 
 /***************************
@@ -1519,6 +1772,12 @@ void hdf_createFieldFile(){
     hid_t dims_field[4] = {0,array_global_size.nkx, array_global_size.nky, array_global_size.nkz};
     hid_t chunk_field[4] = {1,array_global_size.nkx, array_global_size.nky, array_global_size.nkz};
     hid_t max_dims_field[4] = {H5S_UNLIMITED,array_global_size.nkx, array_global_size.nky, array_global_size.nkz};
+
+    /* variables needed to write real fields to the file  */
+    hid_t dims_field_r[4] = {0,array_global_size.nx, array_global_size.ny, array_global_size.nz + 2};
+    hid_t chunk_field_r[4] = {1,array_global_size.nx, array_global_size.ny, array_global_size.nz + 2};
+    hid_t max_dims_field_r[4] = {H5S_UNLIMITED,array_global_size.nx, array_global_size.ny, array_global_size.nz + 2};
+
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
 
@@ -1573,6 +1832,15 @@ void hdf_createFieldFile(){
                          H5P_DEFAULT);
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
+    /*creating time dataset*/
+    plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(plist_id, 1, &chunk_field[0]);
+    dspace_id = H5Screate_simple(1,&dims_field[0],&max_dims_field[0]);
+    dset_id = H5Dcreate2(file_id, "time", H5T_NATIVE_INT, dspace_id, H5P_DEFAULT, plist_id,
+                         H5P_DEFAULT);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+
     H5Pclose(plist_id);
 
     /* creating fields dataset */
@@ -1587,6 +1855,22 @@ void hdf_createFieldFile(){
         dset_id = H5Dcreate2(file_id,
                              "phi",
                              complex_id,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /* create phi real dataset */
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 4, chunk_field_r);
+        dspace_id = H5Screate_simple(4,dims_field_r,max_dims_field_r);
+        dset_id = H5Dcreate2(file_id,
+                             "phi_r",
+                             H5T_NATIVE_DOUBLE,
                              dspace_id,
                              H5P_DEFAULT,
                              plist_id,
@@ -1615,6 +1899,22 @@ void hdf_createFieldFile(){
         H5Dclose(dset_id);
         H5Pclose(plist_id);
 
+        /* create phi real dataset */
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 4, chunk_field_r);
+        dspace_id = H5Screate_simple(4,dims_field_r,max_dims_field_r);
+        dset_id = H5Dcreate2(file_id,
+                             "phi_r",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
         /* create A dataset */
         plist_id   = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 4, chunk_field);
@@ -1622,6 +1922,22 @@ void hdf_createFieldFile(){
         dset_id = H5Dcreate2(file_id,
                              "A",
                              complex_id,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /* create A real dataset */
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 4, chunk_field_r);
+        dspace_id = H5Screate_simple(4,dims_field_r,max_dims_field_r);
+        dset_id = H5Dcreate2(file_id,
+                             "A_r",
+                             H5T_NATIVE_DOUBLE,
                              dspace_id,
                              H5P_DEFAULT,
                              plist_id,
@@ -1646,11 +1962,23 @@ void hdf_createFieldFile(){
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
+
+        /* create B real dataset */
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 4, chunk_field_r);
+        dspace_id = H5Screate_simple(4,dims_field_r,max_dims_field_r);
+        dset_id = H5Dcreate2(file_id,
+                             "B_r",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
     }
-    /*create phi dataset*/
-   // H5Sclose(dspace_id);
-    //H5Sclose(filespace);
-    //H5Dclose(dset_id);
     H5Fclose(file_id);
 };
 
@@ -1664,6 +1992,12 @@ void hdf_saveFields(int timestep){
     hid_t dims_ext_local[4] = {1,array_local_size.nkx, array_local_size.nky, array_local_size.nkz};
     hid_t max_dims_local[4] = {H5S_UNLIMITED,array_local_size.nkx, array_local_size.nky, array_local_size.nkz};
     hid_t max_dims_full[4] = {H5S_UNLIMITED,array_local_size.nkx, array_local_size.nky, array_local_size.nkz};
+
+    hid_t dims_ext_full_r[4] = {1,array_global_size.nkx, array_global_size.nky, array_global_size.nz + 2};
+    hid_t dims_ext_local_r[4] = {1,array_local_size.nkx, array_local_size.nky, array_local_size.nz + 2};
+    hid_t max_dims_local_r[4] = {H5S_UNLIMITED,array_local_size.nkx, array_local_size.nky, array_local_size.nz + 2};
+    hid_t max_dims_full_r[4] = {H5S_UNLIMITED,array_local_size.nkx, array_local_size.nky, array_local_size.nz + 2};
+
     hid_t size[4],size_timestep[1];
     hid_t offset[4],offset_timestep[1];
     hid_t stride[4] = {1,1,1,1};
@@ -1698,7 +2032,7 @@ void hdf_saveFields(int timestep){
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
-        /*write m spec to the file*/
+        /*write phi field to the file*/
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
         dspace_id = H5Dget_space(dset_id);
@@ -1714,7 +2048,49 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
-        //H5Fclose(file_id);
+
+        /*writing phi dataset*/
+        /*opening a group and a dataset*/
+        /*opening a group*/
+        dset_id = H5Dopen2(file_id, "phi_r", H5P_DEFAULT);
+        /*open a dataset*/
+        dspace_id = H5Dget_space(dset_id);
+        /*get dataset's dimensions */
+        ndims = H5Sget_simple_extent_ndims(dspace_id);
+        H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+        H5Sclose(dspace_id);
+        /*extend dataset size*/
+        size[0] = dims[0] + dims_ext_full_r[0];
+        size[1] = dims[1];
+        size[2] = dims[2];
+        size[3] = dims[3];
+        offset[0] = dims[0];
+        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[2] =  0;
+        offset[3] =  0;
+        H5Dset_extent(dset_id, size);
+
+        /*transform phi to real space*/
+        fftw_copyFieldBuf_c(fftw_field, fields_fields.phi);
+        fftw_c2r_field();
+        fftw_transposeToXY_field();
+
+        /*write phi real field to the file*/
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        dspace_id = H5Dget_space(dset_id);
+        H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
+        memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
+        if (mpi_my_col_rank != 0)
+        {
+            H5Sselect_none(dspace_id);
+            H5Sselect_none(memspace);
+        }
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, fftw_field);
+        H5Sclose(memspace);
+        H5Sclose(dspace_id);
+        H5Pclose(plist_id);
+        H5Dclose(dset_id);
     }
     if (systemType == ELECTROMAGNETIC)
     {
@@ -1753,9 +2129,64 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
+
+        /*writing phi real dataset*/
+        /*opening a group and a dataset*/
+        /*opening a group*/
+        dset_id = H5Dopen2(file_id, "phi_r", H5P_DEFAULT);
+        /*open a dataset*/
+        dspace_id = H5Dget_space(dset_id);
+        /*get dataset's dimensions */
+        ndims = H5Sget_simple_extent_ndims(dspace_id);
+        H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+        H5Sclose(dspace_id);
+        /*extend dataset size*/
+        size[0] = dims[0] + dims_ext_full_r[0];
+        size[1] = dims[1];
+        size[2] = dims[2];
+        size[3] = dims[3];
+        offset[0] = dims[0];
+        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[2] =  0;
+        offset[3] =  0;
+        H5Dset_extent(dset_id, size);
+        /*transform phi to real space*/
+        fftw_copyFieldBuf_c(fftw_field, fields_fields.phi);
+        fftw_c2r_field();
+        fftw_transposeToXY_field();
+        double *f_r = fftw_field;
+        /*write phi real field to the file*/
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        dspace_id = H5Dget_space(dset_id);
+        H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
+        memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
+        if (mpi_my_col_rank != 0)
+        {
+            H5Sselect_none(dspace_id);
+            H5Sselect_none(memspace);
+        }
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, f_r);
+        H5Sclose(memspace);
+        H5Sclose(dspace_id);
+        H5Pclose(plist_id);
+        H5Dclose(dset_id);
+
         /* writing B dataset */
         dset_id = H5Dopen2(file_id, "B", H5P_DEFAULT);
         dspace_id = H5Dget_space(dset_id);
+        ndims = H5Sget_simple_extent_ndims(dspace_id);
+        H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+        H5Sclose(dspace_id);
+        /*extend dataset size*/
+        size[0] = dims[0] + dims_ext_full[0];
+        size[1] = dims[1];
+        size[2] = dims[2];
+        size[3] = dims[3];
+        offset[0] = dims[0];
+        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[2] =  0;
+        offset[3] =  0;
         H5Dset_extent(dset_id, size);
         /*write B to the file*/
         plist_id = H5Pcreate(H5P_DATASET_XFER);
@@ -1773,9 +2204,64 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
+
+        /*writing B real dataset*/
+        /*opening a group and a dataset*/
+        /*opening a group*/
+        dset_id = H5Dopen2(file_id, "B_r", H5P_DEFAULT);
+        /*open a dataset*/
+        dspace_id = H5Dget_space(dset_id);
+        /*get dataset's dimensions */
+        ndims = H5Sget_simple_extent_ndims(dspace_id);
+        H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+        H5Sclose(dspace_id);
+        /*extend dataset size*/
+        size[0] = dims[0] + dims_ext_full_r[0];
+        size[1] = dims[1];
+        size[2] = dims[2];
+        size[3] = dims[3];
+        offset[0] = dims[0];
+        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[2] =  0;
+        offset[3] =  0;
+        H5Dset_extent(dset_id, size);
+        /*transform B to real space*/
+        fftw_copyFieldBuf_c(fftw_field, fields_fields.B);
+        fftw_c2r_field();
+        fftw_transposeToXY_field();
+        f_r = fftw_field;
+        /*write B real field to the file*/
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        dspace_id = H5Dget_space(dset_id);
+        H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
+        memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
+        if (mpi_my_col_rank != 0)
+        {
+            H5Sselect_none(dspace_id);
+            H5Sselect_none(memspace);
+        }
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, f_r);
+        H5Sclose(memspace);
+        H5Sclose(dspace_id);
+        H5Pclose(plist_id);
+        H5Dclose(dset_id);
+
         /* writing A dataset */
         dset_id = H5Dopen2(file_id, "A", H5P_DEFAULT);
         dspace_id = H5Dget_space(dset_id);
+        ndims = H5Sget_simple_extent_ndims(dspace_id);
+        H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+        H5Sclose(dspace_id);
+        /*extend dataset size*/
+        size[0] = dims[0] + dims_ext_full[0];
+        size[1] = dims[1];
+        size[2] = dims[2];
+        size[3] = dims[3];
+        offset[0] = dims[0];
+        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[2] =  0;
+        offset[3] =  0;
         H5Dset_extent(dset_id, size);
         /*write A to the file*/
         plist_id = H5Pcreate(H5P_DATASET_XFER);
@@ -1793,7 +2279,49 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
-        //H5Fclose(file_id);
+
+        /*writing A real dataset*/
+        /*opening a group and a dataset*/
+        /*opening a group*/
+        dset_id = H5Dopen2(file_id, "A_r", H5P_DEFAULT);
+        /*open a dataset*/
+        dspace_id = H5Dget_space(dset_id);
+        /*get dataset's dimensions */
+        ndims = H5Sget_simple_extent_ndims(dspace_id);
+        H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+        H5Sclose(dspace_id);
+        /*extend dataset size*/
+        size[0] = dims[0] + dims_ext_full_r[0];
+        size[1] = dims[1];
+        size[2] = dims[2];
+        size[3] = dims[3];
+        offset[0] = dims[0];
+        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[2] =  0;
+        offset[3] =  0;
+        H5Dset_extent(dset_id, size);
+        /*transform A to real space*/
+        fftw_copyFieldBuf_c(fftw_field, fields_fields.A);
+        fftw_c2r_field();
+        fftw_transposeToXY_field();
+        f_r = fftw_field;
+        /*write A real field to the file*/
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        dspace_id = H5Dget_space(dset_id);
+        H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
+        memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
+        if (mpi_my_col_rank != 0)
+        {
+            H5Sselect_none(dspace_id);
+            H5Sselect_none(memspace);
+        }
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, f_r);
+        H5Sclose(memspace);
+        H5Sclose(dspace_id);
+        H5Pclose(plist_id);
+        H5Dclose(dset_id);
+
     }
     /*write a timestep dataset*/
     /*opening a group*/
@@ -1815,6 +2343,30 @@ void hdf_saveFields(int timestep){
     {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_INT,memspace, dspace_id,plist_id,&timestep);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+
+    /*write a time dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "time", H5P_DEFAULT);
+    /*open a dataset...*/
+    dspace_id = H5Dget_space(dset_id);
+    /*get dataset's dimensions */
+    ndims = H5Sget_simple_extent_ndims(dspace_id);
+    dims = malloc(ndims * sizeof(*dims));
+    H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+    H5Sclose(dspace_id);
+    /*... and extend it*/
+    size_timestep[0] = dims[0] + 1;
+    H5Dset_extent(dset_id, size_timestep);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, &offset[0], NULL, &dims_ext_full[0], NULL);
+    memspace = H5Screate_simple(1,&dims_ext_full[0],NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&solver.curTime);
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
