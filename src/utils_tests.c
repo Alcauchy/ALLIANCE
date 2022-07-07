@@ -45,7 +45,7 @@ void test_fieldComputation(){
     }
     vortexInit(g);
     init_conditions(g);
-    fields_sendG(g);
+    fields_sendF(g);
     size_t ind4D;
     size_t ind2D;
 
@@ -55,9 +55,9 @@ void test_fieldComputation(){
             break;
         case ELECTROMAGNETIC:
             printf("[MPI process %d] LAUNCHING FIELD COMPUTATION TEST\n",mpi_my_rank);
-            fields_getPhi(g00,g01);
-            fields_getB(g00,g01);
-            fields_getA(g10);
+            fields_getPhi(f00, f01);
+            fields_getB(f00, f01);
+            fields_getA(f10);
             if(PRINT_A)
             {
                 for(size_t ix = 0; ix < array_local_size.nkx; ix++)
@@ -124,8 +124,8 @@ void test_mainFunction(){
     COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
     for(int it = 0; it < solver.Nt; it++)
@@ -151,8 +151,8 @@ void test_fieldComparison(){
     COMPLEX* B_h = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz * sizeof(*B_h));
 
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
     {
@@ -161,8 +161,8 @@ void test_fieldComparison(){
         B_h[i] = fields_fields.B[i];
     }
     distrib_getG(g, h);
-    fields_sendG(g);
-    fields_getFields(g00, g10, g01);
+    fields_sendF(g);
+    fields_getFields(f00, f10, f01);
     for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
     {
         if(fabs(phi_h[i] - fields_fields.phi[i]) > TOLERANCE)
@@ -190,8 +190,8 @@ void test_kSpecComputations(){
     COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
     diag_computeSpectra(g, h,0);
@@ -211,8 +211,8 @@ void test_kSpecComputations(){
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     COMPLEX* rhs = malloc(array_local_size.total_comp * sizeof(*rhs));
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
     diag_computeSpectra(g, h,0);
@@ -228,8 +228,8 @@ void test_inplaceFFTW_chi(){
     //COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     //COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     //init_conditions(h);
-    //fields_sendG(h);
-    //fields_getFieldsFromH(g00, g10, g01);
+    //fields_sendF(h);
+    //fields_getFieldsFromH(f00, f10, f01);
     //fields_getChi();
     //distrib_getG(g, h);
     size_t indChi;
@@ -754,8 +754,8 @@ void test_fieldsFFT(){
     fftw_copy_buffer_c(fftw_hBuf,h);
     fftw_c2r();
     hdf_create_file_r("h_field.h5",fftw_hBuf);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
     double *field_r = fftw_field;
     fftw_c2r_field();
@@ -787,9 +787,9 @@ void test_everything(){
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     //initializing g
     init_conditions(h);
-    fields_sendG(h);
+    fields_sendF(h);
     //computing fields
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     // computing h function
     distrib_getG(g, h);
@@ -839,9 +839,9 @@ void test_RHS(){
     COMPLEX *out = malloc(array_local_size.total_comp * sizeof(*out));
     //initializing g
     init_conditions(h);
-    fields_sendG(h);
+    fields_sendF(h);
     //computing fields
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_getFieldsFromH(f00, f10, f01);
     /*for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
         fields_fields.A[ii] = 0;
     }*/
@@ -897,9 +897,9 @@ void test_CFL(){
     COMPLEX *out = malloc(array_local_size.total_comp * sizeof(*out));
     //initializing g
     init_conditions(h);
-    fields_sendG(h);
+    fields_sendF(h);
     //computing fields
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_getFieldsFromH(f00, f10, f01);
     /*for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
         fields_fields.A[ii] = 0;
     }*/

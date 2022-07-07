@@ -416,8 +416,8 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     COMPLEX *plus_boundary = calloc(boundary_size, sizeof(*plus_boundary));
     /* exchanging boundaries to compute linear term and fields */
     /* computing h */
-    fields_sendG(in_g);
-    fields_getFields(g00, g10, g01);
+    fields_sendF(in_g);
+    fields_getFields(f00, f10, f01);
     fields_getChi();
     distrib_getH(in_h, in_g);
 

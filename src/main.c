@@ -28,8 +28,8 @@ int main(int argc, char **argv) {
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
     double free_energy0;
@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
         hdf_saveData(h, it);
         if (parameters.save_diagnostics && it % parameters.iter_diagnostics == 0) {
 
-            fields_sendG(g);
-            fields_getFields(g00, g10, g01);
+            fields_sendF(g);
+            fields_getFields(f00, f10, f01);
             fields_getChi();
             distrib_getH(h, g);
             diag_compute(g, h, it);
