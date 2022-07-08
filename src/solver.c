@@ -198,3 +198,14 @@ void solver_updateDt(int it) {
 
     }
 };
+
+/***************************************
+ * \fn void solver_getLinearDt():
+ * \brief computes linear dt
+ *
+ * computes linear dt approximation using
+ * Gershgorin Discs
+ ***************************************/
+void solver_getLinearDt(){
+
+}
