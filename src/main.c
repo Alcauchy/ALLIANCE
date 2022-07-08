@@ -22,8 +22,11 @@ int main(int argc, char **argv) {
         }
     }
 
+    //
+    //initializing run
+    //
     init_start(filename);
-    hdf_createFiles();
+
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
@@ -32,6 +35,10 @@ int main(int argc, char **argv) {
     fields_getChi();
     distrib_getG(g, h);
     double free_energy0;
+
+    //
+    // main loop
+    //
     for (int it = 0; it <= solver.Nt; it++) {
         hdf_saveData(h, it);
         if (parameters.save_diagnostics && it % parameters.iter_diagnostics == 0) {
@@ -45,6 +52,10 @@ int main(int argc, char **argv) {
         }
         solver_makeStep(&g, h, it);
     }
+
+    //
+    // finalizing run
+    //
     free_wavespace();
     fftw_kill();
     mpi_kill();

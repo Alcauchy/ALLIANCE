@@ -49,6 +49,7 @@ void init_start(char *filename){
     var_init();
     fields_init();
     hdf_init();
+    hdf_createFiles();
     solver_init();
     init_printParameters();
 };
