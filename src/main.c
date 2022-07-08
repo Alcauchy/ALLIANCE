@@ -26,7 +26,6 @@ int main(int argc, char **argv) {
     //initializing run
     //
     init_start(filename);
-
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
