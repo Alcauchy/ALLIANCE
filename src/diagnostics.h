@@ -23,4 +23,5 @@ extern double *diag_kSpec;
 extern double *diag_shells;
 
 extern double diag_freeEnergy;
+extern double diag_free_energy0;
 #endif //ALLIANCE_ALPHA_1_0_DIAGNOSTICS_H

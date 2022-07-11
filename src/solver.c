@@ -52,8 +52,6 @@ void solver_init() {
  ***************************************/
 void solver_makeStep(COMPLEX **g, COMPLEX *h, int it) {
     COMPLEX *g_ar = *g;
-    //updating the time step size
-    solver_updateDt(it);
     switch (solverType) {
         case RK4:
             //computing k1
@@ -112,13 +110,20 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h, int it) {
  *
  * uses CFL condition for nonlinear time step
  ***************************************/
-void solver_updateDt(int it) {
+void solver_updateDt(COMPLEX *g, COMPLEX *h, int it) {
     solver.curTime += solver.dt;
     double v_perp[2] = {0,0};
     double v_temp;
     size_t indChi;
     double *vField;
     vField = (double*) fftw_chiBuf;
+
+    // update fields and h first
+    fields_sendF(g);
+    fields_getFields(f00, f10, f01);
+    fields_getChi();
+    distrib_getH(h, g);
+
     if (it % solver.iter_dt == 0) {
         switch (systemType) {
             case ELECTROSTATIC:

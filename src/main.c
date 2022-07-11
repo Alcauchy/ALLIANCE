@@ -33,28 +33,28 @@ int main(int argc, char **argv) {
     fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
-    double free_energy0;
-
+    diag_compute(g, h, 0);
+    hdf_saveData(h, 0);
+    //updating the time step size
+    solver_updateDt(g, h, 0);
     //
     // main loop
     //
-    for (int it = 0; it <= solver.Nt; it++) {
-        hdf_saveData(h, it);
-        if (parameters.save_diagnostics && it % parameters.iter_diagnostics == 0) {
-            fields_sendF(g);
-            fields_getFields(f00, f10, f01);
-            fields_getChi();
-            distrib_getH(h, g);
-            diag_compute(g, h, it);
-            if (it == 0) free_energy0 = diag_freeEnergy;
-            if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/free_energy0);
-        }
+    for (int it = 1; it <= solver.Nt; it++) {
+        //integrate over time
         solver_makeStep(&g, h, it);
+        //updating the time step size
+        solver_updateDt(g, h, it);
+        //compute diagnostics
+        diag_compute(g, h, it);
+        //save data
+        hdf_saveData(h, it);
     }
-
     //
     // finalizing run
     //
+    diag_compute(g, h, -1);
+    hdf_saveData(h, -1);
     free_wavespace();
     fftw_kill();
     mpi_kill();
