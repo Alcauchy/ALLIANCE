@@ -42,6 +42,7 @@ void init_start(char *filename){
     read_parameters(filename);
     init_computation();
     init_physicalSystem();
+    hdf_createFiles();
     init_printParameters();
 };
 
@@ -68,7 +69,6 @@ void init_computation(){
     mpi_initMExchange();
     fftw_init(mpi_row_comm);
     hdf_init();
-    hdf_createFiles();
 };
 
 /***************************************
