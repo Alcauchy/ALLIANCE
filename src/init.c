@@ -142,13 +142,12 @@ void fill_rand(COMPLEX *ar1) {
                                 size_t ix_local = mpi_whereIsX[2 * ix + 1];
                                 size_t im_local = mpi_whereIsM[2 * im + 1];
                                 size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
-                                size_t ind3D = ix_local * array_local_size.nky * array_local_size.nkz +
-                                               iy* array_local_size.nkz +
-                                               iz;
+                                size_t ind3D = ix_local * array_local_size.nky +
+                                               iy;
                                 double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
                                 ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
-                                if (space_kSq[ind3D] > 1e-10){
-                                    double amplitude = sqrt(init_energySpec(sqrt(space_kSq[ind3D]), 0, 1., .5) / 2.0/ M_PI);
+                                if (space_kPerp[ind3D] > 1e-10){
+                                    double amplitude = sqrt(init_energySpec(sqrt(space_kPerp[ind3D]), 0, .0000001, .5) / 2.0/ M_PI);
                                     ar1[ind6D] *=amplitude;
                                 }
                                 if(global_nkx_index[ix_local] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
