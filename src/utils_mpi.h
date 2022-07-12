@@ -5,7 +5,7 @@
 #include <stdlib.h> //Standard C lib
 #include <mpi.h> // MPI
 #include "array.h"
-
+#include "parameters_io.h"
 
 void mpi_init();                        //initialize mpi environment
 void mpi_kill();                        //finalize mpi environment
@@ -30,6 +30,7 @@ extern int mpi_my_coords[2];           // coordinates of the process in 2D topol
 extern int mpi_dims[];                 // size of the dimensions, 0th dimension is for Hermite parallelization, and 1st dimension is for kx.
 extern int *mpi_whereIsX;
 extern int *mpi_whereIsM;
+extern int *mpi_whereIsY;
 extern MPI_Comm mpi_cube_comm;         // 2D topology communicator
 extern MPI_Comm mpi_row_comm;          // row communicator (kx direction)
 extern MPI_Comm mpi_col_comm;          // column communicator (Hermite direction)

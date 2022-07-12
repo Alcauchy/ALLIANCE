@@ -29,8 +29,9 @@ struct rk4 rk4;
  ***************************************/
 void solver_init() {
     solver.dt = parameters.dt;
-    //solver.dt = 0.015;
+    solver.curTime = 0.;
     solver.Nt = parameters.Nt;
+    solver.iter_dt = parameters.iter_dt;
     solverType = SOLVERTYPE;
     if (solverType == RK4) {
         if (mpi_my_rank == IORANK) printf("CHOSEN SOLVER IS RUNGE-KUTTA 4\n");
@@ -49,7 +50,7 @@ void solver_init() {
  *
  * solves one simulation time step
  ***************************************/
-void solver_makeStep(COMPLEX **g, COMPLEX *h) {
+void solver_makeStep(COMPLEX **g, COMPLEX *h, int it) {
     COMPLEX *g_ar = *g;
     switch (solverType) {
         case RK4:
@@ -93,7 +94,6 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h) {
                 rk4.K_buf[i] = 0.j;
             }
             COMPLEX *inter = rk4.g_buf;
-            //printf("3rd = %p\n", inter);
             rk4.g_buf = *g;
             *g = inter;
             break;
@@ -103,3 +103,114 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h) {
             exit(1);
     }
 };
+
+/***************************************
+ * \fn void solver_updateDt():
+ * \brief updates dt
+ *
+ * uses CFL condition for nonlinear time step
+ ***************************************/
+void solver_updateDt(COMPLEX *g, COMPLEX *h, int it) {
+    solver.curTime += solver.dt;
+    double v_perp[2] = {0,0};
+    double v_temp;
+    size_t indChi;
+    double *vField;
+    vField = (double*) fftw_chiBuf;
+
+    // update fields and h first
+    fields_sendF(g);
+    fields_getFields(f00, f10, f01);
+    fields_getChi();
+    distrib_getH(h, g);
+
+    if (it % solver.iter_dt == 0) {
+        switch (systemType) {
+            case ELECTROSTATIC:
+                // compute vx
+                fields_getGradY(fftw_chiBuf);
+                fftw_c2r_chi();
+                for (size_t iy = 0; iy < array_local_size.ny; iy++) {
+                    for (size_t ix = 0; ix < array_local_size.nx; ix++) {
+                        for (size_t iz = 0; iz < array_local_size.nz + 2; iz++) {
+                            for (size_t is = 0; is < array_local_size.ns; is++) {
+                                indChi = getIndChiBufEL_r(ix, iy, iz, is);
+                                v_temp = fabs(vField[indChi]);
+                                v_perp[0] = (v_perp[0] > v_temp) ? v_perp[0] : v_temp;
+                            }
+                        }
+                    }
+                }
+                // compute vy
+                fields_getGradX(fftw_chiBuf);
+                fftw_c2r_chi();
+                for (size_t iy = 0; iy < array_local_size.ny; iy++) {
+                    for (size_t ix = 0; ix < array_local_size.nx; ix++) {
+                        for (size_t iz = 0; iz < array_local_size.nz + 2; iz++) {
+                            for (size_t is = 0; is < array_local_size.ns; is++) {
+                                indChi = getIndChiBufEL_r(ix, iy, iz, is);
+                                v_temp = fabs(vField[indChi]);
+                                v_perp[1] = (v_perp[1] > v_temp) ? v_perp[1] : v_temp;
+                            }
+                        }
+                    }
+                }
+                break;
+            case ELECTROMAGNETIC:
+                // compute vx
+                fields_getGradY(fftw_chiBuf);
+                fftw_c2r_chi();
+                for (size_t iy = 0; iy < array_local_size.ny; iy++) {
+                    for (size_t ix = 0; ix < array_local_size.nx; ix++) {
+                        for (size_t iz = 0; iz < array_local_size.nz + 2; iz++) {
+                            for (size_t is = 0; is < array_local_size.ns; is++) {
+                                for (size_t ifield = 0; ifield < 3; ifield++) {
+                                    indChi = getIndChiBufEM_r(ix, iy, iz, is, ifield);
+                                    v_temp = fabs(vField[indChi]);
+                                    if (ifield == 2) v_temp *= sqrt((array_global_size.nm + 1.) / 2.);
+                                    v_perp[0] = (v_perp[0] > v_temp) ? v_perp[0] : v_temp;
+                                }
+                            }
+                        }
+                    }
+                }
+                // compute vy
+                fields_getGradX(fftw_chiBuf);
+                fftw_c2r_chi();
+                for (size_t iy = 0; iy < array_local_size.ny; iy++) {
+                    for (size_t ix = 0; ix < array_local_size.nx; ix++) {
+                        for (size_t iz = 0; iz < array_local_size.nz + 2; iz++) {
+                            for (size_t is = 0; is < array_local_size.ns; is++) {
+                                for (size_t ifield = 0; ifield < 3; ifield++) {
+                                    indChi = getIndChiBufEM_r(ix, iy, iz, is, ifield);
+                                    v_temp = fabs(vField[indChi]);
+                                    if (ifield == 2) v_temp *= sqrt((array_global_size.nm + 1.) / 2.);
+                                    v_perp[1] = (v_perp[1] > v_temp) ? v_perp[1] : v_temp;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            default:
+                exit(1);
+        }
+        MPI_Allreduce(MPI_IN_PLACE, &v_perp, 2, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        solver.dt = 0.5 / (v_perp[0] / space_dx + v_perp[1] / space_dy);
+        if (mpi_my_rank == 0) printf("it = %d\t t = %f\t dt = %f\n", it, solver.curTime, solver.dt);
+       // if (mpi_my_rank == 0) printf("t = %f\n", solver.curTime);
+       // if (mpi_my_rank == 0) printf("dt = %f\n", solver.dt);
+
+    }
+};
+
+/***************************************
+ * \fn void solver_getLinearDt():
+ * \brief computes linear dt
+ *
+ * computes linear dt approximation using
+ * Gershgorin Discs
+ ***************************************/
+void solver_getLinearDt(){
+
+}

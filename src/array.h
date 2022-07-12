@@ -31,6 +31,8 @@ struct array_size {
     size_t nm;
     size_t nl;
     size_t ns;
+    size_t nx;
+    size_t ny;
     size_t nz;
     size_t total_real;
     size_t total_comp;

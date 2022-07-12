@@ -41,6 +41,10 @@ double *diag_shells = 0;
  * \brief free energy*/
 double diag_freeEnergy;
 
+/**\var double diag_freeEnergy
+ * \brief free energy at initial timestep*/
+double diag_free_energy0;
+
 /***************************************
  * \fn void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep)
  * \brief general function to compute k or m spectra
@@ -236,14 +240,25 @@ double diag_computeFreeEnergyFields(COMPLEX *g, COMPLEX *fields) {};
  * \param iter: current time step
  ***************************************/
 void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
-    diag_computeFreeEnergy(g, h);
-    hdf_saveEnergy(timestep);
-    if (parameters.compute_k) {
-        diag_computeKSpectrum(g, h, diag_kSpec);
-        hdf_saveKSpec(timestep);
-    }
-    if (parameters.compute_m) {
-        diag_computeMSpectrum(g, h, diag_mSpec);
-        hdf_saveMSpec(timestep);
+    if (parameters.save_diagnostics && (timestep % parameters.iter_diagnostics == 0 || timestep == -1)){
+        // update fields and h first
+        fields_sendF(g);
+        fields_getFields(f00, f10, f01);
+        fields_getChi();
+        distrib_getH(h, g);
+        //compute and save free energy
+        diag_computeFreeEnergy(g, h);
+        if (timestep == 0) diag_free_energy0 = diag_freeEnergy;
+        if (mpi_my_rank == 0) printf("W = %.16f\n", diag_freeEnergy/diag_free_energy0);
+        hdf_saveEnergy(timestep);
+        //compute spectra
+        if (parameters.compute_k) {
+            diag_computeKSpectrum(g, h, diag_kSpec);
+            hdf_saveKSpec(timestep);
+        }
+        if (parameters.compute_m) {
+            diag_computeMSpectrum(g, h, diag_mSpec);
+            hdf_saveMSpec(timestep);
+        }
     }
 }

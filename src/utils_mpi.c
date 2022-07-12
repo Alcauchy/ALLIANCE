@@ -24,6 +24,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "utils_mpi.h"
 #define VERBOSE 0
+#define IO_RANK 0
 #define SUBARRAY_COUNT 1
 #define SUBARRAY_M_SIZE 1
 #define SUBARRAY_DIMS 6
@@ -38,6 +39,7 @@ int mpi_sub_buf_size;                   // buffer size needed to exchange m+1 an
 int mpi_sub_buf_size_r;                 // buffer size needed to exchange m+1 and m-1 Hermite moments of real type
 int *mpi_whereIsX;                       // arrays which returns the rank of a process which has a required kx
 int *mpi_whereIsM;
+int *mpi_whereIsY;                      //arrays which returns the rank of a process which has a required y
 size_t mpi_vectorSliceLength;
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
 MPI_Comm mpi_row_comm;                  // row communicator (kx direction)
@@ -87,6 +89,17 @@ void mpi_createTopology() {
     int ndims = 2;
     int periods = {0, 0};
     int reorder = 1;
+
+    mpi_dims[0] = parameters.nproc_m;
+    mpi_dims[1] = parameters.nproc_k;
+    if( (mpi_dims[0]!=0 || mpi_dims[1]!=0) && (mpi_dims[0] * mpi_dims[1] != mpi_size && mpi_dims[0] * mpi_dims[1] != 0)){
+        printf("[MPI process %d] "
+               "nproc_m (%d) * nproc_k (%d) not equal to "
+               "mpi_size (%d), please change mpi configuration!\n",
+                mpi_my_rank,mpi_dims[0],mpi_dims[1],mpi_size);
+        exit(1);
+    }
+
     MPI_Dims_create(mpi_size, ndims, &mpi_dims);
     MPI_Cart_create(MPI_COMM_WORLD, ndims, &mpi_dims, &periods, reorder, &mpi_cube_comm);
     MPI_Cart_coords(mpi_cube_comm, mpi_my_rank, ndims, mpi_my_coords);
@@ -105,6 +118,8 @@ void mpi_getLocalArraySize() {
     array_local_size.nm = array_global_size.nm / mpi_dims[0];
     array_local_size.nl = array_global_size.nl;
     array_local_size.ns = array_global_size.ns;
+    array_local_size.nx = array_global_size.nkx;
+    array_local_size.ny = array_global_size.ny / mpi_dims[1];
     array_local_size.nz = array_global_size.nz;
     if (mpi_my_coords[0] == mpi_dims[0] - 1) {
         array_local_size.nm = array_global_size.nm - array_global_size.nm / mpi_dims[0] * (mpi_my_coords[0]);
@@ -112,6 +127,7 @@ void mpi_getLocalArraySize() {
 
     if (mpi_my_coords[1] == mpi_dims[1] - 1) {
         array_local_size.nkx = array_global_size.nkx - array_global_size.nkx / mpi_dims[1] * (mpi_my_coords[1]);
+        array_local_size.ny = array_global_size.ny - array_global_size.ny / mpi_dims[1] * (mpi_my_coords[1]);
     }
     array_local_size.total_comp = array_local_size.nkx *
                                   array_local_size.nky *
@@ -120,8 +136,8 @@ void mpi_getLocalArraySize() {
                                   array_local_size.nl *
                                   array_local_size.ns;
 
-    array_local_size.total_real = array_local_size.nkx *
-                                  array_local_size.nky *
+    array_local_size.total_real = array_local_size.nx *
+                                  array_local_size.ny *
                                   (array_local_size.nz + 2) *
                                   array_local_size.nm *
                                   array_local_size.nl *
@@ -129,7 +145,7 @@ void mpi_getLocalArraySize() {
 
     mpi_getLocalArrayOffsets();
 
-    printf("[MPI process %d] my coordinates = (%d,%d), local array size = (%d,%d,%d,%d,%d,%d), total size is %d\n",
+    printf("[MPI process %d] my coordinates = (%d,%d), local array size = (%d,%d,%d,%d,%d,%d), local ny = %d, total size is %d\n",
            mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
@@ -139,6 +155,7 @@ void mpi_getLocalArraySize() {
            array_local_size.nm,
            array_local_size.nl,
            array_local_size.ns,
+           array_local_size.ny,
            array_local_size.total_comp);
 }
 
@@ -168,13 +185,13 @@ void mpi_getLocalArrayOffsets() {
 
     array_offset.s = 1.0;
 
-    array_offset.x = array_local_size.nky *
-                     (array_local_size.nz + 2) *
+    array_offset.x = (array_local_size.nz + 2) *
                      array_local_size.nm *
                      array_local_size.nl *
                      array_local_size.ns;
 
-    array_offset.y = (array_local_size.nz + 2) *
+    array_offset.y = array_local_size.nx *
+                    (array_local_size.nz + 2) *
                      array_local_size.nm *
                      array_local_size.nl *
                      array_local_size.ns;
@@ -217,21 +234,40 @@ void mpi_splitInRows(){
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
     printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
     mpi_whereIsX = malloc(2 * array_global_size.nkx * sizeof(*mpi_whereIsX));
+    mpi_whereIsY = malloc(2 * array_global_size.ny * sizeof(*mpi_whereIsY));
     mpi_whereIsM = malloc(2 * array_global_size.nm * sizeof(*mpi_whereIsM));
     for(int iproc = 0; iproc < mpi_dims[1]; iproc++){
-        int ilocal = 0;
+        int ilocalx = 0;
+        int ilocaly = 0;
+        // filling local x indices and processor rank where they are located
         if(iproc != mpi_dims[1] - 1){
             for (int ix = array_global_size.nkx/mpi_dims[1] * iproc; ix < array_global_size.nkx/mpi_dims[1] * (iproc + 1); ix++){
                 mpi_whereIsX[ix * 2 + 0] = iproc;
-                mpi_whereIsX[ix * 2 + 1] = ilocal;
-                ilocal++;
+                mpi_whereIsX[ix * 2 + 1] = ilocalx;
+                ilocalx++;
             }
         }
         else{
             for (int ix = array_global_size.nkx/mpi_dims[1] * iproc; ix < array_global_size.nkx; ix++){
                 mpi_whereIsX[ix * 2 + 0] = iproc;
-                mpi_whereIsX[ix * 2 + 1] = ilocal;
-                ilocal++;
+                mpi_whereIsX[ix * 2 + 1] = ilocalx;
+                ilocalx++;
+            }
+        }
+
+        // filling local y indices and processor rank where they are located
+        if(iproc != mpi_dims[1] - 1){
+            for (int iy = array_global_size.ny/mpi_dims[1] * iproc; iy < array_global_size.ny/mpi_dims[1] * (iproc + 1); iy++){
+                mpi_whereIsY[iy * 2 + 0] = iproc;
+                mpi_whereIsY[iy * 2 + 1] = ilocaly;
+                ilocaly++;
+            }
+        }
+        else{
+            for (int iy = array_global_size.ny/mpi_dims[1] * iproc; iy < array_global_size.ny; iy++){
+                mpi_whereIsY[iy * 2 + 0] = iproc;
+                mpi_whereIsY[iy * 2 + 1] = ilocaly;
+                ilocaly++;
             }
         }
     }
@@ -252,10 +288,11 @@ void mpi_splitInRows(){
             }
         }
     }
-    if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nkx; ii++) printf("[MPI process %d] x = %zu is located at %d proc and local ix = %d\n",mpi_my_rank, ii, mpi_whereIsX[2 * ii], mpi_whereIsX[2 * ii + 1]);
-    if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nm; ii++) printf("[MPI process %d] m = %zu is located at %d proc and local im = %d\n",mpi_my_rank, ii, mpi_whereIsM[2 * ii], mpi_whereIsM[2 * ii + 1]);
+    if (VERBOSE) if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nkx; ii++) printf("[MPI process %d] x = %zu is located at %d proc and local ix = %d\n",mpi_my_rank, ii, mpi_whereIsX[2 * ii], mpi_whereIsX[2 * ii + 1]);
+    if (VERBOSE) if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.nm; ii++) printf("[MPI process %d] m = %zu is located at %d proc and local im = %d\n",mpi_my_rank, ii, mpi_whereIsM[2 * ii], mpi_whereIsM[2 * ii + 1]);
+    if (VERBOSE) if (mpi_my_rank == 0) for (size_t ii = 0; ii < array_global_size.ny; ii++) printf("[MPI process %d] y = %zu is located at %d proc and local iy = %d\n",mpi_my_rank, ii, mpi_whereIsY[2 * ii], mpi_whereIsY[2 * ii + 1]);
     // create mpi vector type to use for enforcing reality condition
-    mpi_vectorSliceLength = array_local_size.nky*array_local_size.nl * array_local_size.nm * array_local_size.ns;
+    mpi_vectorSliceLength = array_local_size.nky * array_local_size.nl * array_local_size.nm * array_local_size.ns;
     MPI_Type_vector(array_local_size.nky,
                     array_local_size.nl * array_local_size.nm * array_local_size.ns,
                     array_local_size.nl * array_local_size.nm * array_local_size.ns * (array_local_size.nkz ) ,
@@ -316,10 +353,14 @@ void mpi_initMExchange() {
     MPI_Type_commit(&mpi_subarray_type_minus);
 
     //Real data init exchange
+    dimensions_full[0] = array_local_size.ny;
+    dimensions_full[1] = array_local_size.nx;
     dimensions_full[2] = array_local_size.nz + 2;
+    dimensions_sub[0] = array_local_size.ny;
+    dimensions_sub[1] = array_local_size.nx;
     dimensions_sub[2] = array_local_size.nz + 2;
-    mpi_sub_buf_size_r = array_local_size.nkx *
-                         array_local_size.nky *
+    mpi_sub_buf_size_r = array_local_size.nx *
+                         array_local_size.ny *
                         (array_local_size.nz + 2) *
                          array_local_size.nl *
                          array_local_size.ns;

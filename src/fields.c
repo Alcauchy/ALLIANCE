@@ -21,7 +21,7 @@
 // fields_getChiPhi
 // fields_getChiB
 // fields_getChiA
-// fields_sendG
+// fields_sendF
 // fields_getFieldsFromH
 // fields_getAFromH
 // fields_getBFromH
@@ -63,9 +63,9 @@ double *phiB_denom;
 
 int *global_nm_index;
 /* buffers to send and store g^0_{s0},g^1_{s0},g^0_{s1} to compute fields*/
-COMPLEX *g00;
-COMPLEX *g10;
-COMPLEX *g01;
+COMPLEX *f00;
+COMPLEX *f10;
+COMPLEX *f01;
 
 /***************************************
  * \fn void fields_init():
@@ -97,13 +97,13 @@ void fields_init() {
             fields_chi.A = 0;
             fields_chi.B = 0;
 
-            g00 = malloc(array_local_size.nkx *
+            f00 = malloc(array_local_size.nkx *
                          array_local_size.nky *
                          array_local_size.nkz *
                          array_local_size.ns *
-                         sizeof(*g00));
-            g10 = 0;
-            g01 = 0;
+                         sizeof(*f00));
+            f10 = 0;
+            f01 = 0;
             break;
 
         case ELECTROMAGNETIC:
@@ -136,21 +136,21 @@ void fields_init() {
                                     array_local_size.ns *
                                     sizeof(*fields_chi.B));
 
-            g00 = malloc(array_local_size.nkx *
+            f00 = malloc(array_local_size.nkx *
                          array_local_size.nky *
                          array_local_size.nkz *
                          array_local_size.ns *
-                         sizeof(*g00));
-            g10 = malloc(array_local_size.nkx *
+                         sizeof(*f00));
+            f10 = malloc(array_local_size.nkx *
                          array_local_size.nky *
                          array_local_size.nkz *
                          array_local_size.ns *
-                         sizeof(*g10));
-            g01 = malloc(array_local_size.nkx *
-                               array_local_size.nky *
-                               array_local_size.nkz *
-                               array_local_size.ns *
-                               sizeof(*g01));
+                         sizeof(*f10));
+            f01 = malloc(array_local_size.nkx *
+                         array_local_size.nky *
+                         array_local_size.nkz *
+                         array_local_size.ns *
+                         sizeof(*f01));
 
             /* preparing auxiliary data to compute A_parallel*/
             A_denom = malloc(array_local_size.nkx *
@@ -480,7 +480,7 @@ void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
 };
 
 /***************************************
- * \fn void fields_getFields(COMPLEX *g00, COMPLEX *g10, COMPLEX *g01)
+ * \fn void fields_getFields(COMPLEX *f00, COMPLEX *f10, COMPLEX *f01)
  * \brief wrapper to get all the fields simultaneously
  * \param g00: 4D complex array (kx,ky,kz,s). Zeroth Hermite and Laguerre moment of modified gyrokinetic distribution function.
  * \param g10: 4D complex array (kx,ky,kz,s). Must be first Hermite and zeroth Laguerre moment of modified gyrokinetic distribution function g.
@@ -613,8 +613,8 @@ void fields_getChiA(){
 }
 
 /***************************************
- * \fn fields_sendG(COMPLEX *g)
- * \param g: complex array. Modified or non-modified gyrokinetic distribution function
+ * \fn fields_sendF(COMPLEX *f)
+ * \param f: complex array. Modified or non-modified gyrokinetic distribution function
  * \brief sends moments of gyrokinetic distribution function which are required to compute fields
  *
  * sends
@@ -624,67 +624,69 @@ void fields_getChiA(){
  *
  * to all processes to compute potentials locally.
  ***************************************/
-void fields_sendG(COMPLEX *g){
+void fields_sendF(COMPLEX *f){
     /* fill buffers with data from processor which has required data */
     size_t ind4D;
     int count;
-    int broadcast_root0 = 0;
-    int broadcast_root1 = 0;
-    switch(systemType)
-    {
+    int broadcast_root0 = mpi_whereIsM[0];  // processor which works with 0th Hermite moment
+    int broadcast_root1 = mpi_whereIsM[2];  // processor which works with 1st Hermite moment
+    size_t m0 = mpi_whereIsM[1];            // local index of the 0th Hermite moment
+    size_t m1 = mpi_whereIsM[3];            // local index of the 1st Hermite moment
+    switch(systemType){
         case ELECTROSTATIC:
-            break;
-        case ELECTROMAGNETIC:
-            for(size_t im = 0; im < array_local_size.nm; im++)
-            {
-                if (global_nm_index[im] == 0)
-                {
-                    for(size_t ix = 0; ix < array_local_size.nkx; ix++)
-                    {
-                        for(size_t iy = 0; iy < array_local_size.nky; iy++)
-                        {
-                            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-                            {
-                                for(size_t is = 0; is < array_local_size.ns; is++)
-                                {
-                                    ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
-                                            iy * array_local_size.nkz * array_local_size.ns +
-                                            iz * array_local_size.ns +
-                                            is;
-                                    g00[ind4D] = g[get_flat_c(is,0,im,ix,iy,iz)];
-                                    g01[ind4D] = g[get_flat_c(is,1,im,ix,iy,iz)];
-                                }
+            if (mpi_my_col_rank = broadcast_root0){
+                for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+                    for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                        iy * array_local_size.nkz * array_local_size.ns +
+                                        iz * array_local_size.ns +
+                                        is;
+                                f00[ind4D] = f[get_flat_c(is, 0, m0, ix, iy, iz)];
                             }
                         }
                     }
-
                 }
-                if (global_nm_index[im] == 1)
-                {
-                    for(size_t ix = 0; ix < array_local_size.nkx; ix++)
-                    {
-                        for(size_t iy = 0; iy < array_local_size.nky; iy++)
-                        {
-                            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-                            {
-                                for(size_t is = 0; is < array_local_size.ns; is++)
-                                {
-                                    ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
-                                            iy * array_local_size.nkz * array_local_size.ns +
-                                            iz * array_local_size.ns +
-                                            is;
-                                    g10[ind4D] = g[get_flat_c(is,0,im,ix,iy,iz)];
-                                }
+            }
+            MPI_Bcast(f00, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_col_comm);
+            break;
+        case ELECTROMAGNETIC:
+            if (mpi_my_col_rank == broadcast_root0){
+                for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+                    for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                        iy * array_local_size.nkz * array_local_size.ns +
+                                        iz * array_local_size.ns +
+                                        is;
+                                f00[ind4D] = f[get_flat_c(is, 0, m0, ix, iy, iz)];
+                                f01[ind4D] = f[get_flat_c(is, 1, m0, ix, iy, iz)];
+                            }
+                        }
+                    }
+                }
+            }
+            if (mpi_my_col_rank == broadcast_root1){
+                for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+                    for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                        iy * array_local_size.nkz * array_local_size.ns +
+                                        iz * array_local_size.ns +
+                                        is;
+                                f10[ind4D] = f[get_flat_c(is, 0, m1, ix, iy, iz)];
                             }
                         }
                     }
                 }
             }
             count = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns;
-            MPI_Bcast(g00,count,MPI_DOUBLE_COMPLEX,broadcast_root0,mpi_col_comm);
-            MPI_Bcast(g01,count,MPI_DOUBLE_COMPLEX,broadcast_root0,mpi_col_comm);
-            MPI_Bcast(g10,count,MPI_DOUBLE_COMPLEX,broadcast_root0,mpi_col_comm);
-
+            MPI_Bcast(f00, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_col_comm);
+            MPI_Bcast(f01, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_col_comm);
+            MPI_Bcast(f10, count, MPI_DOUBLE_COMPLEX, broadcast_root1, mpi_col_comm);
             break;
     }
 };

@@ -42,50 +42,76 @@ void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, con
     size_t ind6DPlus;
     size_t ind6DMinus;
     size_t indBoundary;
-    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
-        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
-            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
-                for (size_t im = 1; im < array_local_size.nm - 1; im++) {
+    //case if there is only one Hermite moment per process
+    if (array_local_size.nm == 1){
+        for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+            for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+                for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
-                            ind6D = get_flat_c(is, il, im, ix, iy, iz);
-                            ind6DPlus = get_flat_c(is, il, im + 1, ix, iy, iz);
-                            ind6DMinus = get_flat_c(is, il, im - 1, ix, iy, iz);
-                            out[ind6D] += space_iKz[iz] * var_var.vT[is] *
-                                         (space_sqrtM[im + 1] * in[ind6DPlus] + space_sqrtM[im] * in[ind6DMinus]);
-
+                            indBoundary = ix * array_local_size.nky * array_local_size.nkz * array_local_size.nl *
+                                          array_local_size.ns
+                                          + iy * array_local_size.nkz * array_local_size.nl * array_local_size.ns
+                                          + iz * array_local_size.nl * array_local_size.ns
+                                          + il * array_local_size.ns
+                                          + is;
+                            ind6D = get_flat_c(is, il, 0, ix, iy, iz);
+                            out[ind6D] += space_iKz[iz] * var_var.vT[is] * (space_sqrtM[0] * minus_boundary[indBoundary] +
+                                                                            space_sqrtM[array_local_size.nm] * plus_boundary[indBoundary]);
                         }
                     }
                 }
             }
         }
     }
-    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
-        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
-            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
-                for (size_t il = 0; il < array_local_size.nl; il++) {
-                    for (size_t is = 0; is < array_local_size.ns; is++) {
-                        /*treating left boundary*/
-                        ind6D = get_flat_c(is, il, 0, ix, iy, iz);
-                        ind6DPlus = get_flat_c(is, il, 1, ix, iy, iz);
-                        indBoundary = ix * array_local_size.nky * array_local_size.nkz * array_local_size.nl *
-                                      array_local_size.ns
-                                      + iy * array_local_size.nkz * array_local_size.nl * array_local_size.ns
-                                      + iz * array_local_size.nl * array_local_size.ns
-                                      + il * array_local_size.ns
-                                      + is;
-                        out[ind6D] += space_iKz[iz] * var_var.vT[is] *
-                                (space_sqrtM[1] * in[ind6DPlus] + space_sqrtM[0] * minus_boundary[indBoundary]);
-                        /*treating right boundary*/
-                        ind6D = get_flat_c(is, il, array_local_size.nm - 1, ix, iy, iz);
-                        ind6DMinus = get_flat_c(is, il, array_local_size.nm - 2, ix, iy, iz);
-                        out[ind6D] += space_iKz[iz] * var_var.vT[is] * (space_sqrtM[array_local_size.nm - 1] * in[ind6DMinus] +
-                                                      space_sqrtM[array_local_size.nm] * plus_boundary[indBoundary]);
+    //case if there is only more than one Hermite moment per process
+    else{
+        for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+            for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+                for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                    for (size_t im = 1; im < array_local_size.nm - 1; im++) {
+                        for (size_t il = 0; il < array_local_size.nl; il++) {
+                            for (size_t is = 0; is < array_local_size.ns; is++) {
+                                ind6D = get_flat_c(is, il, im, ix, iy, iz);
+                                ind6DPlus = get_flat_c(is, il, im + 1, ix, iy, iz);
+                                ind6DMinus = get_flat_c(is, il, im - 1, ix, iy, iz);
+                                out[ind6D] += space_iKz[iz] * var_var.vT[is] *
+                                              (space_sqrtM[im + 1] * in[ind6DPlus] + space_sqrtM[im] * in[ind6DMinus]);
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+            for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+                for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            /*treating left boundary*/
+                            ind6D = get_flat_c(is, il, 0, ix, iy, iz);
+                            ind6DPlus = get_flat_c(is, il, 1, ix, iy, iz);
+                            indBoundary = ix * array_local_size.nky * array_local_size.nkz * array_local_size.nl *
+                                          array_local_size.ns
+                                          + iy * array_local_size.nkz * array_local_size.nl * array_local_size.ns
+                                          + iz * array_local_size.nl * array_local_size.ns
+                                          + il * array_local_size.ns
+                                          + is;
+                            out[ind6D] += space_iKz[iz] * var_var.vT[is] *
+                                          (space_sqrtM[1] * in[ind6DPlus] + space_sqrtM[0] * minus_boundary[indBoundary]);
+                            /*treating right boundary*/
+                            ind6D = get_flat_c(is, il, array_local_size.nm - 1, ix, iy, iz);
+                            ind6DMinus = get_flat_c(is, il, array_local_size.nm - 2, ix, iy, iz);
+                            out[ind6D] += space_iKz[iz] * var_var.vT[is] * (space_sqrtM[array_local_size.nm - 1] * in[ind6DMinus] +
+                                                                            space_sqrtM[array_local_size.nm] * plus_boundary[indBoundary]);
+                        }
                     }
                 }
             }
         }
     }
+
 };
 
 /***************************************
@@ -115,21 +141,21 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
     double phibh = 0;
     double ah = 0;
     double bh = 0;
-    double *plus_boundary = calloc(array_local_size.nkx *
-                                    array_local_size.nky *
+    double *plus_boundary = calloc(array_local_size.nx *
+                                    array_local_size.ny *
                                     (array_local_size.nz + 2)*
                                     array_local_size.nl *
                                     array_local_size.ns,
                                     sizeof(*plus_boundary));
-    double *minus_boundary = calloc(array_local_size.nkx *
-                                    array_local_size.nky *
+    double *minus_boundary = calloc(array_local_size.nx *
+                                    array_local_size.ny *
                                     (array_local_size.nz + 2)*
                                     array_local_size.nl *
                                     array_local_size.ns,
                                     sizeof(*plus_boundary));
     mpi_exchangeMBoundaries_r(in, plus_boundary, minus_boundary);
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
-        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+    for(size_t iy = 0; iy < array_local_size.ny; iy++){
+        for(size_t ix = 0; ix < array_local_size.nx; ix++){
             for(size_t iz = 0; iz < array_local_size.nz + 2; iz++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
                     for(size_t il = 0; il < array_local_size.nl; il++){
@@ -142,37 +168,45 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
                             indChi_A = getIndChiBufEM_r(ix,iy,iz,is,CHI_A);
                             indChi_B = getIndChiBufEM_r(ix,iy,iz,is,CHI_B);
                             // computing (chi_phi + chi_b * h)
-                            phibh = (chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];//(chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];
+                            phibh = (chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];
                             // computing chi_b * h_l=1
                             bh = (il==0)?  chiAr[indChi_B] * in[indH_l1] : chiAr[indChi_B] * (in[indH_l0] + 2. * in[indH_l1]);
-                            if(im!=0 && im!=array_local_size.nm-1){
-                                indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
-                                indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
-                                ah = chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);//chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);
-                            }
-                            //left boundary
-                            else if(im == 0){
-                                indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
-                                indHBound = ix * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
-                                              + iy * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
-                                              + iz * array_local_size.nl * array_local_size.ns
-                                              + il * array_local_size.ns
-                                              + is;
-                                ah = chiAr[indChi_A] * (space_sqrtM[0] * minus_boundary[indHBound] + space_sqrtM[1] * in[indHPlus]);
-                            }
-                            //right boundary
-                            else{
-                                indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
-                                indHBound = ix * array_local_size.nky * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
-                                            + iy * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                            if(array_local_size.nm == 1){
+                                indHBound = iy * array_local_size.nx * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                            + ix * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
                                             + iz * array_local_size.nl * array_local_size.ns
                                             + il * array_local_size.ns
                                             + is;
-                                ah = chiAr[indChi_A] * (space_sqrtM[array_local_size.nm] * plus_boundary[indHBound] + space_sqrtM[array_local_size.nm - 1] * in[indHMinus]);
+                                ah = chiAr[indChi_A] * (space_sqrtM[1] * plus_boundary[indHBound] + space_sqrtM[0] * minus_boundary[indHBound]);
                             }
-
-                            //printf("ah = %f bh = %f phibh = %f\n", ah,bh,phibh);
-                            out[indH] += sign * (phibh + bh + ah);//sign * (phibh + bh + ah);
+                            else{
+                                if(im!=0 && im!=array_local_size.nm - 1){
+                                    indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
+                                    indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
+                                    ah = chiAr[indChi_A] * (space_sqrtM[im + 1] * in[indHPlus] + space_sqrtM[im] * in[indHMinus]);
+                                }
+                                    //left boundary
+                                else if(im == 0){
+                                    indHPlus = get_flat_r(is,il,im + 1,ix,iy,iz);
+                                    indHBound = iy * array_local_size.nx * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                                + ix * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                                + iz * array_local_size.nl * array_local_size.ns
+                                                + il * array_local_size.ns
+                                                + is;
+                                    ah = chiAr[indChi_A] * (space_sqrtM[0] * minus_boundary[indHBound] + space_sqrtM[1] * in[indHPlus]);
+                                }
+                                    //right boundary
+                                else{
+                                    indHMinus = get_flat_r(is,il,im - 1,ix,iy,iz);
+                                    indHBound = iy * array_local_size.nx * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                                + ix * (array_local_size.nz + 2) * array_local_size.nl * array_local_size.ns
+                                                + iz * array_local_size.nl * array_local_size.ns
+                                                + il * array_local_size.ns
+                                                + is;
+                                    ah = chiAr[indChi_A] * (space_sqrtM[array_local_size.nm] * plus_boundary[indHBound] + space_sqrtM[array_local_size.nm - 1] * in[indHMinus]);
+                                }
+                            }
+                            out[indH] += sign * (phibh + bh + ah);
                             out[indH] /= var_var.B0;
                         }
                     }
@@ -197,8 +231,8 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
 void equation_getNonlinearElectrostatic(double *in, double *chiAr, double *out, double sign) {
     size_t indH;
     size_t indChi;
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
-        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+    for(size_t iy = 0; iy < array_local_size.ny; iy++){
+        for(size_t ix = 0; ix < array_local_size.nx; ix++){
             for(size_t iz = 0; iz < array_local_size.nz + 2; iz++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
                     for(size_t il = 0; il < array_local_size.nl; il++){
@@ -382,8 +416,8 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     COMPLEX *plus_boundary = calloc(boundary_size, sizeof(*plus_boundary));
     /* exchanging boundaries to compute linear term and fields */
     /* computing h */
-    fields_sendG(in_g);
-    fields_getFields(g00, g10, g01);
+    fields_sendF(in_g);
+    fields_getFields(f00, f10, f01);
     fields_getChi();
     distrib_getH(in_h, in_g);
 
@@ -391,7 +425,7 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
 
     /* computing linear term */
-    //equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
+    equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
 
     /* computing nonlinear term */
     equation_getNonlinearTerm(in_h, out);

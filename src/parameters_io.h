@@ -21,6 +21,10 @@ struct system_param {
     size_t nl;
     size_t ns;
     size_t nz;
+    double Lx;
+    double Ly;
+    double Lz;
+
     int dealiasing;
     int electromagnetic;
     int adiabatic;
@@ -33,6 +37,7 @@ struct system_param {
     double *charge;
 
     double dt;
+    int iter_dt;
     int Nt;
 
     int compute_k;
@@ -49,6 +54,9 @@ struct system_param {
     int save_distrib;
     double firstShell;
     double lastShell;
+
+    int nproc_m;
+    int nproc_k;
 };
 
 extern struct system_param parameters;

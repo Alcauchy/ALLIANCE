@@ -45,7 +45,7 @@ void test_fieldComputation(){
     }
     vortexInit(g);
     init_conditions(g);
-    fields_sendG(g);
+    fields_sendF(g);
     size_t ind4D;
     size_t ind2D;
 
@@ -55,9 +55,9 @@ void test_fieldComputation(){
             break;
         case ELECTROMAGNETIC:
             printf("[MPI process %d] LAUNCHING FIELD COMPUTATION TEST\n",mpi_my_rank);
-            fields_getPhi(g00,g01);
-            fields_getB(g00,g01);
-            fields_getA(g10);
+            fields_getPhi(f00, f01);
+            fields_getB(f00, f01);
+            fields_getA(f10);
             if(PRINT_A)
             {
                 for(size_t ix = 0; ix < array_local_size.nkx; ix++)
@@ -124,13 +124,13 @@ void test_mainFunction(){
     COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
     for(int it = 0; it < solver.Nt; it++)
     {
-        solver_makeStep(g, h);
+        solver_makeStep(g, h, 0);
         //solver_updateDt();
         if(parameters.save_diagnostics && it % parameters.iter_diagnostics == 0)
         {
@@ -151,8 +151,8 @@ void test_fieldComparison(){
     COMPLEX* B_h = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz * sizeof(*B_h));
 
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
     {
@@ -161,8 +161,8 @@ void test_fieldComparison(){
         B_h[i] = fields_fields.B[i];
     }
     distrib_getG(g, h);
-    fields_sendG(g);
-    fields_getFields(g00, g10, g01);
+    fields_sendF(g);
+    fields_getFields(f00, f10, f01);
     for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
     {
         if(fabs(phi_h[i] - fields_fields.phi[i]) > TOLERANCE)
@@ -190,8 +190,8 @@ void test_kSpecComputations(){
     COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
     diag_computeSpectra(g, h,0);
@@ -211,8 +211,8 @@ void test_kSpecComputations(){
     COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     COMPLEX* rhs = malloc(array_local_size.total_comp * sizeof(*rhs));
     init_conditions(h);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00, g10, g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     distrib_getG(g, h);
     diag_computeSpectra(g, h,0);
@@ -228,8 +228,8 @@ void test_inplaceFFTW_chi(){
     //COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
     //COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
     //init_conditions(h);
-    //fields_sendG(h);
-    //fields_getFieldsFromH(g00, g10, g01);
+    //fields_sendF(h);
+    //fields_getFieldsFromH(f00, f10, f01);
     //fields_getChi();
     //distrib_getG(g, h);
     size_t indChi;
@@ -754,8 +754,8 @@ void test_fieldsFFT(){
     fftw_copy_buffer_c(fftw_hBuf,h);
     fftw_c2r();
     hdf_create_file_r("h_field.h5",fftw_hBuf);
-    fields_sendG(h);
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
     fftw_copyFieldBuf_c(fftw_field,fields_fields.phi);
     double *field_r = fftw_field;
     fftw_c2r_field();
@@ -787,9 +787,9 @@ void test_everything(){
     COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
     //initializing g
     init_conditions(h);
-    fields_sendG(h);
+    fields_sendF(h);
     //computing fields
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_getFieldsFromH(f00, f10, f01);
     fields_getChi();
     // computing h function
     distrib_getG(g, h);
@@ -839,9 +839,9 @@ void test_RHS(){
     COMPLEX *out = malloc(array_local_size.total_comp * sizeof(*out));
     //initializing g
     init_conditions(h);
-    fields_sendG(h);
+    fields_sendF(h);
     //computing fields
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_getFieldsFromH(f00, f10, f01);
     /*for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
         fields_fields.A[ii] = 0;
     }*/
@@ -897,9 +897,9 @@ void test_CFL(){
     COMPLEX *out = malloc(array_local_size.total_comp * sizeof(*out));
     //initializing g
     init_conditions(h);
-    fields_sendG(h);
+    fields_sendF(h);
     //computing fields
-    fields_getFieldsFromH(g00,g10,g01);
+    fields_getFieldsFromH(f00, f10, f01);
     /*for (size_t ii = 0; ii < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; ii++){
         fields_fields.A[ii] = 0;
     }*/
@@ -915,4 +915,91 @@ void test_CFL(){
     free(out);
     free(g);
     free(h);
+}
+
+/***************************
+*  test_transposedFFTW()
+* *************************/
+void test_transposedFFTW(){
+    COMPLEX *h = calloc(array_local_size.total_comp , sizeof(*h));
+    int kx_local,kx_localNeg;
+    int kx = 0;
+    int kxNeg = array_global_size.nkx - kx;
+    int proc, procNeg;
+    proc = mpi_whereIsX[2 * kx];
+    kx_local = mpi_whereIsX[2 * kx + 1];
+    procNeg = mpi_whereIsX[2*kxNeg];
+    kx_localNeg = mpi_whereIsX[2*kxNeg + 1];
+    if(mpi_my_row_rank == proc){
+        size_t iy = 2;
+        size_t ind6D = get_flat_c(0,0,0,kx_local,iy,0);
+        h[ind6D] = array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+        ind6D = get_flat_c(0,0,0,kx_local,array_global_size.nky - iy,0);
+        h[ind6D] = array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+
+        size_t indChi = getIndChiBufEM_c(kx_local,iy,0,0,0);
+        fftw_chiBuf[indChi] =  array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+        indChi = getIndChiBufEM_c(kx_local,array_global_size.nky - iy,0,0,0);
+        fftw_chiBuf[indChi] =  array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;
+
+        size_t ind3D = get_flatIndexComplex3D(kx_local,iy,0);//kx_local * array_local_size.nky * array_local_size.nkz + iy * array_local_size.nkz;
+        fftw_field[ind3D] = (array_global_size.nkx*array_global_size.nky*array_global_size.nz)/2.;
+        ind3D = kx_local * array_local_size.nky * array_local_size.nkz + (array_global_size.nky - iy) * array_local_size.nkz;
+        fftw_field[ind3D] = array_global_size.nx*array_global_size.ny*array_global_size.nz/2.;
+    }
+    double *hr = h;
+    fftw_copy_buffer_c(fftw_hBuf,h);
+    fftw_c2r();
+    fftw_copy_buffer_r(h,fftw_hBuf);
+    double *hbuf = calloc(array_local_size.total_real , sizeof(*hbuf));
+    fftw_copy_buffer_r(hbuf,fftw_hBuf);
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t ind6D = get_flat_r(0,0,0,0,iy,0);
+            //printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    hdf_create_file_r("h.h5", hr);
+    fftw_transposeToXY();
+    fftw_transposeToYX();
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t ind6D = get_flat_r(0,0,0,0,iy,0);
+           // printf("[MPI process %d] f[%zu] = %f\n",mpi_my_rank,iy,hr[ind6D]);
+        }
+    }
+    fftw_c2r_chi();
+    double *chi_r = fftw_chiBuf;
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t indChi = getIndChiBufEM_r(0,iy,0,0,0);
+            printf("[MPI process %d] chi[%zu] = %f\n",mpi_my_rank,iy,chi_r[indChi]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    fftw_transposeToXY_chi();
+    fftw_transposeToYX_chi();
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t indChi = getIndChiBufEM_r(0,iy,0,0,0);
+            printf("[MPI process %d] chi[%zu] = %f\n",mpi_my_rank,iy,chi_r[indChi]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    fftw_r2c_chi();
+
+    // fftw transposed of fields
+    fftw_c2r_field();
+    double *f_r = fftw_field;
+    if(mpi_my_coords[0] == 0){
+        for (size_t iy = 0; iy < array_local_size.ny;iy++){
+            size_t ind3D = iy * array_local_size.nx * (array_local_size.nz + 2);
+            printf("[MPI process %d] field[%zu] = %f\n",mpi_my_rank,iy,f_r[ind3D]);
+            //printf("[MPI process %d] b[%zu] = %f\n",mpi_my_rank,ind6D,hbuf[ind6D]);
+        }
+    }
+    fftw_transposeToXY_field();
+    fftw_transposeToYX_field();
+    fftw_r2c_field();
 }

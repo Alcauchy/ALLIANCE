@@ -99,8 +99,8 @@ size_t getIndChiBufEM_c(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield
  * 1 to access \f$\chi^{A}(\mathbf{r})\f$ and 2 to access \f$\chi^{B}(\mathbf{r})\f$.
  ***************************************/
 size_t getIndChiBufEM_r(size_t ix,size_t iy, size_t iz, size_t is, size_t ifield) {
-    return ix * array_local_size.nky * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
-           iy * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
+    return iy * array_local_size.nx * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
+           ix * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EM +
            iz * array_local_size.ns * CHI_EM +
            is * CHI_EM + ifield;
 }
@@ -136,8 +136,8 @@ size_t getIndChiBufEL_c(size_t ix,size_t iy, size_t iz, size_t is) {
  * flattened index is then can be used to access required value of the gyrokinetic potential at position (ix,iy,iz,is).
  ***************************************/
 size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is) {
-    return ix * array_local_size.nky * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EL +
-           iy * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EL +
+    return iy * array_local_size.nx * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EL +
+           ix * (array_local_size.nz + FFT_OFFSET) * array_local_size.ns * CHI_EL +
            iz * array_local_size.ns * CHI_EL +
            is * CHI_EL;
 }
@@ -157,8 +157,8 @@ size_t getIndChiBufEL_r(size_t ix,size_t iy, size_t iz, size_t is) {
  * 6D array to get a required element at position (is,il,im,ix,iy,iz).
  ***************************************/
 size_t get_flat_r(size_t is, size_t il, size_t im, size_t ix, size_t iy, size_t iz) {
-    return ix * array_offset.x +
-           iy * array_offset.y +
+    return iy * array_offset.y +
+           ix * array_offset.x +
            iz * array_offset.z +
            im * array_offset.m +
            il * array_offset.l +

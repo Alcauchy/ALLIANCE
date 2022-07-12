@@ -14,6 +14,9 @@ void space_generateWaveSpace();     // generates wave vector space
 void free_wavespace();
 void space_generateMSpace();
 
+extern double space_dx;
+extern double space_dy;
+extern double space_dz;
 extern double *space_kPerp2;
 extern double *space_kPerp;
 extern double *space_kSq;

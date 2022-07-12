@@ -30,6 +30,7 @@ void hdf_saveFields(int timestep);
 void hdf_createCheckpoint(COMPLEX *h, int timestep);
 void hdf_initCheckpoints();
 void hdf_dumpCheckpoint(COMPLEX *h, int timestep, char *filename);
+void hdf_dumpCheckpointReal(COMPLEX *h, int timestep, char *filename);
 void hdf_readData(char *filename, COMPLEX *h);
 void hdf_saveDistrib(COMPLEX* h, int timestep);
 void hdf_createSaveDirs();

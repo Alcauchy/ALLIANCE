@@ -38,20 +38,37 @@ enum initial initialConditions;
  ***************************************/
 void init_start(char *filename){
     mpi_init();
-    srand(0);
+
     read_parameters(filename);
-    init_initEnums();
-    mpi_generateTopology();
-    //mpi_getLocalArraySize();
-    mpi_initMExchange();
-    fftw_init(mpi_row_comm);
+    init_computation();
+    init_physicalSystem();
+    hdf_createFiles();
+    init_printParameters();
+};
+
+/****************************************
+* \fn void init_physicalSystem()
+* \brief initialization of physical system and parameters
+ ***************************************/
+void init_physicalSystem(){
     space_init();
     diag_initSpec();
     var_init();
     fields_init();
-    hdf_init();
     solver_init();
-    init_printParameters();
+};
+
+/****************************************
+* \fn void init_computation()
+* \brief initialize hdf, fftw and mpi
+ ***************************************/
+void init_computation(){
+    srand(0);
+    init_initEnums();
+    mpi_generateTopology();
+    mpi_initMExchange();
+    fftw_init(mpi_row_comm);
+    hdf_init();
 };
 
 /***************************************
@@ -121,12 +138,12 @@ void fill_rand(COMPLEX *ar1) {
                 for (size_t im = 0; im < array_global_size.nm; im++){
                     for (size_t il = 0; il < array_global_size.nl; il++){
                         for (size_t is = 0; is < array_global_size.ns; is++){
-                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank){
+                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && (im == 0 || im == 1)){
                                 size_t ix_local = mpi_whereIsX[2 * ix + 1];
                                 size_t im_local = mpi_whereIsM[2 * im + 1];
                                 size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
                                 size_t ind3D = ix_local * array_local_size.nky * array_local_size.nkz +
-                                               iy * array_local_size.nkz +
+                                               iy* array_local_size.nkz +
                                                iz;
                                 double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
                                 ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
