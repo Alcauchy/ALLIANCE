@@ -29,6 +29,18 @@
  * \brief used to store free energy k spectra*/
 double *diag_kSpec = 0;
 
+/**\var double *diag_kSpecPhi
+ * \brief used to store phi energy k spectra*/
+double *diag_kSpecPhi = 0;
+
+/**\var double *diag_kSpecBperp
+ * \brief used to store B_perp energy k spectra*/
+double *diag_kSpecBperp = 0;
+
+/**\var double *diag_kSpecBpar
+ * \brief used to store B_par energy k spectra*/
+double *diag_kSpecBpar = 0;
+
 /**\var double *diag_mSpec
  * \brief used to store free energy m spectra*/
 double *diag_mSpec = 0;
@@ -37,6 +49,14 @@ double *diag_mSpec = 0;
  * \brief used to store positions of k shells  required to compute k spectra*/
 double *diag_shells = 0;
 
+/**\var double diag_shellCentres
+ * \brief centers of shells*/
+double *diag_shellCentres = 0;
+
+/**\var double diag_shellCentres
+ * \brief centers of shells*/
+double *diag_shellNorm = 0;
+
 /**\var double diag_freeEnergy
  * \brief free energy*/
 double diag_freeEnergy;
@@ -44,6 +64,15 @@ double diag_freeEnergy;
 /**\var double diag_freeEnergy
  * \brief free energy at initial timestep*/
 double diag_free_energy0;
+
+/**\var double diag_fib
+ * \brief root of golden ratio scale shells*/
+double diag_sqrtGoldenRatio;
+
+
+/**\var double diag_fib
+ * \brief number of shells*/
+int diag_numOfShells;
 
 /***************************************
  * \fn void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep)
@@ -59,6 +88,7 @@ double diag_free_energy0;
 void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
     if (parameters.compute_k && timestep % parameters.iter_diagnostics == 0) {
         diag_computeKSpectrum(g, h, diag_kSpec);
+        diag_computeFieldSpectrum();
     }
     if (parameters.compute_m && timestep % parameters.iter_diagnostics == 0) {
         diag_computeMSpectrum(g, h, diag_mSpec);
@@ -80,8 +110,16 @@ void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
  ***************************************/
 void diag_initSpec() {
     if (parameters.compute_k) {
-        diag_kSpec = malloc(parameters.k_shells * sizeof(*diag_kSpec));
         diag_getShells();
+        diag_kSpec = malloc((diag_numOfShells + 1) * sizeof(*diag_kSpec));
+        if(systemType == ELECTROMAGNETIC){
+            diag_kSpecPhi = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecPhi));
+            diag_kSpecBperp = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecBperp));
+            diag_kSpecBpar = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecBpar));
+        }
+        if(systemType == ELECTROSTATIC){
+            diag_kSpecPhi = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecPhi));
+        }
     }
     if (parameters.compute_m) {
         if (mpi_my_row_rank == 0) {
@@ -124,20 +162,18 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
  * where \f$N\f$ is a number of wave vectors between shells \f$k^{shell}_{i-1}\f$ and \f$k^{shell}_{i}\f$
  ***************************************/
 void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
-    COMPLEX *sum = malloc(parameters.k_shells * sizeof(*sum));
-    COMPLEX *buf = malloc(parameters.k_shells * sizeof(*buf));
-    double *norm = malloc(parameters.k_shells * sizeof(*norm));
-    double *total_norm = malloc(parameters.k_shells * sizeof(*total_norm));
+    COMPLEX *sum = malloc((diag_numOfShells + 1) * sizeof(*sum));
+    COMPLEX *buf = malloc((diag_numOfShells + 1) * sizeof(*buf));
+    double *norm = malloc((diag_numOfShells + 1) * sizeof(*norm));
+    double *total_norm = malloc((diag_numOfShells + 1) * sizeof(*total_norm));
     size_t ind2D;
     size_t ind6D;
-
-    for (size_t ishell = 1; ishell < parameters.k_shells + 1; ishell++) {
+    for (size_t ishell = 1; ishell < diag_numOfShells + 2; ishell++) {
         sum[ishell - 1] = 0.j;
-        norm[ishell - 1] = 0;
         for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
             for (size_t iy = 0; iy < array_local_size.nky; iy++) {
                 ind2D = ix * array_local_size.nky + iy;
-                if (diag_shells[ishell - 1] < space_kPerp2[ind2D] && diag_shells[ishell] >= space_kPerp2[ind2D]) {
+                if (space_kPerp[ind2D] > diag_shells[ishell - 1]  && space_kPerp[ind2D] <= diag_shells[ishell]) {
                     for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
                         for (size_t im = 0; im < array_local_size.nm; im++) {
                             for (size_t il = 0; il < array_local_size.nl; il++) {
@@ -145,6 +181,7 @@ void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
                                     norm[ishell - 1] += 1.;
                                     ind6D = get_flat_c(is, il, im, ix, iy, iz);
                                     sum[ishell - 1] += g[ind6D] * conj(h[ind6D]);
+                                    //sum[ishell - 1] /= diag_shellNorm[ishell - 1];
                                 }
                             }
                         }
@@ -153,16 +190,10 @@ void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
             }
         }
     }
-    MPI_Reduce(sum, buf, parameters.k_shells, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-    MPI_Reduce(norm, total_norm, parameters.k_shells, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+    MPI_Reduce(sum, buf, diag_numOfShells + 1, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
     if (mpi_my_rank == TO_ROOT) {
-        for (size_t i = 0; i < parameters.k_shells; i++) {
-            if (total_norm[i]) {
-                diag_kSpec[i] = creal(buf[i] / total_norm[i]);
-            } else {
-                diag_kSpec[i] = 0;
-            }
-
+        for (size_t i = 0; i < diag_numOfShells + 1; i++) {
+            diag_kSpec[i] = creal(buf[i])/diag_shellNorm[i];
         }
     }
 };
@@ -214,12 +245,67 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
  * \f$k^{shell}_i = (last\_shell - first\_shell)/(k\_shells) \cdot i\f$
  ***************************************/
 void diag_getShells() {
-    diag_shells = malloc((parameters.k_shells + 1) * sizeof(*diag_shells));
-    for (size_t i = 0; i < parameters.k_shells + 1; i++) {
-        diag_shells[i] = (parameters.lastShell - parameters.firstShell) / parameters.k_shells * i;
-        //printf("[MPI process %d] shell[%d] = %f\n", mpi_my_rank, i, diag_shells[i]);
+    diag_sqrtGoldenRatio = sqrt((1. + sqrt(5.)) * 0.5);
+    double shell1;
+    double k0;
+    k0 = (space_dKx > space_dKy) ? space_dKx : space_dKy;
+    if (parameters.firstShell == 0){
+        shell1 = 4. * k0;
     }
+    else{
+        shell1 = parameters.firstShell;
+    }
+    diag_numOfShells = (int) (log(parameters.lastShell/shell1)/log(diag_sqrtGoldenRatio) + 1);
+    if(diag_numOfShells < 3) {
+        if(mpi_my_rank == 0) {
+            printf("Wrong shell boundaries with k_first = %f and k_last = %f\n"
+                   "EXITING \n",
+                   parameters.firstShell,
+                   parameters.lastShell);
+        }
+        exit(1);
+    }
+    if(mpi_my_rank == 0) {
+        printf("number of shells = %d  shell 1 = %f\n",
+               diag_numOfShells,
+               shell1);
+    }
+    diag_shells = malloc((diag_numOfShells + 2) * sizeof(*diag_shells));
 
+    // shell boundaries
+    diag_shells[0] = 0.;
+    diag_shells[1] = shell1;
+    for (size_t i = 2; i < diag_numOfShells + 1; i++) {
+        diag_shells[i] = pow(diag_sqrtGoldenRatio,i - 1) * shell1;
+        if (mpi_my_rank == 0) printf("shell[%d] = %f\n", i, diag_shells[i]);
+    }
+    diag_shells[diag_numOfShells + 1] = parameters.lastShell;
+
+    //shell centres and normalizations
+    diag_shellCentres = malloc((diag_numOfShells + 1) * sizeof(*diag_shellCentres));
+    diag_shellNorm = calloc((diag_numOfShells + 1), sizeof(*diag_shellNorm));
+    for (size_t ishell = 1; ishell < (diag_numOfShells + 2); ishell++){
+        diag_shellCentres[ishell - 1] = 0.5 * (diag_shells[ishell - 1] + diag_shells[ishell ]);
+        for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+            for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                    size_t ind2D = ix * array_local_size.nky + iy;
+                    if (diag_shells[ishell - 1] < space_kPerp[ind2D] && diag_shells[ishell] >= space_kPerp[ind2D]){
+                        if (iz == 0 || iz == array_local_size.nkz - 1){
+                            diag_shellNorm[ishell - 1] += 1.;
+                        }
+                        else{
+                            diag_shellNorm[ishell - 1] += 2.;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    MPI_Allreduce(MPI_IN_PLACE, diag_shellNorm,diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    for(size_t ishell = 0; ishell < diag_numOfShells + 1; ishell++){
+        if(mpi_my_rank == 0) printf("%f\n", diag_shellNorm[ishell]);
+    }
 }
 
 /***************************************
@@ -254,6 +340,7 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
         //compute spectra
         if (parameters.compute_k) {
             diag_computeKSpectrum(g, h, diag_kSpec);
+            diag_computeFieldSpectrum();
             hdf_saveKSpec(timestep);
         }
         if (parameters.compute_m) {
@@ -262,3 +349,75 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
         }
     }
 }
+
+/***************************************
+ * \fn diag_computeFieldSpectrum()
+ *
+ * computes field energy \f$k_{\perp}\f$ spectra
+ * \f$ W(k^{shell}_i) = \frac{1}{N}\sum_{k^{shell}_{i-1}<|\mathbf{k}_{\perp}|<k^{shell}_{i}}\sum_{k_z,l,m,s} g \bar{h}\f$
+ * where \f$N\f$ is a number of wave vectors between shells \f$k^{shell}_{i-1}\f$ and \f$k^{shell}_{i}\f$
+ ***************************************/
+void diag_computeFieldSpectrum() {
+    size_t ind3D;
+    size_t ind2D;
+    switch(systemType){
+        case ELECTROSTATIC:
+            for(size_t ishell = 0; ishell < diag_numOfShells + 1; ishell++){
+                for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+                    for (size_t iy = 0; ix < array_local_size.nky; iy++){
+                        for (size_t iz = 0; ix < array_local_size.nkz; iz++){
+                            ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                                    iy * array_local_size.nkz +
+                                    iz;
+                            ind2D = ix * array_local_size.nky +
+                                    iy;
+                            if (space_kPerp[ind2D] > diag_shells[ishell]  && space_kPerp[ind2D] <= diag_shells[ishell + 1]){
+                                for (size_t is = 0; is < array_local_size.ns; is++){
+                                    diag_kSpecPhi[ishell] += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
+                                                             * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]);
+                                }
+                            }
+                        }
+                    }
+                }
+                diag_kSpecPhi[ishell] /= diag_shellNorm[ishell];
+            }
+            MPI_Reduce(MPI_IN_PLACE, diag_kSpecPhi, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+            break;
+        case ELECTROMAGNETIC:
+            for(size_t ishell = 0; ishell < diag_numOfShells + 1; ishell++){
+                for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+                    for (size_t iy = 0; iy < array_local_size.nky; iy++){
+                        for (size_t iz = 0; iz < array_local_size.nkz; iz++){
+                            ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                                    iy * array_local_size.nkz +
+                                    iz;
+                            ind2D = ix * array_local_size.nky +
+                                    iy;
+                            if (space_kPerp[ind2D] > diag_shells[ishell]  && space_kPerp[ind2D] <= diag_shells[ishell + 1]){
+                                /*phi spectra*/
+                                for (size_t is = 0; is < array_local_size.ns; is++){
+                                    diag_kSpecPhi[ishell] += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
+                                                                 * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]);
+                                }
+                                /* Bpar spectra */
+                                diag_kSpecBpar[ishell] += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D])/8./M_PI;
+                                /* Bperp spectra */
+                                diag_kSpecBperp[ishell] += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])/8./M_PI;
+                            }
+                        }
+                    }
+                }
+                diag_kSpecPhi[ishell] /= diag_shellNorm[ishell];
+                diag_kSpecBpar[ishell] /= diag_shellNorm[ishell];
+                diag_kSpecBperp[ishell] /= diag_shellNorm[ishell];
+            }
+            MPI_Reduce(MPI_IN_PLACE, diag_kSpecPhi, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+            MPI_Reduce(MPI_IN_PLACE, diag_kSpecBpar, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+            MPI_Reduce(MPI_IN_PLACE, diag_kSpecBperp, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+            break;
+        default:
+            printf("ERROR COMPUTING FIELD SPECTRA! EXITING...\n");
+            exit(1);
+    }
+};

@@ -26,6 +26,9 @@ double space_Lz;
 double space_dx;
 double space_dy;
 double space_dz;
+double space_dKx;
+double space_dKy;
+double space_dKz;
 double *space_kx;
 double *space_ky;
 double *space_kz;
@@ -106,19 +109,19 @@ void space_generateWaveSpace() {
     space_dy = space_Ly / array_global_size.ny;
     space_dz = space_Lz / array_global_size.nz;
 
-    double deltaKx = 2.* M_PI / ( space_Lx);
-    double deltaKy = 2.* M_PI / ( space_Ly);
-    double deltaKz = 2. * M_PI / ( space_Lz);
+    space_dKx = 2. * M_PI / ( space_Lx);
+    space_dKy = 2. * M_PI / ( space_Ly);
+    space_dKz = 2. * M_PI / ( space_Lz);
 
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         if (global_nkx_index[ix] < array_global_size.nkx / 2 + 1) {
-            space_kx[ix] = deltaKx * global_nkx_index[ix];
+            space_kx[ix] = space_dKx * global_nkx_index[ix];
         } else {
-            space_kx[ix] = deltaKx * ((double) global_nkx_index[ix] - (double) array_global_size.nkx);
+            space_kx[ix] = space_dKx * ((double) global_nkx_index[ix] - (double) array_global_size.nkx);
         }
         space_iKx[ix] = 1.j * space_kx[ix];
         //filling space_zerosKx array either with zeros or ones
-        if(fabs(space_kx[ix]) > deltaKx * array_global_size.nkx/3.){
+        if(fabs(space_kx[ix]) > space_dKx * array_global_size.nkx / 3.){
             space_zerosKx[ix] = 0.;
         }
         else{
@@ -129,13 +132,13 @@ void space_generateWaveSpace() {
 
     for (size_t iy = 0; iy < array_global_size.nky; iy++) {
         if (iy < array_global_size.nky / 2 + 1) {
-            space_ky[iy] = deltaKy * iy;
+            space_ky[iy] = space_dKy * iy;
         } else {
-            space_ky[iy] = deltaKy * ((double) iy - (double) array_global_size.nky);
+            space_ky[iy] = space_dKy * ((double) iy - (double) array_global_size.nky);
         }
         space_iKy[iy] = 1.j * space_ky[iy];
         //filling space_zerosKy array either with zeros or ones
-        if(fabs(space_ky[iy]) > deltaKy * array_global_size.nky/3.){
+        if(fabs(space_ky[iy]) > space_dKy * array_global_size.nky / 3.){
             space_zerosKy[iy] = 0.;
             //printf("ky[%d] = 0 for %f\n", iy, space_ky[iy]);
         }
@@ -146,10 +149,10 @@ void space_generateWaveSpace() {
     //space_iKy[1] = (0,0);
     printf("[MPI process %d] ky generated \n", mpi_my_rank);
     for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
-        space_kz[iz] = deltaKz * iz;
+        space_kz[iz] = space_dKz * iz;
         space_iKz[iz] = 1.j * space_kz[iz];
         //filling space_zerosKz array either with zeros or ones
-        if(fabs(space_ky[iz]) > deltaKz * array_global_size.nz/3.){
+        if(fabs(space_ky[iz]) > space_dKz * array_global_size.nz / 3.){
             space_zerosKz[iz] = 0.;
             printf("kz[%d] = 0 for %f\n", iz, space_kz[iz]);
         }
