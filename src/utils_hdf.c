@@ -1113,6 +1113,21 @@ void hdf_createParamFile()
             H5Dclose(dset_id);
             H5Pclose(plist_id);
 
+            /*creating a kSpecH dataset*/
+            plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+            H5Pset_chunk(plist_id, 2, chunk_spec_k);
+            dspace_id = H5Screate_simple(2,dims_spec_k,max_dims_k);
+            dset_id = H5Dcreate2(file_id,
+                                 "/spectra/kSpecH",
+                                 H5T_NATIVE_DOUBLE,
+                                 dspace_id,
+                                 H5P_DEFAULT,
+                                 plist_id,
+                                 H5P_DEFAULT);
+            H5Sclose(dspace_id);
+            H5Dclose(dset_id);
+            H5Pclose(plist_id);
+
             /*creating a kSpecPhi dataset*/
             plist_id   = H5Pcreate(H5P_DATASET_CREATE);
             H5Pset_chunk(plist_id, 2, chunk_spec_k);
@@ -1272,6 +1287,25 @@ void hdf_saveKSpec(int timestep) {
     {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_kSpec);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+
+    /* writing h spec to the file*/
+    /*opening a group and a dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/spectra/kSpecH", H5P_DEFAULT);
+    /*extent dataset dims*/
+    H5Dset_extent(dset_id, size);
+    /*write free energy to the file*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(2,dims_ext,NULL);
+
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_kSpecH);
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
@@ -2512,7 +2546,7 @@ void hdf_readData(char *filename, COMPLEX *h) {
     file_id = H5Fopen(filename,H5F_ACC_RDONLY,plist_id);
     H5Pclose(plist_id);
     /*open dataset*/
-    dset_id = H5Dopen2(file_id, "g", H5P_DEFAULT);
+    dset_id = H5Dopen2(file_id, "h", H5P_DEFAULT);
     file_space = H5Dget_space(dset_id);
     H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset, stride, count, chunk_dims_c);
     memory_space = H5Screate_simple(hdf_rank, chunk_dims_c, NULL);

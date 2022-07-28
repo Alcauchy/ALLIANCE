@@ -41,6 +41,10 @@ double *diag_kSpecBperp = 0;
  * \brief used to store B_par energy k spectra*/
 double *diag_kSpecBpar = 0;
 
+/**\var double *diag_kSpecH
+ * \brief used to store h energy k spectra*/
+double *diag_kSpecH = 0;
+
 /**\var double *diag_mSpec
  * \brief used to store free energy m spectra*/
 double *diag_mSpec = 0;
@@ -116,6 +120,7 @@ void diag_initSpec() {
             diag_kSpecPhi = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecPhi));
             diag_kSpecBperp = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecBperp));
             diag_kSpecBpar = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecBpar));
+            diag_kSpecH = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecH));
         }
         if(systemType == ELECTROSTATIC){
             diag_kSpecPhi = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecPhi));
@@ -341,6 +346,7 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
         if (parameters.compute_k) {
             diag_computeKSpectrum(g, h, diag_kSpec);
             diag_computeFieldSpectrum();
+            diag_computeHSpectrum(h);
             hdf_saveKSpec(timestep);
         }
         if (parameters.compute_m) {
@@ -412,12 +418,54 @@ void diag_computeFieldSpectrum() {
                 diag_kSpecBpar[ishell] /= diag_shellNorm[ishell];
                 diag_kSpecBperp[ishell] /= diag_shellNorm[ishell];
             }
-            MPI_Reduce(MPI_IN_PLACE, diag_kSpecPhi, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-            MPI_Reduce(MPI_IN_PLACE, diag_kSpecBpar, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-            MPI_Reduce(MPI_IN_PLACE, diag_kSpecBperp, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+            if (mpi_my_row_rank == 0){
+                MPI_Reduce(MPI_IN_PLACE, diag_kSpecPhi, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
+                MPI_Reduce(MPI_IN_PLACE, diag_kSpecBpar, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
+                MPI_Reduce(MPI_IN_PLACE, diag_kSpecBperp, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
+            }
+            else{
+                MPI_Reduce(diag_kSpecPhi, diag_kSpecPhi, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
+                MPI_Reduce(diag_kSpecBpar, diag_kSpecBpar, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
+                MPI_Reduce(diag_kSpecBperp, diag_kSpecBperp, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
+            }
+
             break;
         default:
             printf("ERROR COMPUTING FIELD SPECTRA! EXITING...\n");
             exit(1);
     }
 };
+/***************************************
+ * \fn diag_computeHSpectrum(const COMPLEX *h)
+ *
+ * computes field energy \f$k_{\perp}\f$ spectra
+ * \f$ W(k^{shell}_i) = \frac{1}{N}\sum_{k^{shell}_{i-1}<|\mathbf{k}_{\perp}|<k^{shell}_{i}}\sum_{k_z,l,m,s} g \bar{h}\f$
+ * where \f$N\f$ is a number of wave vectors between shells \f$k^{shell}_{i-1}\f$ and \f$k^{shell}_{i}\f$
+ ***************************************/
+void diag_computeHSpectrum(const COMPLEX *h) {
+    size_t ind6D;
+    for (size_t ishell = 0; ishell < diag_numOfShells + 1; ishell++){
+        for(size_t ix = 0; ix < array_local_size.nkx; ix ++){
+            for(size_t iy = 0; iy < array_local_size.nky; iy ++){
+                for(size_t iz = 0; iz < array_local_size.nkz; iz ++){
+                    for(size_t il = 0; il < array_local_size.nl; il ++){
+                        for(size_t im = 0; im < array_local_size.nm; im ++){
+                            for(size_t is = 0; is < array_local_size.ns; is ++){
+                                ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                                diag_kSpecH[ishell] += var_var.T[is]/var_var.m[is] * cabs(h[ind6D]) * cabs(h[ind6D]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        diag_kSpecH[ishell] /= diag_shellNorm[ishell];
+    }
+    if(mpi_my_rank == 0){
+        MPI_Reduce(MPI_IN_PLACE, diag_kSpecH, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+    }
+    else{
+        MPI_Reduce(diag_kSpecH, diag_kSpecH, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+    }
+
+}
