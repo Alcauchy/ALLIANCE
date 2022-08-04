@@ -29,6 +29,9 @@ struct rk4 rk4;
  ***************************************/
 void solver_init() {
     solver.dt = parameters.dt;
+    solver.linDt = parameters.linDt;
+    solver.linDt = parameters.linDt;
+    solver.dissipDt = parameters.dissipDt;
     solver.curTime = 0.;
     solver.Nt = parameters.Nt;
     solver.iter_dt = parameters.iter_dt;
@@ -196,7 +199,9 @@ void solver_updateDt(COMPLEX *g, COMPLEX *h, int it) {
                 exit(1);
         }
         MPI_Allreduce(MPI_IN_PLACE, &v_perp, 2, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-        solver.dt = 0.5 / (v_perp[0] / space_dx + v_perp[1] / space_dy);
+        solver.nonlinDt = 0.5 / (v_perp[0] / space_dx + v_perp[1] / space_dy);
+        solver.dt = (solver.nonlinDt < solver.linDt) ? solver.nonlinDt : solver.linDt;
+        solver.dt = (solver.dt < solver.dissipDt) ? solver.dt : solver.dissipDt;
         if (mpi_my_rank == 0) printf("it = %d\t t = %f\t dt = %f\n", it, solver.curTime, solver.dt);
        // if (mpi_my_rank == 0) printf("t = %f\n", solver.curTime);
        // if (mpi_my_rank == 0) printf("dt = %f\n", solver.dt);

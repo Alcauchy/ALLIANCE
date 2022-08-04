@@ -425,10 +425,35 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
 
     /* computing linear term */
-    equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
-
+    //equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
+    /* computing dissipation */
+    equation_getDissipation(in_h, out);
     /* computing nonlinear term */
     equation_getNonlinearTerm(in_h, out);
     free(minus_boundary);
     free(plus_boundary);
+};
+
+/***************************************
+ * \fn void equation_getDissipation()
+ * \brief computes dissipation.
+ ***************************************/
+void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
+    size_t ind6D;
+    size_t ind2D;
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for (size_t iy = 0; iy < array_local_size.nky; iy++){
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for (size_t im = 0; im < array_local_size.nm; im++){
+                    for (size_t il = 0; il < array_local_size.nl; il++){
+                        for (size_t is = 0; is < array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                            ind2D = ix * array_local_size.nky + iy;
+                            rhs[ind6D] -= (var_var.mu_k * space_kPerp2[ind2D] + var_var.mu_m * global_nm_index[im])  * h[ind6D] ;
+                        }
+                    }
+                }
+            }
+        }
+    }
 };

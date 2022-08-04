@@ -25,6 +25,9 @@ struct system_param {
     double Ly;
     double Lz;
 
+    double mu_k;
+    double mu_m;
+
     int dealiasing;
     int electromagnetic;
     int adiabatic;
@@ -37,6 +40,8 @@ struct system_param {
     double *charge;
 
     double dt;
+    double linDt;
+    double dissipDt;
     int iter_dt;
     int Nt;
 

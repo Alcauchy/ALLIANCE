@@ -284,6 +284,26 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.iter_dt);
                 if (mpi_my_rank == IO_RANK) printf("[MPI process %d] update dt every %d steps \n", mpi_my_rank, parameters.iter_dt);
             }
+            if (strcmp(tmp, "dissip_k") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.mu_k);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] dissipation in k is %f \n", mpi_my_rank, parameters.mu_k);
+            }
+            if (strcmp(tmp, "dissip_m") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.mu_m);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] dissipation in m is %f \n", mpi_my_rank, parameters.mu_m);
+            }
+            if (strcmp(tmp, "dt_dissip") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.dissipDt);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] dissipation time step is %f \n", mpi_my_rank, parameters.dissipDt);
+            }
+            if (strcmp(tmp, "dt_linear") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.linDt);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] linear time step is %f \n", mpi_my_rank, parameters.linDt);
+            }
         }
     }
     init_global_size();

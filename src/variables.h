@@ -27,6 +27,8 @@ struct phys_params{
         double *rho;
         double *b;
         double B0;
+        double mu_k;
+        double mu_m;
 };
 
 extern struct phys_params var_var;

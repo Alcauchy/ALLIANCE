@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include "array.h"
 
-void
-equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, const COMPLEX *minus_boundary, COMPLEX *out);
+void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, const COMPLEX *minus_boundary, COMPLEX *out);
+void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs);
 void equation_getNonlinearElectromagnetic();
 void equation_getNonlinearElectrostatic();
 void equation_getNonlinearProduct(double *in, double *chiAr, double *out, double sign);
