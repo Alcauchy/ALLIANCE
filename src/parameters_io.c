@@ -304,6 +304,21 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.linDt);
                 if (mpi_my_rank == IO_RANK) printf("[MPI process %d] linear time step is %f \n", mpi_my_rank, parameters.linDt);
             }
+            if (strcmp(tmp, "k_max") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.forceKmax);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] forcing kmax = %f \n", mpi_my_rank, parameters.forceKmax);
+            }
+            if (strcmp(tmp, "k_min") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.forceKmin);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] forcing k_min = %f \n", mpi_my_rank, parameters.forceKmin);
+            }
+            if (strcmp(tmp, "power") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.forcePower);
+                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] forcing power = %f \n", mpi_my_rank, parameters.forcePower);
+            }
         }
     }
     init_global_size();

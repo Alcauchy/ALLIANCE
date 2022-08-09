@@ -45,6 +45,10 @@ struct system_param {
     int iter_dt;
     int Nt;
 
+    double forceKmin;
+    double forceKmax;
+    double forcePower;
+
     int compute_k;
     int compute_m;
     int k_shells;

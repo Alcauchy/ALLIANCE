@@ -8,6 +8,7 @@ include_directories(${MPI_INCLUDE_PATH})
 #set(HDF5_PREFER_PARALLEL TRUE)
 include_directories("/home/alcauchy/hdf5/hdf5/include")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
+set(CMAKE_C_FLAGS_DEBUG "-O3")
 add_executable(Alliance_alpha_1_0
         src/main.c
         src/utils_mpi.h src/utils_mpi.c

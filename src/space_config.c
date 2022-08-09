@@ -95,7 +95,7 @@ void space_generateWaveSpace() {
                           sizeof(*space_kPerp2));
 
     space_kSq = malloc(array_local_size.nkx * array_local_size.nky * array_local_size.nkz *
-                          sizeof(*space_kPerp2));
+                          sizeof(*space_kSq));
 
     space_zerosKx = malloc(array_local_size.nkx * sizeof(*space_zerosKx));
     space_zerosKy = malloc(array_local_size.nky * sizeof(*space_zerosKy));

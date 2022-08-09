@@ -52,6 +52,7 @@ void init_start(char *filename){
  ***************************************/
 void init_physicalSystem(){
     space_init();
+    equation_init();
     diag_initSpec();
     var_init();
     fields_init();
@@ -147,7 +148,7 @@ void fill_rand(COMPLEX *ar1) {
                                 double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
                                 ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
                                 if (space_kPerp[ind3D] > 1e-10){
-                                    double amplitude = sqrt(init_energySpec(sqrt(space_kPerp[ind3D]), 0, .01, .5) / 2.0/ M_PI);
+                                    double amplitude = sqrt(init_energySpec(sqrt(space_kPerp[ind3D]), 0, .0001, .5) / 2.0/ M_PI);
                                     ar1[ind6D] *=amplitude;
                                 }
                                 if(global_nkx_index[ix_local] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;

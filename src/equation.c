@@ -13,6 +13,8 @@
 // equation_getNonlinearElectrostatic
 // equation_getNonlinearTerm
 // equation_getRHS
+// equation_init
+// equation_getForcing
 //
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
@@ -26,6 +28,13 @@
 #define CHI_PHI 0
 #define CHI_A 1
 #define CHI_B 2
+
+size_t *equation_forceKxInd;
+size_t *equation_forceKyInd;
+size_t *equation_forceKzInd;
+int equation_forceKn;
+int equation_forceNorm;
+double equation_forcingCoef;
 
 /***************************************
  * \fn void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, const COMPLEX *minus_boundary, COMPLEX *out)
@@ -423,10 +432,10 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
 
     /* boundary exchange */
     mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
-
     /* computing linear term */
-    //equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
-    /* computing dissipation */
+    equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
+    /* computing dissipation and forcing*/
+    equation_getForcing(in_h, out);
     equation_getDissipation(in_h, out);
     /* computing nonlinear term */
     equation_getNonlinearTerm(in_h, out);
@@ -452,6 +461,89 @@ void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
                             rhs[ind6D] -= (var_var.mu_k * space_kPerp2[ind2D] + var_var.mu_m * global_nm_index[im])  * h[ind6D] ;
                         }
                     }
+                }
+            }
+        }
+    }
+};
+
+/***************************************
+ * \fn void equation_init()
+ * \brief initializes forcing.
+ ***************************************/
+void equation_init() {
+    double k_min = parameters.forceKmin;
+    double k_max = parameters.forceKmax;
+    size_t ind3D;
+    equation_forceKn = 0;
+    equation_forceNorm = 0;
+
+    // find out how many wave numbers will be forced
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                        iy * array_local_size.nkz +
+                        iz;
+                if(space_kSq[ind3D] > k_min * k_min && space_kSq[ind3D] < k_max * k_max){
+                    equation_forceKn += 1;
+                }
+            }
+        }
+    }
+    printf("[MPI process %d] forcing %d modes\n",mpi_my_rank,equation_forceKn);
+    MPI_Allreduce(&equation_forceKn,&equation_forceNorm,1,MPI_INT, MPI_SUM, mpi_row_comm);
+    if (mpi_my_rank == 0) printf("%d\n",equation_forceNorm);
+
+    // putting list of indices of wave numbers which are excited
+    equation_forceKxInd = malloc(equation_forceKn * sizeof(*equation_forceKxInd));
+    equation_forceKyInd = malloc(equation_forceKn * sizeof(*equation_forceKyInd));
+    equation_forceKzInd = malloc(equation_forceKn * sizeof(*equation_forceKzInd));
+    size_t count = 0;
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                        iy * array_local_size.nkz +
+                        iz;
+                if(space_kSq[ind3D] > k_min * k_min && space_kSq[ind3D] < k_max * k_max){
+                    equation_forceKxInd[count] = ix;
+                    equation_forceKyInd[count] = iy;
+                    equation_forceKzInd[count] = iz;
+                    count++;
+                }
+            }
+        }
+    }
+    //forcing coefficient
+    equation_forcingCoef = parameters.forcePower /
+                           equation_forceNorm *
+                           (array_global_size.nx * array_global_size.ny * array_global_size.nz);
+};
+
+/***************************************
+ * \fn void equation_getForcing()
+ * \brief adds forcing to the RHS.
+ ***************************************/
+void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
+    size_t local_m;
+    size_t forced_proc;
+    size_t indKx;
+    size_t indKy;
+    size_t indKz;
+    size_t ind6D;
+    forced_proc = mpi_whereIsM[2];
+    local_m = mpi_whereIsM[3];
+    // find out how many wave numbers will be forced
+    if (mpi_my_col_rank == forced_proc){
+        for(size_t i = 0; i < equation_forceKn; i++){
+            indKx = equation_forceKxInd[i];
+            indKy = equation_forceKyInd[i];
+            indKz = equation_forceKzInd[i];
+            for(size_t is = 0; is < array_local_size.ns; is++){
+                ind6D = get_flat_c(is,0,local_m,indKx,indKy,indKz);
+                if (cabs(h[ind6D]) > 1e-16){
+                    rhs[ind6D] += equation_forcingCoef/conj(h[ind6D]);
                 }
             }
         }

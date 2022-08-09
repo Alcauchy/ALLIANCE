@@ -1003,3 +1003,47 @@ void test_transposedFFTW(){
     fftw_transposeToYX_field();
     fftw_r2c_field();
 }
+
+/***************************
+*  test_spectra()
+* *************************/
+void test_spectra(){
+    size_t ind3D;
+    size_t ind2D;
+    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
+    init_conditions(h);
+    fields_sendF(h);
+    fields_getFieldsFromH(f00, f10, f01);
+    fields_getChi();
+    distrib_getG(g, h);
+    for(size_t ix = 0; ix < array_local_size.nkx; ix ++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy ++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz ++){
+                ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                        iy * array_local_size.nkz +
+                        iz;
+                ind2D = ix * array_local_size.nky +
+                        iy;
+                fields_fields.B[ind3D] = space_kPerp2[ind2D];
+            }
+        }
+    }
+    diag_computeFieldSpectrum();
+    hdf_saveKSpec(0);
+    hdf_saveData(h, 0);
+}
+
+/***************************
+*  test_forcing()
+* *************************/
+void test_forcing(){
+    COMPLEX *rhs = malloc(array_local_size.total_comp * sizeof(*rhs));
+    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
+    for(size_t i = 0; i < array_local_size.total_comp; i++){
+        h[i] = 1;
+        rhs[i] = 0;
+    }
+    equation_getForcing(h,rhs);
+    hdf_saveData(rhs,0);
+}

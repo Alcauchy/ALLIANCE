@@ -199,6 +199,7 @@ void solver_updateDt(COMPLEX *g, COMPLEX *h, int it) {
                 exit(1);
         }
         MPI_Allreduce(MPI_IN_PLACE, &v_perp, 2, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        if(mpi_my_rank == 0) printf("max speed = (%f,%f)\n",v_perp[0],v_perp[1]);
         solver.nonlinDt = 0.5 / (v_perp[0] / space_dx + v_perp[1] / space_dy);
         solver.dt = (solver.nonlinDt < solver.linDt) ? solver.nonlinDt : solver.linDt;
         solver.dt = (solver.dt < solver.dissipDt) ? solver.dt : solver.dissipDt;
