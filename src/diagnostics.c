@@ -120,7 +120,7 @@ void diag_initSpec() {
             diag_kSpecPhi = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecPhi));
             diag_kSpecBperp = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecBperp));
             diag_kSpecBpar = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecBpar));
-            diag_kSpecH = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecH));
+            diag_kSpecH = calloc((diag_numOfShells + 1) * array_local_size.nm, sizeof(*diag_kSpecH));
         }
         if(systemType == ELECTROSTATIC){
             diag_kSpecPhi = calloc((diag_numOfShells + 1), sizeof(*diag_kSpecPhi));
@@ -444,6 +444,7 @@ void diag_computeFieldSpectrum() {
  ***************************************/
 void diag_computeHSpectrum(const COMPLEX *h) {
     size_t ind6D;
+    size_t ind2D;
     for (size_t ishell = 0; ishell < diag_numOfShells + 1; ishell++){
         for(size_t ix = 0; ix < array_local_size.nkx; ix ++){
             for(size_t iy = 0; iy < array_local_size.nky; iy ++){
@@ -452,20 +453,20 @@ void diag_computeHSpectrum(const COMPLEX *h) {
                         for(size_t im = 0; im < array_local_size.nm; im ++){
                             for(size_t is = 0; is < array_local_size.ns; is ++){
                                 ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                diag_kSpecH[ishell] += var_var.T[is]/var_var.m[is] * cabs(h[ind6D]) * cabs(h[ind6D]);
+                                ind2D = ishell * array_local_size.nm + im;
+                                diag_kSpecH[ind2D] += var_var.T[is]/var_var.m[is] * cabs(h[ind6D]) * cabs(h[ind6D]) / diag_shellNorm[ishell];
                             }
                         }
                     }
                 }
             }
         }
-        diag_kSpecH[ishell] /= diag_shellNorm[ishell];
     }
-    if(mpi_my_rank == 0){
-        MPI_Reduce(MPI_IN_PLACE, diag_kSpecH, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+    if(mpi_my_row_rank == 0){
+        MPI_Reduce(MPI_IN_PLACE, diag_kSpecH, (diag_numOfShells + 1) * array_local_size.nm, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
     }
     else{
-        MPI_Reduce(diag_kSpecH, diag_kSpecH, diag_numOfShells + 1, MPI_DOUBLE, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+        MPI_Reduce(diag_kSpecH, diag_kSpecH, (diag_numOfShells + 1)* array_local_size.nm, MPI_DOUBLE, MPI_SUM, TO_ROOT, mpi_row_comm);
     }
 
 }

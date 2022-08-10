@@ -1047,11 +1047,14 @@ void hdf_createParamFile()
         H5Gclose(group_id);
 
         hid_t dims_spec_k[2] = {0,diag_numOfShells + 1};
+        hid_t dims_spec_k2D[3] = {0,diag_numOfShells + 1,parameters.nm};
         hid_t dims_spec_m[2] = {0,parameters.nm};
-        hid_t chunk_spec_k[2] = {1,diag_numOfShells + 1};
+        hid_t chunk_spec_k[2] = {1, diag_numOfShells + 1};
+        hid_t chunk_spec_k2D[3] = {1, diag_numOfShells + 1, parameters.nm};
         hid_t chunk_spec_k_borders[2] = {1,diag_numOfShells + 2};
         hid_t chunk_spec_m[2] = {1,parameters.nm};
         hid_t max_dims_k[2] = {H5S_UNLIMITED,diag_numOfShells + 1};
+        hid_t max_dims_k2D[3] = {H5S_UNLIMITED,diag_numOfShells + 1,parameters.nm};
         hid_t max_dims_m[2] = {H5S_UNLIMITED,parameters.nm};
         /*creating a dt and timestep datasets*/
         /* creating timestep dataset*/
@@ -1115,8 +1118,8 @@ void hdf_createParamFile()
 
             /*creating a kSpecH dataset*/
             plist_id   = H5Pcreate(H5P_DATASET_CREATE);
-            H5Pset_chunk(plist_id, 2, chunk_spec_k);
-            dspace_id = H5Screate_simple(2,dims_spec_k,max_dims_k);
+            H5Pset_chunk(plist_id, 3, chunk_spec_k2D);
+            dspace_id = H5Screate_simple(3,dims_spec_k2D,max_dims_k2D);
             dset_id = H5Dcreate2(file_id,
                                  "/spectra/kSpecH",
                                  H5T_NATIVE_DOUBLE,
@@ -1142,7 +1145,7 @@ void hdf_createParamFile()
             H5Sclose(dspace_id);
             H5Dclose(dset_id);
             H5Pclose(plist_id);
-            /*creating a kSpecBperp kSpecBpar dataset*/
+            /*creating a kSpecBperp kSpecBperp dataset*/
             if (systemType == ELECTROMAGNETIC){
                 /*creating a kSpecBperp dataset*/
                 plist_id   = H5Pcreate(H5P_DATASET_CREATE);
@@ -1255,8 +1258,11 @@ void hdf_saveKSpec(int timestep) {
     hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
     hid_t plist_id; //property list id
     hid_t dims_ext[2] = {1,diag_numOfShells + 1};
+    hid_t dims_ext2D[3] = {1,diag_numOfShells + 1,array_local_size.nm};
     hid_t size[2];
+    hid_t size2D[3];
     hid_t offset[2];
+    hid_t offset2D[3];
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
     /* open file to read and write */
@@ -1295,14 +1301,27 @@ void hdf_saveKSpec(int timestep) {
     /*opening a group and a dataset*/
     /*opening a group*/
     dset_id = H5Dopen2(file_id, "/spectra/kSpecH", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    /*get dataset's dimensions */
+    int ndims2D = H5Sget_simple_extent_ndims(dspace_id);
+    hsize_t *dims2D = malloc(ndims * sizeof(*dims2D));
+    H5Sget_simple_extent_dims(dspace_id, dims2D, NULL);
+    H5Sclose(dspace_id);
+    /*extend dataset size*/
+    size2D[0] = dims2D[0] + dims_ext2D[0];
+    size2D[1] = dims2D[1];
+    size2D[2] = dims2D[2];
+    offset2D[0] = dims2D[0];
+    offset2D[1] = 0;
+    offset2D[2] = mpi_my_col_rank * parameters.nm / mpi_dims[0];
     /*extent dataset dims*/
-    H5Dset_extent(dset_id, size);
+    H5Dset_extent(dset_id, size2D);
     /*write free energy to the file*/
     dspace_id = H5Dget_space(dset_id);
-    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
-    memspace = H5Screate_simple(2,dims_ext,NULL);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset2D, NULL, dims_ext2D, NULL);
+    memspace = H5Screate_simple(3,dims_ext2D,NULL);
 
-    if(mpi_my_rank == 0)
+    if(mpi_my_row_rank == 0)
     {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_kSpecH);
