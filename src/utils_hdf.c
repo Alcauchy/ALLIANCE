@@ -255,7 +255,9 @@ void hdf_create_file_c(char *filename, COMPLEX *data){
  * *************************/
 void hdf_create_file_r(char *filename, double *data){
     //transpose the data
+    printf("hi\n");
     fftw_copy_buffer_r(fftw_hBuf,data);
+    printf("hi1\n");
     fftw_transposeToXY();
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -272,7 +274,7 @@ void hdf_create_file_r(char *filename, double *data){
 
     plist_id = H5Pcreate(H5P_DATASET_CREATE); //creating chunked dataset
     H5Pset_chunk(plist_id, hdf_rank, chunk_dims_r);
-    dset_id = H5Dcreate(file_id,"g", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    dset_id = H5Dcreate(file_id,"hr", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
     H5Pclose(plist_id);
     H5Sclose(file_space);
 
@@ -1100,6 +1102,18 @@ void hdf_createParamFile()
             H5Sclose(dspace_id);
             H5Dclose(dset_id);
             H5Pclose(plist_id);
+
+            /* creating normalizations dataset dataset */
+            plist_id = H5Pcreate(H5P_DATASET_CREATE);
+            H5Pset_chunk(plist_id, 1, &chunk_spec_k[1]);
+            dspace_id = H5Screate_simple(1,&chunk_spec_k[1],&chunk_spec_k[1]);
+            dset_id = H5Dcreate2(file_id, "/spectra/norm", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+                                 H5P_DEFAULT);
+            H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, diag_shellNorm);
+            H5Sclose(dspace_id);
+            H5Dclose(dset_id);
+            H5Pclose(plist_id);
+
 
             /*creating a kSpec dataset*/
             plist_id   = H5Pcreate(H5P_DATASET_CREATE);

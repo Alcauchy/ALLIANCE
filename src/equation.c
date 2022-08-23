@@ -516,9 +516,7 @@ void equation_init() {
         }
     }
     //forcing coefficient
-    equation_forcingCoef = parameters.forcePower /
-                           equation_forceNorm *
-                           (array_global_size.nx * array_global_size.ny * array_global_size.nz);
+    equation_forcingCoef = parameters.forcePower / equation_forceNorm;
 };
 
 /***************************************
