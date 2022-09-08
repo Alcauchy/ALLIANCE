@@ -21,10 +21,12 @@
 enum electromagnetic{ELECTROSTATIC,ELECTROMAGNETIC};
 enum adiabatic{NONADIABATIC,ADIABATIC};
 enum initial{RANDOM, FROMFILE};
+enum spectrum{UNIT, SHELL};
+enum dealiasing {ALIASED, TWOTHIRDS};
 
 void init_start(char *filename);
 void init_printParameters();
-void init_initEnums();
+void init_initFlags();
 void init_conditions(COMPLEX *data);
 void init_computation();
 void init_physicalSystem();
@@ -35,4 +37,6 @@ void init_fillSinc(COMPLEX *out);
 extern enum adiabatic kinetic;
 extern enum electromagnetic systemType;
 extern enum initial initialConditions;
+extern enum spectrum spectrumType;
+extern enum dealiasing dealiasingType;
 #endif //ALLIANCE_ALPHA_1_0_INIT_H

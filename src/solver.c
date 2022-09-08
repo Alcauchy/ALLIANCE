@@ -36,6 +36,7 @@ void solver_init() {
     solver.Nt = parameters.Nt;
     solver.iter_dt = parameters.iter_dt;
     solverType = SOLVERTYPE;
+    if (mpi_my_rank == IORANK) printf("================SOLVER===============\n");
     if (solverType == RK4) {
         if (mpi_my_rank == IORANK) printf("CHOSEN SOLVER IS RUNGE-KUTTA 4\n");
         rk4.K_buf = calloc(array_local_size.total_comp, sizeof(*rk4.K_buf));

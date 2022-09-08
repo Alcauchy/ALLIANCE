@@ -35,6 +35,7 @@ int main(int argc, char **argv) {
     distrib_getG(g, h);
     diag_compute(g, h, 0);
     hdf_saveData(h, 0);
+    diag_print(h,0);
     //updating the time step size
     solver_updateDt(g, h, 0);
     //
@@ -49,6 +50,8 @@ int main(int argc, char **argv) {
         diag_compute(g, h, it);
         //save data
         hdf_saveData(h, it);
+        //print data
+        diag_print(h,it);
     }
     //
     // finalizing run

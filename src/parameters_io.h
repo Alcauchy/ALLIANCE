@@ -8,7 +8,7 @@
 #include "utils_mpi.h"
 #include "array.h"
 
-enum DEALIASING {ALIASED, TWOTHIRDS};
+
 
 void read_parameters(char *filename);
 void read_parametersFromFile(char *filename);
@@ -51,7 +51,6 @@ struct system_param {
 
     int compute_k;
     int compute_m;
-    int k_shells;
     int iter_diagnostics;
     int iter_EMfield;
     int checkpoints;
@@ -63,6 +62,8 @@ struct system_param {
     int save_distrib;
     double firstShell;
     double lastShell;
+    int spectrum;
+    double unitK;
 
     int nproc_m;
     int nproc_k;

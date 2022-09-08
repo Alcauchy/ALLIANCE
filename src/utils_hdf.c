@@ -150,7 +150,7 @@ void hdf_init(){
     offset[4] = 0;
     offset[5] = 0;
 
-    printf("[MPI process %d] my coords are (%d, %d), offsets are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
+    if(VERBOSE) printf("[MPI process %d] my coords are (%d, %d), offsets are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
            offset[0],
@@ -159,7 +159,7 @@ void hdf_init(){
            offset[3],
            offset[4],
            offset[5]);
-    printf("[MPI process %d] my coords are (%d, %d), chunk dims for real are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
+    if(VERBOSE) printf("[MPI process %d] my coords are (%d, %d), chunk dims for real are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
            chunk_dims_r[0],
@@ -168,7 +168,7 @@ void hdf_init(){
            chunk_dims_r[3],
            chunk_dims_r[4],
            chunk_dims_r[5]);
-    printf("[MPI process %d] my coords are (%d, %d), chunk dims for complex are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
+    if(VERBOSE) printf("[MPI process %d] my coords are (%d, %d), chunk dims for complex are (%lld,%lld,%lld,%lld,%lld,%lld)\n",mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
            chunk_dims_c[0],
@@ -224,9 +224,9 @@ void hdf_create_file_c(char *filename, COMPLEX *data){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
-    printf("[process id %d] trying to create a file\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rank, dataspace_dims_c, NULL);
     memory_space = H5Screate_simple(hdf_rank, chunk_dims_c, NULL);
@@ -255,9 +255,7 @@ void hdf_create_file_c(char *filename, COMPLEX *data){
  * *************************/
 void hdf_create_file_r(char *filename, double *data){
     //transpose the data
-    printf("hi\n");
     fftw_copy_buffer_r(fftw_hBuf,data);
-    printf("hi1\n");
     fftw_transposeToXY();
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
@@ -265,9 +263,9 @@ void hdf_create_file_r(char *filename, double *data){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
-    printf("[process id %d] trying to create a file\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rank, dataspace_dims_r, NULL);
     memory_space = H5Screate_simple(hdf_rank, chunk_dims_r, NULL);
@@ -313,7 +311,7 @@ void hdf_initChi(){
         chunk_dimsChi[2] = array_local_size.nkz;
         chunk_dimsChi[3] = array_local_size.ns;
         chunk_dimsChi[4] = 1;
-        printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
+        if(VERBOSE) printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
 
         chunk_dimsChi_r[0] = array_local_size.nkx;
         chunk_dimsChi_r[1] = array_local_size.nky;
@@ -352,7 +350,7 @@ void hdf_initChi(){
         chunk_dimsChi[2] = array_local_size.nkz;
         chunk_dimsChi[3] = array_local_size.ns;
         chunk_dimsChi[4] = 3;
-        printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
+        if(VERBOSE) printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
 
         chunk_dimsChi_r[0] = array_local_size.nkx;
         chunk_dimsChi_r[1] = array_local_size.nky;
@@ -388,9 +386,9 @@ void hdf_createChiFile_r(char *filename, double *data){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
-    printf("[process id %d] trying to create a file\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rankChi, dataspace_dimsChi_r, NULL);
     memory_space = H5Screate_simple(hdf_rankChi, chunk_dimsChi_r, NULL);
@@ -424,9 +422,9 @@ void hdf_createChiFile_c(char *filename, COMPLEX *data){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_cube_comm, info);
-    printf("[process id %d] trying to create a file\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rank, dataspace_dimsChi, NULL);
     memory_space = H5Screate_simple(hdf_rank, chunk_dimsChi, NULL);
@@ -467,7 +465,7 @@ void hdf_initField(){
     chunk_dimsFields[0] = array_local_size.nkx;
     chunk_dimsFields[1] = array_local_size.nky;
     chunk_dimsFields[2] = array_local_size.nkz;
-    printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
+    if(VERBOSE) printf("[MPI process %d] %llu %llu %llu\n",mpi_my_rank, chunk_dimsFields[0],chunk_dimsFields[1],chunk_dimsFields[2]);
 
     chunk_dimsFields_r[0] = array_local_size.nkx;
     chunk_dimsFields_r[1] = array_local_size.nky;
@@ -493,9 +491,9 @@ void hdf_saveFieldA(char *filename){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
-    printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rankFields, dataspace_dimsFields, NULL);
     memory_space = H5Screate_simple(hdf_rankFields, chunk_dimsFields, NULL);
@@ -533,9 +531,9 @@ void hdf_saveField_r(double *f, char *filename){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
-    printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rankFields, dataspace_dimsFields_r, NULL);
     memory_space = H5Screate_simple(hdf_rankFields, chunk_dimsFields_r, NULL);
@@ -571,9 +569,9 @@ void hdf_saveFieldB(char *filename){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
-    printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rankFields, dataspace_dimsFields, NULL);
     memory_space = H5Screate_simple(hdf_rankFields, chunk_dimsFields, NULL);
@@ -608,9 +606,9 @@ void hdf_saveFieldPhi(char *filename){
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
     H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
-    printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
-    printf("[process id %d] file created\n",mpi_my_rank);
+    if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
     H5Pclose(plist_id);
     file_space = H5Screate_simple(hdf_rankFields, dataspace_dimsFields, NULL);
     memory_space = H5Screate_simple(hdf_rankFields, chunk_dimsFields, NULL);
@@ -717,14 +715,17 @@ void hdf_saveEnergy(int timestep)
  * *************************/
 void hdf_saveData(COMPLEX *h, int timestep) {
     if (parameters.save_EMfield && timestep % parameters.iter_EMfield == 0) {
+        if (mpi_my_rank == 0) printf("saving fields\n");
         hdf_saveFields(timestep);
     }
     if (parameters.checkpoints && timestep % parameters.iter_checkpoint == 0)
     {
+        if (mpi_my_rank == 0) printf("saving checkpoint\n");
         hdf_createCheckpoint(h, timestep);
     }
     if (parameters.save_distrib && timestep % parameters.iter_distribution == 0)
     {
+        if (mpi_my_rank == 0) printf("saving distribution function\n");
         hdf_saveDistrib(h,timestep);
     }
 }
@@ -1048,15 +1049,15 @@ void hdf_createParamFile()
         group_id = H5Gcreate2(file_id, "/spectra", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         H5Gclose(group_id);
 
-        hid_t dims_spec_k[2] = {0,diag_numOfShells + 1};
-        hid_t dims_spec_k2D[3] = {0,diag_numOfShells + 1,parameters.nm};
+        hid_t dims_spec_k[2] = {0,diag_numOfShells};
+        hid_t dims_spec_k2D[3] = {0,diag_numOfShells,parameters.nm};
         hid_t dims_spec_m[2] = {0,parameters.nm};
-        hid_t chunk_spec_k[2] = {1, diag_numOfShells + 1};
-        hid_t chunk_spec_k2D[3] = {1, diag_numOfShells + 1, parameters.nm};
-        hid_t chunk_spec_k_borders[2] = {1,diag_numOfShells + 2};
+        hid_t chunk_spec_k[2] = {1, diag_numOfShells};
+        hid_t chunk_spec_k2D[3] = {1, diag_numOfShells, parameters.nm};
+        hid_t chunk_spec_k_borders[2] = {1,diag_numOfShellBounds};
         hid_t chunk_spec_m[2] = {1,parameters.nm};
-        hid_t max_dims_k[2] = {H5S_UNLIMITED,diag_numOfShells + 1};
-        hid_t max_dims_k2D[3] = {H5S_UNLIMITED,diag_numOfShells + 1,parameters.nm};
+        hid_t max_dims_k[2] = {H5S_UNLIMITED,diag_numOfShells};
+        hid_t max_dims_k2D[3] = {H5S_UNLIMITED,diag_numOfShells,parameters.nm};
         hid_t max_dims_m[2] = {H5S_UNLIMITED,parameters.nm};
         /*creating a dt and timestep datasets*/
         /* creating timestep dataset*/
@@ -1271,8 +1272,8 @@ void hdf_createFiles(){
 void hdf_saveKSpec(int timestep) {
     hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
     hid_t plist_id; //property list id
-    hid_t dims_ext[2] = {1,diag_numOfShells + 1};
-    hid_t dims_ext2D[3] = {1,diag_numOfShells + 1,array_local_size.nm};
+    hid_t dims_ext[2] = {1,diag_numOfShells};
+    hid_t dims_ext2D[3] = {1,diag_numOfShells,array_local_size.nm};
     hid_t size[2];
     hid_t size2D[3];
     hid_t offset[2];

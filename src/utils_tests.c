@@ -184,26 +184,6 @@ void test_fieldComparison(){
 }
 
 /***************************
- *  test_kSpecComputations()
- * *************************/
-void test_kSpecComputations(){
-    COMPLEX* h = malloc(array_local_size.total_comp * sizeof(*h));
-    COMPLEX* g = malloc(array_local_size.total_comp * sizeof(*g));
-    init_conditions(h);
-    fields_sendF(h);
-    fields_getFieldsFromH(f00, f10, f01);
-    fields_getChi();
-    distrib_getG(g, h);
-    diag_computeSpectra(g, h,0);
-    for(size_t i = 0; i < parameters.k_shells; i++){
-        printf("[MPI process %d] spec[%zu] = %f\n", mpi_my_rank,i,diag_kSpec[i]);
-    }
-    for(size_t i = 0; i < array_local_size.nm; i++){
-        printf("[MPI process %d] spec_m[%zu] = %f\n", mpi_my_rank,i,diag_mSpec[i]);
-    }
-}
-
-/***************************
  *  test_linearRHS()
  * *************************/
  void test_linearRHS(){

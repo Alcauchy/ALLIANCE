@@ -309,7 +309,15 @@ void fields_getA(const COMPLEX *g) {
                                    g[flatInd];
                         }
                         flatInd2D = ix * array_local_size.nky + iy;
-                        fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= A_denom[flatInd2D];
+                        if (fabs(space_kPerp2[flatInd2D]>1e-16))
+                        {
+                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= A_denom[flatInd2D];
+                        }
+                        else
+                        {
+                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= 0.0;
+                        }
+
                     }
                 }
             }
@@ -341,19 +349,13 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
         case ADIABATIC:
             break;
         case NONADIABATIC:
-            for(size_t ix = 0; ix < array_local_size.nkx; ix++)
-            {
-                for(size_t iy = 0; iy < array_local_size.nky; iy++)
-                {
+            for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+                for(size_t iy = 0; iy < array_local_size.nky; iy++){
                     ind2D = ix * array_local_size.nky + iy;
-
-                    if (fabs(phiB_denom[ind2D]) > 1e-16)
-                    {
-                        for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-                        {
+                    if (fabs(phiB_denom[ind2D]) > 1e-16){
+                        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
                             fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
-                            for(size_t is = 0; is < array_local_size.ns; is++)
-                            {
+                            for(size_t is = 0; is < array_local_size.ns; is++){
                                 ind3D = ix * array_local_size.nky  * array_local_size.ns +
                                         iy  * array_local_size.ns +
                                         is;
@@ -365,18 +367,15 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
                                                                                         (g0[ind4D] + g1[ind4D]);//(g0[ind4D] + g1[ind4D]);
                                 fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += c_pot[ind2D] * I_phi[ind3D] *
                                                                                      g0[ind4D];
-
                             }
                             fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] *= - var_var.beta / phiB_denom[ind2D];
                         }
 
                     }
-                    else
-                    {
-                        for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-                        {
+                    else{
+                        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
                             fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
-                        /*    for(size_t is = 0; is < array_local_size.ns; is++) {
+                            /*for(size_t is = 0; is < array_local_size.ns; is++) {
                                 ind3D = ix * array_local_size.nky * array_local_size.ns +
                                         iy * array_local_size.ns +
                                         is;
@@ -384,7 +383,7 @@ void fields_getB(const COMPLEX* g0, const COMPLEX* g1) {
                                         iy * array_local_size.nkz * array_local_size.ns +
                                         iz * array_local_size.ns +
                                         is;
-                                fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = - 0.5 * var_var.beta * I_B[ind3D] *
+                                fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = - 1.0 * var_var.beta * I_B[ind3D] * // * 0.5 *
                                                                                     (g0[ind4D] + g1[ind4D])/b_pot[ind2D];
                             }*/
                         }
@@ -489,7 +488,7 @@ void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
  * Wrapper for functions #fields_getPhi, #fields_getB, #fields_getA.
  ***************************************/
 void fields_getFields(COMPLEX *g00, COMPLEX *g10, COMPLEX *g01) {
-    fields_getPhi(g00,g10);
+    fields_getPhi(g00,g01);
     fields_getB(g00,g01);
     fields_getA(g10);
 };
@@ -773,29 +772,35 @@ void fields_getAFromH(const COMPLEX* h){
  ***************************************/
 void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
     size_t ind4D;
+    size_t ind2D;
     switch(kinetic)
     {
         case ADIABATIC:
             break;
         case NONADIABATIC:
-            for(size_t ix = 0; ix < array_local_size.nkx; ix++)
-            {
-                for(size_t iy = 0; iy < array_local_size.nky; iy++)
-                {
-                    for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-                    {
-                        fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
-                        for(size_t is = 0; is < array_local_size.ns; is++)
-                        {
-                            ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
-                                    iy * array_local_size.nkz * array_local_size.ns +
-                                    iz * array_local_size.ns +
-                                    is;
-                            fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += var_var.n[is] * var_var.T[is] / var_var.B0 *
+            for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+                for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                    ind2D = ix * array_local_size.nky + iy;
+                    if (fabs(phiB_denom[ind2D]) > 1e-16){
+                        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                            fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                            for(size_t is = 0; is < array_local_size.ns; is++)
+                            {
+                                ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                        iy * array_local_size.nkz * array_local_size.ns +
+                                        iz * array_local_size.ns +
+                                        is;
+                                fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] += var_var.n[is] * var_var.T[is] / var_var.B0 *
                                                                                      var_J1[var_getJIndex(ix,iy,is)] *
                                                                                      (h0[ind4D] + h1[ind4D]);
+                            }
+                            fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] *= - var_var.beta * 0.5;
                         }
-                        fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] *= - var_var.beta * 0.5;
+                    }
+                    else{
+                        for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                            fields_fields.B[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                        }
                     }
                 }
             }
@@ -819,6 +824,7 @@ void fields_getBFromH(const COMPLEX *h0, const COMPLEX *h1) {
  ***************************************/
 void fields_getPhiFromH(const COMPLEX* h){
     size_t ind4D;
+    size_t ind2D;
     double q2nT = 0;
     for (size_t is = 0; is < array_local_size.ns; is++)
     {
@@ -841,25 +847,31 @@ void fields_getPhiFromH(const COMPLEX* h){
                 case ELECTROSTATIC:
                     break;
                 case ELECTROMAGNETIC:
-                    for(size_t ix = 0; ix < array_local_size.nkx; ix++)
-                    {
-                        for(size_t iy = 0; iy < array_local_size.nky; iy++)
-                        {
-                            for(size_t iz = 0; iz < array_local_size.nkz; iz++)
-                            {
-                                fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
-                                for(size_t is = 0; is < array_local_size.ns; is++)
-                                {
-                                    ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
-                                            iy * array_local_size.nkz * array_local_size.ns +
-                                            iz * array_local_size.ns +
-                                            is;
-                                    fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] += var_var.q[is] * var_var.n[is] *
-                                                                                           var_J0[var_getJIndex(ix,iy,is)] *
-                                                                                           h[ind4D];
+                    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+                        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                            ind2D = ix * array_local_size.nky + iy;
+                            if (fabs(phiB_denom[ind2D]) > 1e-16){
+                                for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                                    fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                                    for(size_t is = 0; is < array_local_size.ns; is++)
+                                    {
+                                        ind4D = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                                iy * array_local_size.nkz * array_local_size.ns +
+                                                iz * array_local_size.ns +
+                                                is;
+                                        fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] += var_var.q[is] * var_var.n[is] *
+                                                                                               var_J0[var_getJIndex(ix,iy,is)] *
+                                                                                               h[ind4D];
+                                    }
+                                    fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] /= q2nT;
                                 }
-                                fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] /= q2nT;
                             }
+                            else{
+                                for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                                    fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] = 0.j;
+                                }
+                            }
+
                         }
                     }
                     break;

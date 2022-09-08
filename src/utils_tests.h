@@ -12,7 +12,6 @@ void test_fieldComputation();
 void test_freeEnergyComputation();
 void test_mainFunction();
 void test_fieldComparison();
-void test_kSpecComputations();
 void test_linearRHS();
 void test_inplaceFFTW_chi();
 void test_nonlinearTerm();

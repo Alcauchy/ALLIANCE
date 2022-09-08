@@ -10,7 +10,7 @@
 //
 // init_start
 // init_printParameters
-// init_initEnums
+// init_initFlags
 // init_conditions
 //
 // VERSION 1.0
@@ -28,6 +28,8 @@
 enum adiabatic kinetic;
 enum electromagnetic systemType;
 enum initial initialConditions;
+enum spectrum spectrumType;
+enum dealiasing dealiasingType;
 
 /****************************************
 * \fn void init_start(char *filename)
@@ -65,7 +67,7 @@ void init_physicalSystem(){
  ***************************************/
 void init_computation(){
     srand(0);
-    init_initEnums();
+    init_initFlags();
     mpi_generateTopology();
     mpi_initMExchange();
     fftw_init(mpi_row_comm);
@@ -81,7 +83,7 @@ void init_computation(){
 void init_printParameters(){
     if (mpi_my_rank == RANK_IO)
     {
-        printf("created %d x %d communicator\n", mpi_dims[0], mpi_dims[1]);
+        printf("===========SYSTEM PARAMETERS=========\n");
         switch(kinetic)
         {
             case NONADIABATIC:
@@ -100,23 +102,43 @@ void init_printParameters(){
                 printf("system is electrostatic\n");
                 break;
         }
+        switch(spectrumType)
+        {
+            case UNIT:
+                printf("spectrum computed using unit k\n");
+                break;
+            case SHELL:
+                printf("spectrum computed using shells\n");
+                break;
+        }
+        switch(dealiasingType)
+        {
+            case ALIASED:
+                printf("no dealiasing is performed\n");
+                break;
+            case TWOTHIRDS:
+                printf("2/3 rule used for dealiasing\n");
+                break;
+        }
     }
 
 };
 
 /***************************************
- * \fn void init_initEnums()
- * \brief enumerator initialization
+ * \fn void init_initFlags()
+ * \brief flag initialization
  *
- * initializes enumerators, which are then used
+ * initializes flags, which are then used
  * to define if system is adiabatic or kinetic,
  * electromagnetic or electrostatic,
  * and type of initial conditions
  ***************************************/
-void init_initEnums(){
+void init_initFlags(){
    kinetic = parameters.adiabatic;
    systemType = parameters.electromagnetic;
    initialConditions = parameters.initial;
+   spectrumType = parameters.spectrum;
+   dealiasingType = parameters.dealiasing;
 };
 
 /***************************************
@@ -130,8 +152,7 @@ void init_initEnums(){
  ***************************************/
 void fill_rand(COMPLEX *ar1) {
     for (size_t i = 0; i < array_local_size.total_comp; i++) {
-        ar1[i] = 0;//cexp(2. * M_PI *1.j * (double) rand() / (double) (RAND_MAX)) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
-                //((0.5 - (double) rand() / (double) (RAND_MAX)) + (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
+        ar1[i] = 0;
     }
     for (size_t ix = 0; ix < array_global_size.nkx; ix++){
         for (size_t iy = 0; iy < array_global_size.nky; iy++){
@@ -267,7 +288,7 @@ void init_conditions(COMPLEX *data){
             printf("[MPI process %d] error with initial conditions! Aborting...",mpi_my_rank);
             exit(1);
     }
-    dealiasing23(data);
+    distrib_dealiasing(data);
     distrib_enforceReality(data);
     distrib_setZeroNHalf(data);
 };
@@ -331,13 +352,13 @@ double init_sinc(double amp, double f, double x, double y, double z, double x0, 
  * and should not be used elsewhere outside init.c file.
  ***************************************/
 void init_fillSinc(COMPLEX *out) {
-    printf("hi-1\n");
-    size_t proc_id = mpi_whereIsM[2];
-    size_t local_m = mpi_whereIsM[3];
+    size_t proc_id = mpi_whereIsM[0];
+    size_t local_m = mpi_whereIsM[1];
     size_t ind6D;
     double *real = fftw_hBuf;
     double x0,y0,z0;
     double x,y,z;
+    double disp[2] = {0.01,0.1};
     x0 = space_dx * array_global_size.nx/2;
     y0 = space_dy * array_global_size.ny/2;
     z0 = space_dz * array_global_size.nz/2;
@@ -351,13 +372,12 @@ void init_fillSinc(COMPLEX *out) {
                         y = space_dy * (iy + array_global_size.ny * mpi_my_row_rank / mpi_dims[1]);
                         z = space_dz * iz;
                        // real[ind6D] = init_sinc(0.01,4,x,y,z,x0,y0,z0);
-                        real[ind6D] = init_exp2(1.,0.01,x,y,z,x0,y0,z0);
+                        real[ind6D] = init_exp2(1.,disp[is],x,y,z,x0,y0,z0);
                     }
                 }
             }
         }
     }
-    printf("hi0\n");
     hdf_create_file_r("init.h5",real);
     fftw_r2c();
     fftw_copy_buffer_c(out,fftw_hBuf);

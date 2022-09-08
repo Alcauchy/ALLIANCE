@@ -13,6 +13,8 @@
 // distrib_getXGrad
 // distrib_getYGrad
 // distrib_getZGrad
+// dealiasing23
+// distrib_dealiasing
 //
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
@@ -333,3 +335,44 @@ void distrib_setZeroNHalf(COMPLEX *f){
         }
     }
 };
+
+/***************************************
+ * \fn void dealiasing23(COMPLEX *data_c)
+ * \brief 2/3 rule dealiasing
+ * \param data_c: complex 6D data array
+ ***************************************/
+void dealiasing23(COMPLEX *data_c){
+    size_t ind6D;
+    for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
+        for(size_t iky = 0; iky < array_local_size.nky; iky++){
+            for(size_t ikz = 0; ikz < array_local_size.nkz; ikz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is <array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,ikx,iky,ikz);
+                            data_c[ind6D] *= space_zerosKx[ikx]*space_zerosKy[iky]*space_zerosKz[ikz];
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/***************************************
+ * \fn void distrib_dealiasing(COMPLEX *data_c)
+ * \brief dealiasing function
+ * \param data_c: complex 6D data array
+ ***************************************/
+void distrib_dealiasing(COMPLEX *data_c){
+    switch(dealiasingType){
+        case ALIASED:
+            break;
+        case TWOTHIRDS:
+            dealiasing23(data_c);
+            break;
+        default:
+            printf("DEALIASING ERROR; ABORTING...\n");
+            exit(1);
+    }
+}

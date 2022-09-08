@@ -15,6 +15,7 @@
 //
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
+#define VERBOSE 0
 
 #include "space_config.h"
 #include <complex.h>
@@ -29,6 +30,10 @@ double space_dz;
 double space_dKx;
 double space_dKy;
 double space_dKz;
+double space_kXmax;
+double space_kYmax;
+double space_kZmax;
+double space_kPerpMax;
 double *space_kx;
 double *space_ky;
 double *space_kz;
@@ -113,6 +118,12 @@ void space_generateWaveSpace() {
     space_dKy = 2. * M_PI / ( space_Ly);
     space_dKz = 2. * M_PI / ( space_Lz);
 
+    space_kXmax = 0.5 * space_dKx * array_global_size.nkx;
+    space_kYmax = 0.5 * space_dKy * array_global_size.nky;
+    space_kZmax = 0.5 * space_dKz * array_global_size.nkz;
+
+    space_kPerpMax = (space_kXmax > space_kYmax) ? space_kXmax : space_kYmax;
+
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         if (global_nkx_index[ix] < array_global_size.nkx / 2 + 1) {
             space_kx[ix] = space_dKx * global_nkx_index[ix];
@@ -120,7 +131,7 @@ void space_generateWaveSpace() {
             space_kx[ix] = space_dKx * ((double) global_nkx_index[ix] - (double) array_global_size.nkx);
         }
         space_iKx[ix] = 1.j * space_kx[ix];
-        //filling space_zerosKx array either with zeros or ones
+        //filling space_zerosKx array either with zeros or ones - needed for dealiasing
         if(fabs(space_kx[ix]) > space_dKx * array_global_size.nkx / 3.){
             space_zerosKx[ix] = 0.;
         }
@@ -128,7 +139,6 @@ void space_generateWaveSpace() {
             space_zerosKx[ix] = 1.;
         }
     }
-    printf("[MPI process %d] kx generated \n", mpi_my_rank);
 
     for (size_t iy = 0; iy < array_global_size.nky; iy++) {
         if (iy < array_global_size.nky / 2 + 1) {
@@ -137,31 +147,25 @@ void space_generateWaveSpace() {
             space_ky[iy] = space_dKy * ((double) iy - (double) array_global_size.nky);
         }
         space_iKy[iy] = 1.j * space_ky[iy];
-        //filling space_zerosKy array either with zeros or ones
+        //filling space_zerosKy array either with zeros or ones - needed for dealiasing
         if(fabs(space_ky[iy]) > space_dKy * array_global_size.nky / 3.){
             space_zerosKy[iy] = 0.;
-            //printf("ky[%d] = 0 for %f\n", iy, space_ky[iy]);
         }
         else{
             space_zerosKy[iy] = 1.;
         }
     }
-    //space_iKy[1] = (0,0);
-    printf("[MPI process %d] ky generated \n", mpi_my_rank);
     for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
         space_kz[iz] = space_dKz * iz;
         space_iKz[iz] = 1.j * space_kz[iz];
-        //filling space_zerosKz array either with zeros or ones
+        //filling space_zerosKz array either with zeros or ones - needed for dealiasing
         if(fabs(space_ky[iz]) > space_dKz * array_global_size.nz / 3.){
             space_zerosKz[iz] = 0.;
-            printf("kz[%d] = 0 for %f\n", iz, space_kz[iz]);
         }
         else{
             space_zerosKz[iz] = 1.;
         }
-        //printf("[MPI process %d] kz[%d] = %f\n ",mpi_my_rank, iz, space_kz[iz]);
     }
-    printf("[MPI process %d] kz generated \n", mpi_my_rank);
 
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {

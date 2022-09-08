@@ -7,6 +7,7 @@
 #include "array.h"
 #include "parameters_io.h"
 #include "space_config.h"
+#include "equation.h"
 
 void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep);                 // compute spectra spec from complex array data.
 void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h);                  // computes free energy from the complex fields g and h
@@ -19,6 +20,9 @@ void diag_computeHSpectrum(const COMPLEX *h);
 void diag_initSpec();
 void diag_getShells();
 void diag_compute(COMPLEX *g, COMPLEX *h, int timestep);
+void diag_computeEnergyBalance(const COMPLEX *h);
+void diag_computeEnergy(const COMPLEX *h);
+void diag_print(const COMPLEX *h, int it);
 
 extern double *diag_mSpec;
 extern double *diag_kSpec;
@@ -29,8 +33,19 @@ extern double *diag_kSpecH;
 extern double *diag_shells;
 extern double *diag_shellNorm;
 extern double *diag_shellCentres;
+extern double *diag_MM;
 
 extern double diag_freeEnergy;
 extern double diag_free_energy0;
 extern int diag_numOfShells;
+extern int diag_numOfShellBounds;
+extern double diag_energyH;
+extern double diag_energyPhi;
+extern double diag_energyBperp;
+extern double diag_energyBpar;
+extern double diag_energyTotal;
+extern double diag_injected;
+extern double diag_dissipated;
+extern double diag_etakmax;
+
 #endif //ALLIANCE_ALPHA_1_0_DIAGNOSTICS_H

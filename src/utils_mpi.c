@@ -104,7 +104,8 @@ void mpi_createTopology() {
     MPI_Cart_create(MPI_COMM_WORLD, ndims, &mpi_dims, &periods, reorder, &mpi_cube_comm);
     MPI_Cart_coords(mpi_cube_comm, mpi_my_rank, ndims, mpi_my_coords);
     if (mpi_my_rank == 0) {
-        printf("[MPI process %d] created %d x %d communicator\n", mpi_my_rank, mpi_dims[0], mpi_dims[1]);
+        printf("============MPI TOPOLOGY=============\n");
+        printf("created %d x %d communicator\n",mpi_dims[0], mpi_dims[1]);
     }
 }
 
@@ -145,7 +146,7 @@ void mpi_getLocalArraySize() {
 
     mpi_getLocalArrayOffsets();
 
-    printf("[MPI process %d] my coordinates = (%d,%d), local array size = (%d,%d,%d,%d,%d,%d), local ny = %d, total size is %d\n",
+    printf("[MPI process %d] my coordinates = (%d,%d), local complex array size = (%d,%d,%d,%d,%d,%d), local real array size = (%d,%d,%d,%d,%d,%d), total size is %d\n",
            mpi_my_rank,
            mpi_my_coords[0],
            mpi_my_coords[1],
@@ -156,6 +157,11 @@ void mpi_getLocalArraySize() {
            array_local_size.nl,
            array_local_size.ns,
            array_local_size.ny,
+           array_local_size.nx,
+           array_local_size.nz,
+           array_local_size.nm,
+           array_local_size.nl,
+           array_local_size.ns,
            array_local_size.total_comp);
 }
 
@@ -216,13 +222,16 @@ void mpi_findHermiteNeighbours() {
     char *neighbour_names[2] = {"minus", "plus"};
     //performing shift in cartesian coordinates and finding plus and minus neighbours
     MPI_Cart_shift(mpi_cube_comm, 0, 1, &m_neighbour_ranks[MINUS], &m_neighbour_ranks[PLUS]);
-    for (int i = 0; i < 2; i++) {
-        if (m_neighbour_ranks[i] == MPI_PROC_NULL)
-            printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have no %s neighbour in m.\n", mpi_my_rank,
-                   mpi_my_coords[0], mpi_my_coords[1], neighbour_names[i]);
-        else
-            printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have a %s neighbour in m: process %d.\n",
-                   mpi_my_rank, mpi_my_coords[0], mpi_my_coords[1], neighbour_names[i], m_neighbour_ranks[i]);
+    if (VERBOSE) {
+        for (int i = 0; i < 2; i++) {
+            if (m_neighbour_ranks[i] == MPI_PROC_NULL)
+                printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have no %s neighbour in m.\n",
+                       mpi_my_rank,
+                       mpi_my_coords[0], mpi_my_coords[1], neighbour_names[i]);
+            else
+                printf("[MPI process %d] my cartesian coordinates are (%d,%d), I have a %s neighbour in m: process %d.\n",
+                       mpi_my_rank, mpi_my_coords[0], mpi_my_coords[1], neighbour_names[i], m_neighbour_ranks[i]);
+        }
     }
 }
 
@@ -232,7 +241,7 @@ void mpi_findHermiteNeighbours() {
 void mpi_splitInRows(){
     mpi_my_row_rank = mpi_my_coords[1];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
-    printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
+    if (VERBOSE) printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
     mpi_whereIsX = malloc(2 * array_global_size.nkx * sizeof(*mpi_whereIsX));
     mpi_whereIsY = malloc(2 * array_global_size.ny * sizeof(*mpi_whereIsY));
     mpi_whereIsM = malloc(2 * array_global_size.nm * sizeof(*mpi_whereIsM));
@@ -308,7 +317,7 @@ void mpi_splitInRows(){
 void mpi_splitInCols(){
     mpi_my_col_rank = mpi_my_coords[0];
     MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[1], mpi_my_col_rank, &mpi_col_comm);
-    printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_col_rank);
+    if (VERBOSE) printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_col_rank);
 };
 
 /***************************
