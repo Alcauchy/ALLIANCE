@@ -104,7 +104,6 @@ void mpi_createTopology() {
     MPI_Cart_create(MPI_COMM_WORLD, ndims, &mpi_dims, &periods, reorder, &mpi_cube_comm);
     MPI_Cart_coords(mpi_cube_comm, mpi_my_rank, ndims, mpi_my_coords);
     if (mpi_my_rank == 0) {
-        printf("============MPI TOPOLOGY=============\n");
         printf("created %d x %d communicator\n",mpi_dims[0], mpi_dims[1]);
     }
 }

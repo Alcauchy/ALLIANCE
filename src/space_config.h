@@ -14,6 +14,9 @@ void space_generateWaveSpace();     // generates wave vector space
 void free_wavespace();
 void space_generateMSpace();
 
+extern double space_Lx;
+extern double space_Ly;
+extern double space_Lz;
 extern double space_dx;
 extern double space_dy;
 extern double space_dz;
@@ -38,5 +41,6 @@ extern COMPLEX *space_iKx;
 extern COMPLEX *space_iKy;
 extern COMPLEX *space_iKz;
 extern size_t *space_globalMIndex;
+
 
 #endif //ALLIANCE_ALPHA_1_0_SPACE_CONFIG_H

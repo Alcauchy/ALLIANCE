@@ -183,6 +183,7 @@ void test_fieldComparison(){
 
 }
 
+
 /***************************
  *  test_linearRHS()
  * *************************/

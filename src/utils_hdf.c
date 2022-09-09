@@ -287,6 +287,9 @@ void hdf_create_file_r(char *filename, double *data){
     H5Sclose(memory_space);
     H5Pclose(plist_id);
     H5Fclose(file_id);
+
+    //transpose data back (in general, not required, added to make function foolproof)
+    fftw_transposeToYX();
 }
 
 /***************************
@@ -410,6 +413,10 @@ void hdf_createChiFile_r(char *filename, double *data){
     H5Sclose(memory_space);
     H5Pclose(plist_id);
     H5Fclose(file_id);
+
+    // transposing data to original shape
+    fftw_transposeToYX_chi();
+
 }
 
 /***************************
@@ -555,6 +562,9 @@ void hdf_saveField_r(double *f, char *filename){
     H5Sclose(memory_space);
     H5Pclose(plist_id);
     H5Fclose(file_id);
+
+    // transposing data to original shape
+    fftw_transposeToYX_field();
 
 };
 
@@ -1922,6 +1932,9 @@ void hdf_dumpCheckpointReal(COMPLEX *h, int timestep, char *filename){
     H5Sclose(memory_space);
     H5Pclose(plist_id);
     H5Fclose(file_id);
+
+    // transposing data to original shape
+    fftw_transposeToYX();
 }
 
 void hdf_saveDistrib(COMPLEX* h, int timestep){
@@ -2274,6 +2287,9 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
+
+        // transposing data to original shape
+        fftw_transposeToYX_field();
     }
     if (systemType == ELECTROMAGNETIC)
     {
@@ -2354,6 +2370,8 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
+        // transposing data to original shape
+        fftw_transposeToYX_field();
 
         /* writing B dataset */
         dset_id = H5Dopen2(file_id, "B", H5P_DEFAULT);
@@ -2429,6 +2447,8 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
+        // transposing data to original shape
+        fftw_transposeToYX_field();
 
         /* writing A dataset */
         dset_id = H5Dopen2(file_id, "A", H5P_DEFAULT);
@@ -2504,6 +2524,8 @@ void hdf_saveFields(int timestep){
         H5Sclose(dspace_id);
         H5Pclose(plist_id);
         H5Dclose(dset_id);
+        // transposing data to original shape
+        fftw_transposeToYX_field();
 
     }
     /*write a timestep dataset*/

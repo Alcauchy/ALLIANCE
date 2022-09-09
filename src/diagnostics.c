@@ -683,7 +683,7 @@ void diag_computeEnergy(const COMPLEX *h){
         case ELECTROMAGNETIC:
             for (size_t ix = 0; ix < array_local_size.nkx; ix++){
                 for (size_t iy = 0; iy < array_local_size.nky; iy++){
-                    ind2D = array_local_size.nky * iy + ix;
+                    ind2D = ix * array_local_size.nky  + iy;
                     for (size_t iz = 0; iz < array_local_size.nkz; iz++){
                         ind3D = get_flatIndexComplex3D(ix,iy,iz);
                         for (size_t im = 0; im < array_local_size.nm; im++){
@@ -694,7 +694,8 @@ void diag_computeEnergy(const COMPLEX *h){
                                     diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
                                                       * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
                                     diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) / 8. / M_PI * diag_MM[iz];
-                                    diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D]) / 8. / M_PI * diag_MM[iz];
+                                    diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])/ 8. / M_PI * diag_MM[iz];
+
                                 }
                             }
                         }

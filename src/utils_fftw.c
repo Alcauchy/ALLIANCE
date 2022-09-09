@@ -70,7 +70,7 @@ void fftw_init(MPI_Comm communicator){
     size_c[1] = array_global_size.nky;
     size_c[2] = array_global_size.nkz;
     size_r[0] = array_global_size.ny;
-    size_r[1] = array_global_size.nkx;
+    size_r[1] = array_global_size.nx;
     size_r[2] = array_global_size.nz;
     //size_r[0] = array_global_size.nkx;
     //size_r[1] = array_global_size.nky;
@@ -91,6 +91,7 @@ void fftw_init(MPI_Comm communicator){
                                           &local_ny,
                                           &local_y_start); // getting local size stored on each processor;
     if (VERBOSE) printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
+    printf("[MPI process %d] local nx is %td, local ny is %td",mpi_my_rank, local_nx, local_ny);
 
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
@@ -98,8 +99,8 @@ void fftw_init(MPI_Comm communicator){
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);
-    int flags_c2r = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_IN;
-    int flags_r2c = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_OUT;
+    unsigned int flags_c2r = FFTW_MPI_TRANSPOSED_IN|FFTW_ESTIMATE;
+    unsigned int flags_r2c = FFTW_MPI_TRANSPOSED_OUT|FFTW_ESTIMATE;
     plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                           size_r,
                                           howmany,
@@ -119,14 +120,14 @@ void fftw_init(MPI_Comm communicator){
                                           communicator,
                                           flags_r2c);
     plan_transposeToXY = fftw_mpi_plan_many_transpose(size_r[0], size_r[1],
-                                                      howmany*(size_r[2] + 2),
+                                                      howmany*(size_r[2]+2),
                                                       local_ny, local_nx,
                                                       fftw_hBuf, fftw_hBuf,
                                                       communicator,
                                                       FFTW_ESTIMATE);
 
     plan_transposeToYX = fftw_mpi_plan_many_transpose(size_r[1], size_r[0],
-                                                      howmany*(size_r[2] + 2),
+                                                      howmany*(size_r[2]+2),
                                                       local_nx, local_ny,
                                                       fftw_hBuf, fftw_hBuf,
                                                       communicator,

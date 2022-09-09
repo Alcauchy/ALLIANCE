@@ -26,8 +26,8 @@ int main(int argc, char **argv) {
     //initializing run
     //
     init_start(filename);
-    COMPLEX *h = malloc(array_local_size.total_comp * sizeof(*h));
-    COMPLEX *g = malloc(array_local_size.total_comp * sizeof(*g));
+    COMPLEX *h = calloc(array_local_size.total_comp, sizeof(*h));
+    COMPLEX *g = calloc(array_local_size.total_comp, sizeof(*g));
     init_conditions(h);
     fields_sendF(h);
     fields_getFieldsFromH(f00, f10, f01);

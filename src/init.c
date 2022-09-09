@@ -356,6 +356,8 @@ void init_fillSinc(COMPLEX *out) {
     size_t local_m = mpi_whereIsM[1];
     size_t ind6D;
     double *real = fftw_hBuf;
+    double *real_check = calloc(array_local_size.total_real, sizeof(*real_check));
+    double *real_check1 = calloc(array_local_size.total_real, sizeof(*real_check1));
     double x0,y0,z0;
     double x,y,z;
     double disp[2] = {0.01,0.1};
@@ -372,7 +374,8 @@ void init_fillSinc(COMPLEX *out) {
                         y = space_dy * (iy + array_global_size.ny * mpi_my_row_rank / mpi_dims[1]);
                         z = space_dz * iz;
                        // real[ind6D] = init_sinc(0.01,4,x,y,z,x0,y0,z0);
-                        real[ind6D] = init_exp2(1.,disp[is],x,y,z,x0,y0,z0);
+                       // real[ind6D] = init_exp2(1.,disp[is],x,y,z,x0,y0,z0);
+                       real[ind6D] = init_sinX(1.0, 3.0 / space_Lx,x);
                     }
                 }
             }
@@ -405,4 +408,18 @@ double init_exp2(double amp, double f, double x, double y, double z, double x0, 
     valueZ = exp(-f * ((z - z0) * (z - z0)));
 
     return amp * valueX * valueY * valueZ;
+}
+
+/***************************************
+ * \fn double init_exp2(double k, double m, double amp, double disp)
+ * \brief returns energy spectrum
+ * \param x: a wavenumber at which spectrum is computed
+ * \param amp: amplitude of the spectrum
+ *
+ * computes sinus function along chosen axis
+ * This function is supposed to be used in-module only
+ * and should not be used elsewhere outside init.c file.
+ ***************************************/
+double init_sinX(double amp, double f, double x){
+    return amp * sin(2 * M_PI * f * x);
 }
