@@ -91,7 +91,6 @@ void fftw_init(MPI_Comm communicator){
                                           &local_ny,
                                           &local_y_start); // getting local size stored on each processor;
     if (VERBOSE) printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
-    printf("[MPI process %d] local nx is %td, local ny is %td",mpi_my_rank, local_nx, local_ny);
 
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
