@@ -14,10 +14,20 @@ void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out);
 void equation_init();
 void equation_getForcing(const COMPLEX *h, COMPLEX *rhs);
 
-extern size_t *equation_forceKxInd;
-extern size_t *equation_forceKyInd;
-extern size_t *equation_forceKzInd;
+extern int *equation_forceKxInd;
+extern int *equation_forceKyInd;
+extern int *equation_forceKzInd;
+extern int *equation_forceKxIndGlobal;
+extern int *equation_forceKxIndGathered;
+extern int *equation_forceKyIndGathered;
+extern int *equation_forceKzIndGathered;
 extern int equation_forceKn;
+extern int equation_forceKnTotal;
 extern int equation_forceNorm;
+extern int equation_forcedM;
+extern int *equation_forceKnAr;
+extern int *equation_displacements;
 extern double equation_forcingCoef;
+extern double *equation_forcingMM;
+extern COMPLEX *equation_forcingAr;
 #endif //ALLIANCE_ALPHA_1_0_EQUATION_H

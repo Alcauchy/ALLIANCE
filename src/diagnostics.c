@@ -158,7 +158,7 @@ void diag_initSpec() {
         diag_kSpec = malloc((diag_numOfShells) * sizeof(*diag_kSpec));
         diag_MM = malloc((array_local_size.nkz) * sizeof(*diag_MM));
         for (size_t iz = 0; iz < array_local_size.nkz; iz++ ){
-            if(iz == 0 || iz == array_local_size.nkz -1){
+            if(iz == 0 || iz == array_local_size.nkz - 1){
                 diag_MM[iz] = 1.0;
             }
             else{
@@ -198,11 +198,23 @@ void diag_initSpec() {
 void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
     COMPLEX sum = 0;
     COMPLEX freeEnergy = 0;
-    for (size_t i = 0; i < array_local_size.total_comp; i++) {
-        sum += g[i] * conj(h[i]);
+    size_t ind6D;
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+        for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+            for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                for (size_t im = 0; im < array_local_size.nm; im++) {
+                    for (size_t il = 0; il < array_local_size.nl; il++) {
+                        for (size_t is = 0; is < array_local_size.ns; is++) {
+                            ind6D = get_flat_c(is, il, im, ix, iy, iz);
+                            sum += g[ind6D] * conj(h[ind6D]) * diag_MM[iz];
+                        }
+                    }
+                }
+            }
+        }
     }
     MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_C_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-    diag_freeEnergy = 2. * creal(freeEnergy);
+    diag_freeEnergy = creal(freeEnergy);
 
 };
 
@@ -432,6 +444,7 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
         diag_freeEnergy = diag_energyTotal;
         if (timestep == 0) diag_free_energy0 = diag_freeEnergy;
         hdf_saveEnergy(timestep);
+        hdf_saveForcing();
         //compute spectra
         if (parameters.compute_k) {
             diag_computeKSpectrum(g, h, diag_kSpec);
@@ -590,7 +603,7 @@ void diag_computeEnergyBalance(const COMPLEX *h){
     if (mpi_my_col_rank == forced_proc){
         for(size_t i = 0; i < equation_forceKn; i++){
             for(size_t is = 0; is < array_local_size.ns; is++){
-                diag_injected += equation_forcingCoef;
+                diag_injected += equation_forcingMM[i] * equation_forcingCoef;
             }
         }
     }
@@ -730,7 +743,7 @@ void diag_computeEnergy(const COMPLEX *h){
  * where \f$N\f$ is a number of wave vectors between shells \f$k^{shell}_{i-1}\f$ and \f$k^{shell}_{i}\f$
  ***************************************/
 void diag_print(const COMPLEX *h, int it){
-    if (it%10 == 0){
+    if (it%parameters.iter_diagnostics == 0){
         diag_computeEnergyBalance(h);
         diag_computeEnergy(h);
         if(mpi_my_rank == 0){

@@ -160,7 +160,7 @@ void fill_rand(COMPLEX *ar1) {
                 for (size_t im = 0; im < array_global_size.nm; im++){
                     for (size_t il = 0; il < array_global_size.nl; il++){
                         for (size_t is = 0; is < array_global_size.ns; is++){
-                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && (im == 0 || im == 1)){
+                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && (im == 0)){
                                 size_t ix_local = mpi_whereIsX[2 * ix + 1];
                                 size_t im_local = mpi_whereIsM[2 * im + 1];
                                 size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
@@ -274,8 +274,8 @@ void init_conditions(COMPLEX *data){
     switch(initialConditions)
     {
         case RANDOM:
-            //fill_rand(data);
-            init_fillSinc(data);
+            fill_rand(data);
+            //init_fillSinc(data);
             //fill_randM0(data);
             //fill_randSingleKM(data);
             break;
@@ -360,7 +360,7 @@ void init_fillSinc(COMPLEX *out) {
     double *real_check1 = calloc(array_local_size.total_real, sizeof(*real_check1));
     double x0,y0,z0;
     double x,y,z;
-    double disp[2] = {0.01,0.1};
+    double disp[2] = {0.05,0.08};
     x0 = space_dx * array_global_size.nx/2;
     y0 = space_dy * array_global_size.ny/2;
     z0 = space_dz * array_global_size.nz/2;
@@ -370,12 +370,13 @@ void init_fillSinc(COMPLEX *out) {
                 for(size_t iz = 0; iz <  array_local_size.nz + 2; iz++){
                     for(size_t is = 0; is< array_local_size.ns; is++){
                         ind6D = get_flat_r(is,0,local_m,ix,iy,iz);
-                        x = space_dx * ix;
+                        x = space_dx * (ix);
                         y = space_dy * (iy + array_global_size.ny * mpi_my_row_rank / mpi_dims[1]);
-                        z = space_dz * iz;
-                       // real[ind6D] = init_sinc(0.01,4,x,y,z,x0,y0,z0);
-                       // real[ind6D] = init_exp2(1.,disp[is],x,y,z,x0,y0,z0);
-                       real[ind6D] = init_sinX(1.0, 3.0 / space_Lx,x);
+                        z = space_dz * (iz);
+                        //real[ind6D] = init_sinc(0.01,4,x,y,z,x0,y0,z0);
+                        real[ind6D] = init_exp2(1.,disp[is],x,y,z,x0,y0,z0);
+                       //real[ind6D] = init_sinX(10.0, 3.0 / space_Lx,x);//*init_sinX(10.0, 3.0 / space_Ly,y);;
+                       //real[ind6D] = init_sinX(10.0, 4.0 *disp[is]/ space_Lx,x) * init_cosX(1.0, 6.0/ space_Ly,y);;
                     }
                 }
             }
@@ -384,6 +385,7 @@ void init_fillSinc(COMPLEX *out) {
     hdf_create_file_r("init.h5",real);
     fftw_r2c();
     fftw_copy_buffer_c(out,fftw_hBuf);
+    //for(size_t ii = 0; ii < array_local_size.total_comp; ii++) out[ii] = 1.;
 }
 
 /***************************************
@@ -421,5 +423,9 @@ double init_exp2(double amp, double f, double x, double y, double z, double x0, 
  * and should not be used elsewhere outside init.c file.
  ***************************************/
 double init_sinX(double amp, double f, double x){
-    return amp * sin(2 * M_PI * f * x);
+    return amp * sin( 2 * M_PI * f * x);
+}
+
+double init_cosX(double amp, double f, double x){
+    return amp * cos( 2 * M_PI * f * x);
 }

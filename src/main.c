@@ -41,6 +41,8 @@ int main(int argc, char **argv) {
     //
     // main loop
     //
+    char name[64];
+    COMPLEX *freeEn = malloc(array_local_size.total_comp * sizeof(*freeEn));
     for (int it = 1; it <= solver.Nt; it++) {
         //integrate over time
         solver_makeStep(&g, h, it);

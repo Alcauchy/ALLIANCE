@@ -1053,6 +1053,131 @@ void hdf_createParamFile()
     /* Close the group. */
     H5Gclose(group_id);
 
+    /* Create a group to save forcing */
+    group_id = H5Gcreate2(file_id,
+                          "/force",
+                          H5P_DEFAULT,
+                          H5P_DEFAULT,
+                          H5P_DEFAULT);
+    /* writing forcing power information */
+    int rank_power = 1;
+    hid_t dims_power[1] = {1};
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_power, dims_power, NULL);
+    dset_id = H5Dcreate(file_id,"force/power", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_power, dims_power, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    //H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &parameters.forcePower);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /* writing forcing shell boundaries */
+    int rank_forceShell = 1;
+    hid_t dims_forceShell[1] = {2};
+    double forceShell[2] = {parameters.forceKmin,parameters.forceKmax};
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_forceShell, dims_forceShell, NULL);
+    dset_id = H5Dcreate(file_id,"force/forceShell", H5T_NATIVE_DOUBLE, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_forceShell, dims_forceShell, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_DOUBLE, memory_space, file_space, plist_id, &forceShell);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /* writing kx indices which are forced */
+    int rank_forcedIndices = 1;
+    hid_t dims_forcedIndices[1] = {equation_forceNorm};
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_forcedIndices, dims_forcedIndices, NULL);
+    dset_id = H5Dcreate(file_id,"force/kx", H5T_NATIVE_INT, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_forcedIndices, dims_forcedIndices, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_INT, memory_space, file_space, plist_id, equation_forceKxIndGathered);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /* writing ky indices which are forced */
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_forcedIndices, dims_forcedIndices, NULL);
+    dset_id = H5Dcreate(file_id,"force/ky", H5T_NATIVE_INT, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_forcedIndices, dims_forcedIndices, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_INT, memory_space, file_space, plist_id, equation_forceKyIndGathered);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /* writing kz indices which are forced */
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    file_space = H5Screate_simple(rank_forcedIndices, dims_forcedIndices, NULL);
+    dset_id = H5Dcreate(file_id,"force/kz", H5T_NATIVE_INT, file_space, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    memory_space = H5Screate_simple(rank_forcedIndices, dims_forcedIndices, NULL);
+    if(mpi_my_rank != CHECKPOINT_ROOT)
+    {
+        H5Sselect_none(file_space);
+        H5Sselect_none(memory_space);
+    }
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Dwrite(dset_id,H5T_NATIVE_INT, memory_space, file_space, plist_id, equation_forceKzIndGathered);
+    H5Dclose(dset_id);
+    H5Sclose(file_space);
+    H5Pclose(plist_id);
+
+    /*creating dataset in which forcing will be stored*/
+    hid_t dims_forceArray[3] = {0, equation_forceNorm, array_local_size.ns};
+    hid_t chunk_forceArray[3] = {1, equation_forceNorm, array_local_size.ns};
+    hid_t max_forceArray[3] = {H5S_UNLIMITED, equation_forceNorm, array_local_size.ns};
+
+    plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(plist_id, 3, chunk_forceArray);
+    dspace_id = H5Screate_simple(3, dims_forceArray, max_forceArray);
+    dset_id = H5Dcreate2(file_id,
+                         "/force/forcing",
+                         complex_id,
+                         dspace_id,
+                         H5P_DEFAULT,
+                         plist_id,
+                         H5P_DEFAULT);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    H5Pclose(plist_id);
+
+    /* Close the group. */
+    H5Gclose(group_id);
+
+
     /*creating a group to save spectra*/
     if(parameters.save_diagnostics || parameters.compute_k)
     {
@@ -1502,6 +1627,62 @@ void hdf_saveMSpec(int timestep){
     H5Fclose(file_id);
 }
 
+/***************************
+ *  hdf_saveForcing
+ * *************************/
+void hdf_saveForcing(){
+    hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
+    hid_t plist_id; //property list id
+    hid_t dims_ext_full[3] = {1, equation_forceNorm, array_local_size.ns};
+    hid_t dims_ext_local[3] = {1, equation_forceKn, array_local_size.ns};
+    hid_t max_dims_local[3] = {H5S_UNLIMITED, equation_forceKn, array_local_size.ns};
+    hid_t max_dims_full[3] = {H5S_UNLIMITED, equation_forceNorm, array_local_size.ns};
+    hid_t size[3];
+    hid_t offset[3];
+    hid_t stride[3] = {1,1,1};
+    hid_t count[3] = {1,1,1};
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
+    /* open file to read and write */
+    file_id = H5Fopen(PARAMETER_FILENAME,H5F_ACC_RDWR,plist_id);
+    H5Pclose(plist_id);
+    /*opening a group and a dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/force/forcing", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    /*get dataset's dimensions */
+    int ndims = H5Sget_simple_extent_ndims(dspace_id);
+    hsize_t *dims = malloc(ndims * sizeof(*dims));
+    H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+    H5Sclose(dspace_id);
+    /*extend dataset size*/
+    size[0] = dims[0] + dims_ext_full[0];
+    size[1] = dims[1];
+    size[2] = dims[2];
+    offset[0] = dims[0];
+    offset[1] = equation_displacements[mpi_my_row_rank];
+    offset[2] = 0;
+    H5Dset_extent(dset_id, size);
+    /*write forcing to the file*/
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
+    memspace = H5Screate_simple(2,&dims_ext_local[1],&max_dims_local[1]);
+    int forced_proc = mpi_whereIsM[equation_forcedM];
+    if (mpi_my_col_rank != forced_proc)
+    {
+        H5Sselect_none(dspace_id);
+        H5Sselect_none(memspace);
+    }
+    H5Dwrite(dset_id, complex_id, memspace, dspace_id, plist_id, equation_forcingAr);
+    H5Sclose(memspace);
+    H5Sclose(dspace_id);
+    H5Pclose(plist_id);
+    H5Dclose(dset_id);
+    H5Fclose(file_id);
+}
 /***************************
  *
  *

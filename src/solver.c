@@ -20,6 +20,7 @@
 enum solverType solverType;
 struct solver solver;
 struct rk4 rk4;
+struct euler euler;
 
 /***************************************
  * \fn void solver_init():
@@ -29,6 +30,7 @@ struct rk4 rk4;
  ***************************************/
 void solver_init() {
     solver.dt = parameters.dt;
+    printf("dt = %f\n",solver.dt);
     solver.linDt = parameters.linDt;
     solver.linDt = parameters.linDt;
     solver.dissipDt = parameters.dissipDt;
@@ -42,6 +44,12 @@ void solver_init() {
         rk4.K_buf = calloc(array_local_size.total_comp, sizeof(*rk4.K_buf));
         rk4.RHS_buf = calloc(array_local_size.total_comp, sizeof(*rk4.RHS_buf));
         rk4.g_buf = calloc(array_local_size.total_comp, sizeof(*rk4.g_buf));
+
+    }
+    if (solverType == EULER) {
+        if (mpi_my_rank == IORANK) printf("CHOSEN SOLVER IS EULER\n");
+        euler.RHS_buf = calloc(array_local_size.total_comp, sizeof(*euler.RHS_buf));
+        euler.g_buf = calloc(array_local_size.total_comp, sizeof(*euler.g_buf));
 
     }
 };
@@ -102,6 +110,17 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h, int it) {
             *g = inter;
             break;
 
+        case EULER:
+            equation_getRHS(g_ar, h, euler.RHS_buf);
+            for (size_t i = 0; i < array_local_size.total_comp; i++) {
+                euler.g_buf[i] = g_ar[i] + solver.dt * euler.RHS_buf[i];
+                euler.RHS_buf[i] = 0.j;
+            }
+            COMPLEX *inter1 = euler.g_buf;
+            euler.g_buf = *g;
+            *g = inter1;
+            break;
+
         default:
             printf("ERROR WHILE MAKING SOLVER STEP; CHECK CHOICE OF SOLVER! ABORTING... \n");
             exit(1);
@@ -122,13 +141,12 @@ void solver_updateDt(COMPLEX *g, COMPLEX *h, int it) {
     double *vField;
     vField = (double*) fftw_chiBuf;
 
-    // update fields and h first
-    fields_sendF(g);
-    fields_getFields(f00, f10, f01);
-    fields_getChi();
-    distrib_getH(h, g);
-
     if (it % solver.iter_dt == 0) {
+        // update fields and h first
+        fields_sendF(g);
+        fields_getFields(f00, f10, f01);
+        fields_getChi();
+        distrib_getH(h, g);
         switch (systemType) {
             case ELECTROSTATIC:
                 // compute vx

@@ -23,18 +23,31 @@
 #include "fields.h"
 #include "distrib.h"
 
+
+#define FORCE2D 1
+
 #define CHI_EM 3
 #define CHI_EL 1
 #define CHI_PHI 0
 #define CHI_A 1
 #define CHI_B 2
 
-size_t *equation_forceKxInd;
-size_t *equation_forceKyInd;
-size_t *equation_forceKzInd;
+int *equation_forceKxInd;
+int *equation_forceKyInd;
+int *equation_forceKzInd;
+int *equation_forceKxIndGlobal;
+int *equation_forceKxIndGathered;
+int *equation_forceKyIndGathered;
+int *equation_forceKzIndGathered;
 int equation_forceKn;
+int equation_forceKnTotal;
 int equation_forceNorm;
+int equation_forcedM = 0;
+int *equation_forceKnAr;
+int *equation_displacements;
 double equation_forcingCoef;
+double *equation_forcingMM;
+COMPLEX *equation_forcingAr;
 
 /***************************************
  * \fn void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, const COMPLEX *minus_boundary, COMPLEX *out)
@@ -176,7 +189,7 @@ void equation_getNonlinearElectromagnetic(double *in, double *chiAr, double *out
                             indChi_phi = getIndChiBufEM_r(ix,iy,iz,is,CHI_PHI);
                             indChi_A = getIndChiBufEM_r(ix,iy,iz,is,CHI_A);
                             indChi_B = getIndChiBufEM_r(ix,iy,iz,is,CHI_B);
-                            // computing (chi_phi + chi_b * h)
+                            // computing (chi_phi + chi_b) * h
                             phibh = (chiAr[indChi_phi] + chiAr[indChi_B]) * in[indH];
                             // computing chi_b * h_l=1
                             bh = (il==0)?  chiAr[indChi_B] * in[indH_l1] : chiAr[indChi_B] * (in[indH_l0] + 2. * in[indH_l1]);
@@ -412,6 +425,7 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
 void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
     size_t ind6D;
     size_t ind2D;
+    size_t ind3D;
     for (size_t ix = 0; ix < array_local_size.nkx; ix++){
         for (size_t iy = 0; iy < array_local_size.nky; iy++){
             for (size_t iz = 0; iz < array_local_size.nkz; iz++){
@@ -420,7 +434,10 @@ void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
                         for (size_t is = 0; is < array_local_size.ns; is++){
                             ind6D = get_flat_c(is,il,im,ix,iy,iz);
                             ind2D = ix * array_local_size.nky + iy;
-                            rhs[ind6D] -= (var_var.mu_k * space_kPerp2[ind2D] + var_var.mu_m * global_nm_index[im])  * h[ind6D] ;
+                            ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                                    iy * array_local_size.nkz +
+                                    iz;
+                            rhs[ind6D] -= (var_var.mu_k * space_kPerp2[ind2D] + var_var.mu_m * global_nm_index[im])  * h[ind6D] ;//(var_var.mu_k * space_kPerp2[ind2D] + var_var.mu_m * global_nm_index[im])  * h[ind6D] ;
                         }
                     }
                 }
@@ -437,48 +454,126 @@ void equation_init() {
     double k_min = parameters.forceKmin;
     double k_max = parameters.forceKmax;
     size_t ind3D;
+    size_t ind2D;
     equation_forceKn = 0;
     equation_forceNorm = 0;
 
     // find out how many wave numbers will be forced
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
-        for(size_t iy = 0; iy < array_local_size.nky; iy++){
-            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
-                ind3D = ix * array_local_size.nky * array_local_size.nkz +
-                        iy * array_local_size.nkz +
-                        iz;
-                if(space_kSq[ind3D] > k_min * k_min && space_kSq[ind3D] < k_max * k_max){
-                    equation_forceKn += 1;
+    if (!FORCE2D){
+        for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+            for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                    ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                            iy * array_local_size.nkz +
+                            iz;
+                    if(space_kSq[ind3D] > k_min * k_min && space_kSq[ind3D] < k_max * k_max){
+                        equation_forceKn += 1;
+                        // taking into account the reality condition
+                        if (iz == 0 || iz == array_global_size.nkz - 1){
+                            equation_forceNorm += 1;
+                        }
+                        else{
+                            equation_forceNorm += 1;
+                        }
+
+                    }
                 }
             }
         }
     }
-    //printf("[MPI process %d] forcing %d modes\n",mpi_my_rank,equation_forceKn);
-    MPI_Allreduce(&equation_forceKn,&equation_forceNorm,1,MPI_INT, MPI_SUM, mpi_row_comm);
+    if (FORCE2D){
+        for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+            for(size_t iy = 0; iy < array_local_size.nky; iy++){
+                ind2D = ix * array_local_size.nky + iy;
+                if(space_kPerp2[ind2D] > k_min * k_min && space_kPerp2[ind2D] < k_max * k_max){
+                    equation_forceKn += 1;
+                    // taking into account the reality condition
+                    equation_forceNorm += 1;
+                }
+            }
+        }
+    }
+    //getting amounts of forced modes at each processor; needed to store force
+    equation_forceKnAr = malloc(mpi_dims[1] * sizeof(*equation_forceKnAr));
+    equation_displacements = malloc(mpi_dims[1] * sizeof(*equation_displacements));
+    MPI_Allgather(&equation_forceKn,1,MPI_INT,equation_forceKnAr,1,MPI_INT, mpi_row_comm);
+    //computing displacements
+    for(size_t jj = 0; jj < mpi_dims[1]; jj++){
+        equation_displacements[jj] = 0;
+        for (size_t ii = 0; ii < jj; ii++){
+            equation_displacements[jj] += equation_forceKnAr[ii];
+        }
+    }
+
+    //getting total number of modes
+    MPI_Allreduce(MPI_IN_PLACE,&equation_forceNorm,1,MPI_INT, MPI_SUM, mpi_row_comm);
     if (mpi_my_row_rank == 0) printf("total forcing modes = %d\n",equation_forceNorm);
 
     // putting list of indices of wave numbers which are excited
     equation_forceKxInd = malloc(equation_forceKn * sizeof(*equation_forceKxInd));
     equation_forceKyInd = malloc(equation_forceKn * sizeof(*equation_forceKyInd));
     equation_forceKzInd = malloc(equation_forceKn * sizeof(*equation_forceKzInd));
+    equation_forceKxIndGlobal = malloc(equation_forceKn * sizeof(*equation_forceKxIndGlobal));
+    equation_forcingMM = malloc(equation_forceKn * sizeof(*equation_forcingMM));
+    // allocating forcing array to store forcing
+    equation_forcingAr = malloc(equation_forceKn * array_local_size.ns * sizeof(*equation_forcingAr));
     size_t count = 0;
-    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
-        for(size_t iy = 0; iy < array_local_size.nky; iy++){
-            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
-                ind3D = ix * array_local_size.nky * array_local_size.nkz +
-                        iy * array_local_size.nkz +
-                        iz;
-                if(space_kSq[ind3D] > k_min * k_min && space_kSq[ind3D] < k_max * k_max){
-                    equation_forceKxInd[count] = ix;
-                    equation_forceKyInd[count] = iy;
-                    equation_forceKzInd[count] = iz;
-                    count++;
+    if (!FORCE2D) {
+        for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+            for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+                for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                    ind3D = ix * array_local_size.nky * array_local_size.nkz +
+                            iy * array_local_size.nkz +
+                            iz;
+                    if (space_kSq[ind3D] > k_min * k_min && space_kSq[ind3D] < k_max * k_max) {
+                        equation_forceKxInd[count] = ix;
+                        equation_forceKyInd[count] = iy;
+                        equation_forceKzInd[count] = iz;
+                        if (iz == 0 || iz == array_local_size.nkz - 1) {
+                            equation_forcingMM[count] = 1.0;
+                        } else {
+                            equation_forcingMM[count] = 2.0;
+                        }
+                        count++;
+                    }
                 }
             }
         }
     }
+    if (FORCE2D){
+        for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+            for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+                    ind2D = ix * array_local_size.nky +
+                            iy;
+                    if (space_kPerp2[ind2D] > k_min * k_min && space_kPerp2[ind2D] < k_max * k_max) {
+                        equation_forceKxInd[count] = ix;
+                        equation_forceKxIndGlobal[count] = global_nkx_index[ix];
+                        equation_forceKyInd[count] = iy;
+                        equation_forceKzInd[count] = 0;
+                        equation_forcingMM[count] = 1.0;
+                        count++;
+                    }
+            }
+        }
+    }
+    for (size_t ii = 0; ii < equation_forceKn; ii++){
+        printf("%zu: kz = %zu kx = %zu, ky = %zu, %f\n",ii, equation_forceKzInd[ii],equation_forceKxInd[ii],equation_forceKyInd[ii], equation_forcingMM[ii]);
+    }
+    equation_forceKxIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKxIndGathered));
+    equation_forceKyIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKxIndGathered));
+    equation_forceKzIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKzIndGathered));
+    if (mpi_my_row_rank == 0){
+        MPI_Gatherv(equation_forceKyInd, equation_forceKn, MPI_INT, equation_forceKyIndGathered, equation_forceKnAr,equation_displacements,MPI_INT,0,mpi_row_comm);
+        MPI_Gatherv(equation_forceKzInd, equation_forceKn, MPI_INT, equation_forceKzIndGathered, equation_forceKnAr,equation_displacements,MPI_INT,0,mpi_row_comm);
+        MPI_Gatherv(equation_forceKxIndGlobal, equation_forceKn, MPI_INT, equation_forceKxIndGathered, equation_forceKnAr,equation_displacements,MPI_INT,0,mpi_row_comm);
+    }
+    else{
+        MPI_Gatherv(equation_forceKyInd, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_row_comm);
+        MPI_Gatherv(equation_forceKzInd, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_row_comm);
+        MPI_Gatherv(equation_forceKxIndGlobal, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_row_comm);
+    }
     //forcing coefficient
-    equation_forcingCoef = parameters.forcePower / equation_forceNorm;
+    equation_forcingCoef = parameters.forcePower / equation_forceNorm / array_global_size.ns;
 };
 
 /***************************************
@@ -492,8 +587,10 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
     size_t indKy;
     size_t indKz;
     size_t ind6D;
-    forced_proc = mpi_whereIsM[2];
-    local_m = mpi_whereIsM[3];
+    size_t indForce;
+    double sumForce = 0;
+    forced_proc = mpi_whereIsM[equation_forcedM];
+    local_m = mpi_whereIsM[equation_forcedM * 2 + 1];
     // find out how many wave numbers will be forced
     if (mpi_my_col_rank == forced_proc){
         for(size_t i = 0; i < equation_forceKn; i++){
@@ -502,9 +599,22 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
             indKz = equation_forceKzInd[i];
             for(size_t is = 0; is < array_local_size.ns; is++){
                 ind6D = get_flat_c(is,0,local_m,indKx,indKy,indKz);
-                if (cabs(h[ind6D]) > 1e-16){
-                    rhs[ind6D] += equation_forcingCoef/conj(h[ind6D]);
-                }
+                sumForce +=  cabs(h[ind6D]) * cabs(h[ind6D]) * equation_forcingMM[i] * 2;
+            }
+        }
+        MPI_Allreduce(MPI_IN_PLACE,&sumForce,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
+        double powerInjected = 0;
+
+        for(size_t i = 0; i < equation_forceKn; i++){
+            indKx = equation_forceKxInd[i];
+            indKy = equation_forceKyInd[i];
+            indKz = equation_forceKzInd[i];
+            for(size_t is = 0; is < array_local_size.ns; is++){
+                ind6D = get_flat_c(is,0,local_m,indKx,indKy,indKz);
+                indForce = i * array_local_size.ns + is;
+                equation_forcingAr[indForce] = parameters.forcePower * h[ind6D] / sumForce;
+                rhs[ind6D] += equation_forcingAr[indForce];
+                powerInjected += creal(equation_forcingAr[indForce] * conj(h[ind6D])) * equation_forcingMM[i] * 2;
             }
         }
     }

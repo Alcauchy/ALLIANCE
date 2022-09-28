@@ -34,6 +34,7 @@ double init_energySpec(double k, double m, double amp, double disp);
 double init_sinc(double amp, double f, double x, double y, double z, double x0, double y0, double z0);
 double init_exp2(double amp, double f, double x, double y, double z, double x0, double y0, double z0);
 double init_sinX(double amp, double f, double x);
+double init_cosX(double amp, double f, double x);
 void init_fillSinc(COMPLEX *out);
 extern enum adiabatic kinetic;
 extern enum electromagnetic systemType;
