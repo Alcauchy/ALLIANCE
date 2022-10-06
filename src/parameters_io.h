@@ -32,6 +32,7 @@ struct system_param {
     int electromagnetic;
     int adiabatic;
     int initial;
+    int allow_rescale;
     char from_simulationName[128];
     double beta;
     double *mass;

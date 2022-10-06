@@ -322,6 +322,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.unitK);
                 if (mpi_my_rank == IO_RANK) printf("unit k = %lf \n", parameters.unitK);
             }
+            if (strcmp(tmp, "allow_rescale") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.allow_rescale);
+                if (mpi_my_rank == IO_RANK) printf("allow_rescale = %d \n", parameters.allow_rescale);
+            }
         }
     }
     if (mpi_my_rank == 0) printf("=====================================\n");

@@ -2771,6 +2771,9 @@ void hdf_saveFields(int timestep){
  *  hdf_readData
  * *************************/
 void hdf_readData(char *filename, COMPLEX *h) {
+    for (size_t ii = 0; ii < array_local_size.total_comp; ii++){
+        h[ii] = 0.;
+    }
     // now we will create a file, and write a dataset into it.
     hid_t file_id, dset_id;
     hid_t file_space, memory_space;
@@ -2785,18 +2788,312 @@ void hdf_readData(char *filename, COMPLEX *h) {
     /*open dataset*/
     dset_id = H5Dopen2(file_id, "h", H5P_DEFAULT);
     file_space = H5Dget_space(dset_id);
-    H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset, stride, count, chunk_dims_c);
-    memory_space = H5Screate_simple(hdf_rank, chunk_dims_c, NULL);
-    /*
-     * reading h dataset
-     */
-    plist_id = H5Pcreate(H5P_DATASET_XFER);
-    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-    H5Dread(dset_id,complex_id, memory_space, file_space, plist_id, h);
-    /*closing dataset identifier, memory space and file space*/
+    int ndims = H5Sget_simple_extent_ndims(file_space);
+    hsize_t *dims = malloc(ndims * sizeof(*dims));
+    H5Sget_simple_extent_dims(file_space, dims, NULL);
+    if (mpi_my_rank == 0){
+        printf("DIMS OF DATASET = %zu,%zu,%zu,%zu,%zu,%zu\n",dims[0],dims[1],dims[2],dims[3],dims[4],dims[5]);
+    }
+    if(parameters.allow_rescale == 0){
+        /*checking if dataset dimensions are the same as the simulation box resolution
+         * if not, abort computation and exit*/
+        if (array_global_size.nkx != dims[0]){
+            if (mpi_my_rank == 0) printf("WARNING! nkx simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling is not allowed! EXITING...\n", array_global_size.nkx, dims[0]);
+            exit(1);
+        }
+        if (array_global_size.nky != dims[1]){
+            if (mpi_my_rank == 0) printf("WARNING! nky simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling is not allowed! EXITING...\n", array_global_size.nky, dims[1]);
+            exit(1);
+        }
+        if (array_global_size.nkz != dims[2]){
+            if (mpi_my_rank == 0) printf("WARNING! nkz simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling is not allowed! EXITING...\n", array_global_size.nkz, dims[2]);
+            exit(1);
+        }
+        if (array_global_size.nm != dims[3]){
+            if (mpi_my_rank == 0) printf("WARNING! nm simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling is not allowed! EXITING...\n", array_global_size.nm, dims[3]);
+            exit(1);
+        }
+        /*read data if everything is fine with resolution*/
+        H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset, stride, count, chunk_dims_c);
+        memory_space = H5Screate_simple(hdf_rank, chunk_dims_c, NULL);
+
+        /*
+         * reading h dataset
+         */
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        H5Dread(dset_id,complex_id, memory_space, file_space, plist_id, h);
+        /*close memory space*/
+        H5Sclose(memory_space);
+        H5Pclose(plist_id);
+    }
+    else{
+        /*checking if dataset dimensions are the same as the simulation box resolution
+         * if not, abort computation and exit*/
+        if (array_global_size.nkx != dims[0]) {
+            if (mpi_my_rank == 0)
+                printf("WARNING! nkx simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling will be performed!\n",
+                       array_global_size.nkx, dims[0]);
+        }
+        if (array_global_size.nky != dims[1]) {
+            if (mpi_my_rank == 0)
+                printf("WARNING! nky simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling will be performed!\n",
+                       array_global_size.nky, dims[1]);
+        }
+        if (array_global_size.nkz != dims[2]) {
+            if (mpi_my_rank == 0)
+                printf("WARNING! nkz simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling will be performed!\n",
+                       array_global_size.nkz, dims[2]);
+        }
+        if (array_global_size.nm != dims[3]) {
+            if (mpi_my_rank == 0)
+                printf("WARNING! nm simulation resolution (%zu) not equal to file resolution (%zu)! Rescaling will be performed!\n",
+                       array_global_size.nm, dims[3]);
+        }
+        /* we need take into account the normalization as well */
+        COMPLEX old_norm = 1./(dims[0]*dims[1]*(dims[2] - 1) * 2);
+        COMPLEX norm = 1./(fftw_norm/old_norm);
+
+        /* next part is to read the correct hyperslab from the file.
+         * If data in the file is bigger than simulation resolution, data will be truncated.
+         * If it is smaller, than the data will be padded with zeros in the centre.
+         * Algorithm is the following: first, data is treated as two separate arrays, one with positive kx and the other is with negative kx.
+         * Array of positive kx is loaded to the left, and negative kx is loaded to the processors to the right.
+         * Then they are being copied from buffer to a bigger/smaller array of data.*/
+        hid_t offset_file[6];
+        hid_t stride_file[6] = {1,1,1,1,1,1};
+        hid_t count_file[6] = {1,1,1,1,1,1};
+        hid_t chunk_dims_c_file[6];
+        size_t yMax;
+        size_t zMax;
+        int procId_mMax;
+        int procId_kMaxPos;
+        int procId_kMaxNeg;
+        int maxM;
+        int maxXPositive;
+        int maxXNegative;
+        int maxXNegativeData;
+
+        /*define maximum size of data in z and y*/
+        yMax = (dims[1] > array_local_size.nky) ? array_local_size.nky : dims[1];
+        zMax = (dims[1] > array_local_size.nkz) ? array_local_size.nkz : dims[2];
+
+        /* first we want to find which m moment is the largest for the system or file, and at which processor it is located*/
+        if(dims[3] > array_global_size.nm){
+            maxM = array_global_size.nm - 1;
+        }
+        else{
+            maxM = dims[3] - 1;
+        }
+        procId_mMax = mpi_whereIsM[2 * maxM];
+        /* next we want to find out which is the processor where maximum positive and negative values of kx are located*/
+        if(dims[0] > array_global_size.nkx){
+            maxXPositive = array_global_size.nkx/2;
+            maxXNegative = array_global_size.nkx/2 + 1;
+            maxXNegativeData = dims[0] - (array_global_size.nkx/2) + 1;
+        }
+        else{
+            maxXPositive = dims[0]/2;
+            maxXNegative = array_global_size.nkx - dims[0]/2 + 1;
+            maxXNegativeData = dims[0]/2 + 1;
+        }
+        procId_kMaxPos = mpi_whereIsX[2 * maxXPositive];
+        procId_kMaxNeg = mpi_whereIsX[2 * maxXNegative];
+        if (mpi_my_rank == 0) printf("procId_mMax = %d, maxM = %d\n", procId_mMax, maxM);
+        if (mpi_my_rank == 0) printf("procId_kMaxPos = %d, maxKPos = %d\n", procId_kMaxPos, maxXPositive);
+        if (mpi_my_rank == 0) printf("procId_kMaxNeg = %d, maxKNeg = %d\n", procId_kMaxNeg, maxXNegative);
+        if (mpi_my_rank == 0) printf("maxNegData = %d\n", maxXNegativeData);
+
+        /* we now know processors id. Let's now set correct offsets to load data on processors (for now positive),
+         * as well as array chunk dimensions.*/
+        offset_file[0] = 0;
+        offset_file[1] = 0;
+        offset_file[2] = 0;
+        offset_file[3] = 0;
+        offset_file[4] = 0;
+        offset_file[5] = 0;
+
+        chunk_dims_c_file[0] = 0;
+        chunk_dims_c_file[1] = dims[1];
+        chunk_dims_c_file[2] = dims[2];
+        chunk_dims_c_file[3] = 0;
+        chunk_dims_c_file[4] = dims[4];
+        chunk_dims_c_file[5] = dims[5];
+        /* first we set offsets for m, as well as chunk sizes*/
+        if(mpi_my_col_rank <= procId_mMax){
+            offset_file[3] = mpi_my_col_rank * array_local_size.nm;
+            chunk_dims_c_file[3] = array_local_size.nm;
+            if (mpi_my_col_rank == procId_mMax) chunk_dims_c_file[3] = dims[3] - mpi_my_col_rank * array_local_size.nm;
+        }
+        else{
+            offset_file[3] = 0;
+            chunk_dims_c_file[3] = 0;
+        }
+        //printf("my_col_rank = %d, chunk_size for m = %zu, offset = %zu\n",mpi_my_col_rank, chunk_dims_c_file[3],offset_file[3]);
+
+        /* setting offsets and chunk sizes for kx, positive array*/
+        if(mpi_my_row_rank <= procId_kMaxPos){
+            offset_file[0] = mpi_my_row_rank * array_local_size.nkx;
+            chunk_dims_c_file[0] = array_local_size.nkx;
+            if (mpi_my_row_rank == procId_kMaxPos) chunk_dims_c_file[0] = (maxXPositive + 1) - mpi_my_row_rank * array_local_size.nkx;
+        }
+        else{
+            offset_file[0] = 0;
+            chunk_dims_c_file[0] = 0;
+        }
+        printf("POSITIVE my_row_rank = %d, chunk_size for kx = %zu, offset = %zu\n",mpi_my_row_rank, chunk_dims_c_file[0],offset_file[0]);
+        /*now we are allocating buffers, in which the positive array will be stored*/
+        size_t total_bufSize = chunk_dims_c_file[0] * chunk_dims_c_file[1]
+                             * chunk_dims_c_file[2] * chunk_dims_c_file[3]
+                             * chunk_dims_c_file[4] * chunk_dims_c_file[5];
+        COMPLEX *buf = malloc(total_bufSize * sizeof(*buf));
+        H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset_file, stride_file, count_file, chunk_dims_c_file);
+        memory_space = H5Screate_simple(hdf_rank, chunk_dims_c_file, NULL);
+
+        /*
+         * reading h dataset
+         */
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        H5Dread(dset_id,complex_id, memory_space, file_space, plist_id, buf);
+
+        /*fill positive part of array to data array*/
+        for(size_t ix = 0; ix < chunk_dims_c_file[0]; ix++){
+            //printf("ix = %zu\n",ix);
+            for(size_t iy = 0; iy < yMax/2 + 1; iy++){
+                for(size_t iz = 0; iz < zMax; iz++){
+                    for(size_t im = 0; im < chunk_dims_c_file[3]; im++){
+                        for(size_t il = 0; il < array_local_size.nl; il++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                size_t indBufPosY = ix * chunk_dims_c_file[1] * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                   +iy * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                   +iz * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                   +im * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                   +il * chunk_dims_c_file[5]
+                                                   +is;
+                                size_t indArPosY = get_flat_c(is, il, im, ix, iy, iz);
+                                h[indArPosY] = buf[indBufPosY];
+
+
+                                if (iy != yMax/2){
+                                    size_t indBufNegY = ix * chunk_dims_c_file[1] * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                       +(chunk_dims_c_file[1] - iy - 1) * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                       +iz * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                       +im * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                       +il * chunk_dims_c_file[5]
+                                                       +is;
+                                    size_t indArNegY = get_flat_c(is, il, im, ix, array_local_size.nky - iy - 1, iz);
+                                    h[indArNegY] = buf[indBufNegY];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /*close memory space*/
+        H5Sclose(memory_space);
+        H5Pclose(plist_id);
+        free(buf);
+
+        /*Now we need to load negative k array. To do so, we first need to set correct negative offsets and chunk sizes. Only 0th dimension is required,
+         * others are not changed*/
+        offset_file[0] = 0;
+        chunk_dims_c_file[0] = 0;
+        int negativeOffsetStart = 0;
+        if (mpi_my_row_rank == procId_kMaxNeg){
+            offset_file[0] = maxXNegativeData;
+            printf("offset_kx = %d\n",maxXNegativeData);
+            int local_kx = mpi_whereIsX[2 * (maxXNegative) + 1];
+            printf("local_kx = %d\n",local_kx);
+            chunk_dims_c_file[0] = array_local_size.nkx - local_kx;
+            printf("chunk_dims_kx = %zu\n",chunk_dims_c_file[0]);
+            negativeOffsetStart = chunk_dims_c_file[0] + offset_file[0];
+        }
+
+        MPI_Bcast(&negativeOffsetStart,1,MPI_INT,procId_kMaxNeg,mpi_row_comm);
+        printf("Offset start negative = %d\n",negativeOffsetStart);
+        if(mpi_my_row_rank > procId_kMaxNeg){
+            offset_file[0] =  negativeOffsetStart + (mpi_my_row_rank - procId_kMaxNeg - 1) * array_local_size.nkx;
+            chunk_dims_c_file[0] = array_local_size.nkx;
+        }
+        printf("NEGATIVE my_row_rank = %d, chunk_size for kx = %zu, offset = %zu\n",mpi_my_row_rank, chunk_dims_c_file[0],offset_file[0]);
+
+        /* we have computed offsets and chunk dimensions, now we compute total size of buffer,
+         * select the correct hyperslab and prepare memory space for it*/
+        total_bufSize = chunk_dims_c_file[0] * chunk_dims_c_file[1]
+                        * chunk_dims_c_file[2] * chunk_dims_c_file[3]
+                        * chunk_dims_c_file[4] * chunk_dims_c_file[5];
+        buf = malloc(total_bufSize * sizeof(*buf));
+        H5Sselect_hyperslab(file_space, H5S_SELECT_SET, offset_file, stride_file, count_file, chunk_dims_c_file);
+        memory_space = H5Screate_simple(hdf_rank, chunk_dims_c_file, NULL);
+
+        /*
+         * reading h dataset
+         */
+        printf("HIHIIIIII\n");
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+        H5Dread(dset_id,complex_id, memory_space, file_space, plist_id, buf);
+
+        /*fill negative part of array to data array*/
+        size_t kxNeg;
+        for(size_t ix = 0; ix < chunk_dims_c_file[0]; ix++){
+            //printf("ix = %zu\n",ix);
+            if(mpi_my_row_rank == procId_kMaxNeg){
+                kxNeg = mpi_whereIsX[2 * (maxXNegative + ix) + 1];
+                //printf("kxNeg = %zu\n",kxNeg);
+            }
+            else{
+                kxNeg = ix;
+            }
+            for(size_t iy = 0; iy < yMax/2 + 1; iy++){
+                for(size_t iz = 0; iz < zMax; iz++){
+                    for(size_t im = 0; im < chunk_dims_c_file[3]; im++){
+                        for(size_t il = 0; il < array_local_size.nl; il++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                size_t indBufPosY = ix * chunk_dims_c_file[1] * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                    +iy * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                    +iz * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                    +im * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                    +il * chunk_dims_c_file[5]
+                                                    +is;
+                                size_t indArPosY = get_flat_c(is, il, im, kxNeg, iy, iz);
+                                h[indArPosY] = buf[indBufPosY];
+
+
+                                if (iy != yMax/2){
+                                    size_t indBufNegY = ix * chunk_dims_c_file[1] * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                        +(chunk_dims_c_file[1] - iy - 1) * chunk_dims_c_file[2] * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                        +iz * chunk_dims_c_file[3] * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                        +im * chunk_dims_c_file[4] * chunk_dims_c_file[5]
+                                                        +il * chunk_dims_c_file[5]
+                                                        +is;
+                                    size_t indArNegY = get_flat_c(is, il, im, kxNeg, array_local_size.nky - iy - 1, iz);
+                                    h[indArNegY] = buf[indBufNegY];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /*close memory space*/
+        H5Sclose(memory_space);
+        H5Pclose(plist_id);
+        free(buf);
+
+        /*normalize data correctly*/
+        for(size_t ii = 0; ii < array_local_size.total_comp;ii++){
+            h[ii] *= norm;
+        }
+    }
+    /*closing dataset identifier and file space*/
     H5Dclose(dset_id);
     H5Sclose(file_space);
-    H5Sclose(memory_space);
-    H5Pclose(plist_id);
+
+
 
 };

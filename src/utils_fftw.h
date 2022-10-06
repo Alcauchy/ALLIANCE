@@ -41,6 +41,7 @@ double cosinus(double f,int ix);                            // returns cos(2*pi*
 extern COMPLEX *fftw_hBuf;
 extern COMPLEX *fftw_chiBuf;
 extern COMPLEX *fftw_field;
+extern double fftw_norm;
 extern int *global_nkx_index;
 
 #endif //ALLIANCE_ALPHA_1_0_UTILS_FFTW_H
