@@ -2899,10 +2899,6 @@ void hdf_readData(char *filename, COMPLEX *h) {
         }
         procId_kMaxPos = mpi_whereIsX[2 * maxXPositive];
         procId_kMaxNeg = mpi_whereIsX[2 * maxXNegative];
-        if (mpi_my_rank == 0) printf("procId_mMax = %d, maxM = %d\n", procId_mMax, maxM);
-        if (mpi_my_rank == 0) printf("procId_kMaxPos = %d, maxKPos = %d\n", procId_kMaxPos, maxXPositive);
-        if (mpi_my_rank == 0) printf("procId_kMaxNeg = %d, maxKNeg = %d\n", procId_kMaxNeg, maxXNegative);
-        if (mpi_my_rank == 0) printf("maxNegData = %d\n", maxXNegativeData);
 
         /* we now know processors id. Let's now set correct offsets to load data on processors (for now positive),
          * as well as array chunk dimensions.*/
@@ -2941,7 +2937,7 @@ void hdf_readData(char *filename, COMPLEX *h) {
             offset_file[0] = 0;
             chunk_dims_c_file[0] = 0;
         }
-        printf("POSITIVE my_row_rank = %d, chunk_size for kx = %zu, offset = %zu\n",mpi_my_row_rank, chunk_dims_c_file[0],offset_file[0]);
+
         /*now we are allocating buffers, in which the positive array will be stored*/
         size_t total_bufSize = chunk_dims_c_file[0] * chunk_dims_c_file[1]
                              * chunk_dims_c_file[2] * chunk_dims_c_file[3]
@@ -3004,21 +3000,16 @@ void hdf_readData(char *filename, COMPLEX *h) {
         int negativeOffsetStart = 0;
         if (mpi_my_row_rank == procId_kMaxNeg){
             offset_file[0] = maxXNegativeData;
-            printf("offset_kx = %d\n",maxXNegativeData);
             int local_kx = mpi_whereIsX[2 * (maxXNegative) + 1];
-            printf("local_kx = %d\n",local_kx);
             chunk_dims_c_file[0] = array_local_size.nkx - local_kx;
-            printf("chunk_dims_kx = %zu\n",chunk_dims_c_file[0]);
             negativeOffsetStart = chunk_dims_c_file[0] + offset_file[0];
         }
 
         MPI_Bcast(&negativeOffsetStart,1,MPI_INT,procId_kMaxNeg,mpi_row_comm);
-        printf("Offset start negative = %d\n",negativeOffsetStart);
         if(mpi_my_row_rank > procId_kMaxNeg){
             offset_file[0] =  negativeOffsetStart + (mpi_my_row_rank - procId_kMaxNeg - 1) * array_local_size.nkx;
             chunk_dims_c_file[0] = array_local_size.nkx;
         }
-        printf("NEGATIVE my_row_rank = %d, chunk_size for kx = %zu, offset = %zu\n",mpi_my_row_rank, chunk_dims_c_file[0],offset_file[0]);
 
         /* we have computed offsets and chunk dimensions, now we compute total size of buffer,
          * select the correct hyperslab and prepare memory space for it*/
@@ -3032,7 +3023,6 @@ void hdf_readData(char *filename, COMPLEX *h) {
         /*
          * reading h dataset
          */
-        printf("HIHIIIIII\n");
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
         H5Dread(dset_id,complex_id, memory_space, file_space, plist_id, buf);
