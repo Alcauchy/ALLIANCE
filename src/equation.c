@@ -437,7 +437,7 @@ void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
                             ind3D = ix * array_local_size.nky * array_local_size.nkz +
                                     iy * array_local_size.nkz +
                                     iz;
-                            rhs[ind6D] -= (var_var.mu_k * space_kPerp2[ind2D] + var_var.mu_m * global_nm_index[im])  * h[ind6D] ;//(var_var.mu_k * space_kPerp2[ind2D] + var_var.mu_m * global_nm_index[im])  * h[ind6D] ;
+                            rhs[ind6D] -= equation_getLocalDissipation(h[ind6D], space_kPerp2[ind2D], space_kz[iz], global_nm_index[im]);
                         }
                     }
                 }
@@ -445,6 +445,15 @@ void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
         }
     }
 };
+
+/***************************************
+ * \fn COMPLEX equation_getLocalDissipation()
+ * \brief computes dissipation at a given k and m.
+ ***************************************/
+COMPLEX equation_getLocalDissipation(const COMPLEX h, double kPerpSq, double kz, double m) {
+    return (var_var.mu_k * pow(kPerpSq, var_var.lap_k) + var_var.mu_m * m + var_var.mu_kz * pow(kz,2.*var_var.lap_kz)) * h;
+};
+
 
 /***************************************
  * \fn void equation_init()
@@ -555,9 +564,6 @@ void equation_init() {
                     }
             }
         }
-    }
-    for (size_t ii = 0; ii < equation_forceKn; ii++){
-        printf("%zu: kz = %zu kx = %zu, ky = %zu, %f\n",ii, equation_forceKzInd[ii],equation_forceKxInd[ii],equation_forceKyInd[ii], equation_forcingMM[ii]);
     }
     equation_forceKxIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKxIndGathered));
     equation_forceKyIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKxIndGathered));

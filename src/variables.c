@@ -107,6 +107,9 @@ void var_varInit(){
     var_var.beta = parameters.beta;
     var_var.mu_k = parameters.mu_k;
     var_var.mu_m = parameters.mu_m;
+    var_var.mu_kz = parameters.mu_kz;
+    var_var.lap_k = parameters.lap_k;
+    var_var.lap_kz = parameters.lap_kz;
     var_var.B0 = 1.0;
     for(size_t i = 0; i < parameters.ns; i++)
     {

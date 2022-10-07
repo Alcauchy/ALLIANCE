@@ -2876,7 +2876,7 @@ void hdf_readData(char *filename, COMPLEX *h) {
 
         /*define maximum size of data in z and y*/
         yMax = (dims[1] > array_local_size.nky) ? array_local_size.nky : dims[1];
-        zMax = (dims[1] > array_local_size.nkz) ? array_local_size.nkz : dims[2];
+        zMax = (dims[2] > array_local_size.nkz) ? array_local_size.nkz : dims[2];
 
         /* first we want to find which m moment is the largest for the system or file, and at which processor it is located*/
         if(dims[3] > array_global_size.nm){

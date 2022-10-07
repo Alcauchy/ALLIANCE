@@ -327,6 +327,21 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.allow_rescale);
                 if (mpi_my_rank == IO_RANK) printf("allow_rescale = %d \n", parameters.allow_rescale);
             }
+            if (strcmp(tmp, "dissip_kz") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.mu_kz);
+                if (mpi_my_rank == IO_RANK) printf("dissip_kz = %f \n", parameters.mu_kz);
+            }
+            if (strcmp(tmp, "hyper_k") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.lap_k);
+                if (mpi_my_rank == IO_RANK) printf("hyperlaplacian power for k_perp = %f \n", parameters.lap_k);
+            }
+            if (strcmp(tmp, "hyper_kz") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.lap_kz);
+                if (mpi_my_rank == IO_RANK) printf("hyperlaplacian power for k_perp = %f \n", parameters.lap_kz);
+            }
         }
     }
     if (mpi_my_rank == 0) printf("=====================================\n");

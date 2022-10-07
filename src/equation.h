@@ -13,6 +13,7 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out);
 void equation_getNonlinearTerm(const COMPLEX *h, COMPLEX *out);
 void equation_init();
 void equation_getForcing(const COMPLEX *h, COMPLEX *rhs);
+COMPLEX equation_getLocalDissipation(const COMPLEX h, double kPerpSq, double kz, double m);
 
 extern int *equation_forceKxInd;
 extern int *equation_forceKyInd;

@@ -29,6 +29,9 @@ struct phys_params{
         double B0;
         double mu_k;
         double mu_m;
+        double mu_kz;
+        double lap_k;
+        double lap_kz;
 };
 
 extern struct phys_params var_var;

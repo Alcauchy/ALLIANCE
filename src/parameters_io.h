@@ -27,6 +27,9 @@ struct system_param {
 
     double mu_k;
     double mu_m;
+    double mu_kz;
+    double lap_k;
+    double lap_kz;
 
     int dealiasing;
     int electromagnetic;

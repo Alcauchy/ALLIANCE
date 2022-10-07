@@ -625,8 +625,7 @@ void diag_computeEnergyBalance(const COMPLEX *h){
                             ind6D = get_flat_c(is,il,im,ix,iy,iz);
                             dissipated_local_k = var_var.mu_k * space_kPerp2[ind2D] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
                             dissipated_k += dissipated_local_k;
-                            diag_dissipated += dissipated_local_k +
-                                          var_var.mu_m * global_nm_index[im] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
+                            diag_dissipated += cabs(equation_getLocalDissipation(h[ind6D], space_kPerp2[ind2D], space_kz[iz], global_nm_index[im])) * cabs(h[ind6D]) * diag_MM[iz];
                         }
                     }
                 }
