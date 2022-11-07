@@ -18,6 +18,7 @@
 // diag_initSpec
 // diag_getShells
 // diag_compute
+// diag_filterK
 //
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
@@ -167,28 +168,34 @@ void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
  ***************************************/
 void diag_initSpec() {
     diag_MM = malloc((array_local_size.nkz) * sizeof(*diag_MM));
-    for (size_t iz = 0; iz < array_local_size.nkz; iz++ ){
-        if(iz == 0 || iz == array_local_size.nkz - 1){
+    for (size_t iz = 0; iz < array_local_size.nkz; iz++ ) {
+        if (iz == 0 || iz == array_local_size.nkz - 1) {
             diag_MM[iz] = 1.0;
         }
-        else{
+        else {
             diag_MM[iz] = 2.0;
         }
-    if (parameters.compute_k || parameters.compute_nonlinear) {
-        diag_getShells();
-        diag_kSpec = malloc((diag_numOfShells) * sizeof(*diag_kSpec));
-        }
-        if(systemType == ELECTROMAGNETIC){
-            diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
-            diag_kSpecBperp = calloc((diag_numOfShells), sizeof(*diag_kSpecBperp));
-            diag_kSpecBpar = calloc((diag_numOfShells), sizeof(*diag_kSpecBpar));
-            diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
-        }
-        if(systemType == ELECTROSTATIC){
-            diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
-            diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
-        }
     }
+        if (parameters.compute_k || parameters.compute_nonlinear){
+            diag_getShells();
+            diag_kSpec = malloc((diag_numOfShells) * sizeof(*diag_kSpec));
+            if(parameters.compute_k){
+                if (systemType == ELECTROMAGNETIC){
+                    diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
+                    diag_kSpecBperp = calloc((diag_numOfShells), sizeof(*diag_kSpecBperp));
+                    diag_kSpecBpar = calloc((diag_numOfShells), sizeof(*diag_kSpecBpar));
+                    diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
+                }
+                if (systemType == ELECTROSTATIC){
+                    diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
+                    diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
+                }
+            }
+            if(parameters.compute_nonlinear){
+                diag_nonlinearFlux = calloc((diag_numOfShellBounds),sizeof(*diag_nonlinearFlux));
+            }
+        }
+
     if (parameters.compute_m) {
         if (mpi_my_row_rank == 0) {
             diag_mSpec = malloc(array_local_size.nm * sizeof(*diag_mSpec));
@@ -367,6 +374,7 @@ void diag_getShells() {
         //shell centres and normalizations
         diag_shellCentres = malloc((diag_numOfShells) * sizeof(*diag_shellCentres));
         diag_shellNorm = calloc((diag_numOfShells), sizeof(*diag_shellNorm));
+        diag_nonlinearNorm = calloc((diag_numOfShells), sizeof(*diag_nonlinearNorm));
         for (size_t ishell = 1; ishell < (diag_numOfShellBounds); ishell++){
             diag_shellCentres[ishell - 1] = 0.5 * (diag_shells[ishell - 1] + diag_shells[ishell ]);
             for(size_t ix = 0; ix < array_local_size.nkx; ix++){
@@ -381,11 +389,20 @@ void diag_getShells() {
                                 diag_shellNorm[ishell - 1] += 2.;
                             }
                         }
+                        if (diag_shells[ishell - 1] < space_kPerp[ind2D]){
+                            if (iz == 0 || iz == array_local_size.nkz - 1){
+                                diag_nonlinearNorm[ishell - 1] += 1.;
+                            }
+                            else{
+                                diag_nonlinearNorm[ishell - 1] += 2.;
+                            }
+                        }
                     }
                 }
             }
         }
         MPI_Allreduce(MPI_IN_PLACE, diag_shellNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+        MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
     }
 
     if (spectrumType == UNIT){
@@ -406,6 +423,7 @@ void diag_getShells() {
         //shell normalizations and centres
         diag_shellCentres = malloc((diag_numOfShells) * sizeof(*diag_shellCentres));
         diag_shellNorm = calloc((diag_numOfShells), sizeof(*diag_shellNorm));
+        diag_nonlinearNorm = calloc((diag_numOfShells), sizeof(*diag_nonlinearNorm));
         for (size_t ishell = 1; ishell < (diag_numOfShellBounds); ishell++){
             diag_shellCentres[ishell - 1] = 0.5 * (diag_shells[ishell - 1] + diag_shells[ishell ]);
             for(size_t ix = 0; ix < array_local_size.nkx; ix++){
@@ -420,11 +438,20 @@ void diag_getShells() {
                                 diag_shellNorm[ishell - 1] += 2.;
                             }
                         }
+                        if (diag_shells[ishell - 1] < space_kPerp[ind2D]){
+                            if (iz == 0 || iz == array_local_size.nkz - 1){
+                                diag_nonlinearNorm[ishell - 1] += 1.;
+                            }
+                            else{
+                                diag_nonlinearNorm[ishell - 1] += 2.;
+                            }
+                        }
                     }
                 }
             }
         }
         MPI_Allreduce(MPI_IN_PLACE, diag_shellNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+        MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
     }
 
 }
@@ -775,5 +802,46 @@ void diag_print(const COMPLEX *h, int it){
 
         }
     }
+}
+
+/***************************************
+ * \fn diag_filterK(const COMPLEX *in, COMPLEX *out, k_c)
+ * \brief low-pass sharp filter in \f$ k_\perp \f$
+ * \param in: input 6D array
+ * \param out: output 6D array
+ * \param k_c: cutoff wave number
+ ***************************************/
+void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c){
+    COMPLEX *maskKx = calloc(array_local_size.nkx, sizeof(maskKx));
+    COMPLEX *maskKy = calloc(array_local_size.nky, sizeof(maskKx));
+    size_t ind2D;
+    size_t ind6D;
+
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            ind2D = ix * array_local_size.nky + iy;
+            if (space_kPerp[ind2D] <= k_c){
+                maskKx[ix] = 1.0;
+                maskKy[iy] = 1.0;
+            }
+        }
+    }
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                            out[ind6D] =  in[ind6D] * maskKx[ix] * maskKy[iy];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    free(maskKx);
+    free(maskKy);
 }
 
