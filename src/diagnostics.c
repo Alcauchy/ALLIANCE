@@ -206,7 +206,7 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
                             ind6D = get_flat_c(is, il, im, ix, iy, iz);
-                            sum += g[ind6D] * conj(h[ind6D]) * diag_MM[iz];
+                            sum += 0.5 * var_var.T[is] * var_var.n[is] * g[ind6D] * conj(h[ind6D]) * diag_MM[iz];
                         }
                     }
                 }
@@ -214,7 +214,8 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
         }
     }
     MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_C_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
-    diag_freeEnergy = creal(freeEnergy);
+    diag_freeEnergy = cabs(freeEnergy);
+    printf("computed as old = %f\n",diag_freeEnergy);
 
 };
 
@@ -439,7 +440,7 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
         fields_getChi();
         distrib_getH(h, g);
         //compute and save free energy
-        //diag_computeFreeEnergy(g, h);
+        diag_computeFreeEnergy(g, h);
         diag_computeEnergy(h);
         diag_freeEnergy = diag_energyTotal;
         if (timestep == 0) diag_free_energy0 = diag_freeEnergy;
@@ -566,7 +567,7 @@ void diag_computeHSpectrum(const COMPLEX *h) {
                             for(size_t il = 0; il < array_local_size.nl; il ++){
                                 for(size_t is = 0; is < array_local_size.ns; is ++){
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    diag_kSpecH[ind2Dm] += var_var.T[is]/var_var.m[is] * cabs(h[ind6D]) * cabs(h[ind6D]) / diag_shellNorm[ishell];;
+                                    diag_kSpecH[ind2Dm] += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) / diag_shellNorm[ishell];;
                                 }
                             }
                         }
@@ -623,7 +624,7 @@ void diag_computeEnergyBalance(const COMPLEX *h){
                         for (size_t is = 0; is < array_local_size.ns; is++){
                             ind2D = ix * array_local_size.nky + iy;
                             ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                            dissipated_local_k = var_var.mu_k * space_kPerp2[ind2D] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
+                            dissipated_local_k = cabs(equation_getLocalDissipation(h[ind6D], space_kPerp2[ind2D], 0.0, 0.0))  * cabs(h[ind6D]) * diag_MM[iz];
                             dissipated_k += dissipated_local_k;
                             diag_dissipated += cabs(equation_getLocalDissipation(h[ind6D], space_kPerp2[ind2D], space_kz[iz], global_nm_index[im])) * cabs(h[ind6D]) * diag_MM[iz];
                         }
@@ -671,7 +672,7 @@ void diag_computeEnergy(const COMPLEX *h){
                             for (size_t il = 0; il < array_local_size.nl; il++){
                                 for (size_t is = 0; is < array_local_size.ns; is++){
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    diag_energyH += var_var.T[is] / var_var.m[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
+                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
                                     diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
                                                       * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
                                 }
@@ -702,7 +703,8 @@ void diag_computeEnergy(const COMPLEX *h){
                             for (size_t il = 0; il < array_local_size.nl; il++){
                                 for (size_t is = 0; is < array_local_size.ns; is++){
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    diag_energyH += var_var.T[is] / var_var.m[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
+                                    size_t ind4D = var_getJIndex(ix,iy,is);
+                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
                                     diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
                                                       * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
                                     diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) / 8. / M_PI * diag_MM[iz];

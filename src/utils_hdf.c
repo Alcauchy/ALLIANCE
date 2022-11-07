@@ -132,7 +132,7 @@ void hdf_init(){
 
     chunk_dims_r[0] = array_local_size.nkx;
     chunk_dims_r[1] = array_local_size.nky;
-    chunk_dims_r[2] = array_local_size.nz+2;
+    chunk_dims_r[2] = array_local_size.nz + 2;
     chunk_dims_r[3] = array_local_size.nm;
     chunk_dims_r[4] = array_local_size.nl;
     chunk_dims_r[5] = array_local_size.ns;
@@ -683,6 +683,99 @@ void hdf_saveEnergy(int timestep)
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
+    /*write injected energy to the file*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/injected", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_injected);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    /*write dissipated energy to the file*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/dissipated", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_dissipated);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    /*write h energy to the file*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/hEnergy", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_energyH);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    /*write phi energy to the file*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/phiEnergy", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_energyPhi);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    if (systemType == ELECTROMAGNETIC){
+        /*write B_perp energy to the file*/
+        dset_id = H5Dopen2(file_id, "/freeEnergy/BperpEnergy", H5P_DEFAULT);
+        /*open a dataset*/
+        dspace_id = H5Dget_space(dset_id);
+        H5Dset_extent(dset_id, size);
+        dspace_id = H5Dget_space(dset_id);
+        H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+        memspace = H5Screate_simple(1,dims_ext,NULL);
+        if(mpi_my_rank == 0)
+        {
+            plist_id = H5Pcreate(H5P_DATASET_XFER);
+            H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_energyBperp);
+        }
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        /*write B_par energy to the file*/
+        dset_id = H5Dopen2(file_id, "/freeEnergy/BparEnergy", H5P_DEFAULT);
+        /*open a dataset*/
+        dspace_id = H5Dget_space(dset_id);
+        H5Dset_extent(dset_id, size);
+        dspace_id = H5Dget_space(dset_id);
+        H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+        memspace = H5Screate_simple(1,dims_ext,NULL);
+        if(mpi_my_rank == 0)
+        {
+            plist_id = H5Pcreate(H5P_DATASET_XFER);
+            H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_energyBpar);
+        }
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+    }
+
     /*write a timestep dataset*/
     /*opening a group*/
     dset_id = H5Dopen2(file_id, "/freeEnergy/timestep", H5P_DEFAULT);
@@ -1359,7 +1452,11 @@ void hdf_createParamFile()
         H5Pset_chunk(plist_id, 1, chunk_energy);
         hid_t maxdims[1] = {H5S_UNLIMITED};
         dspace_id = H5Screate_simple(1,dims_energy,maxdims);
-        dset_id = H5Dcreate2(file_id, "/freeEnergy/freeEnergy", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/freeEnergy",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
                              H5P_DEFAULT);
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
@@ -1369,7 +1466,11 @@ void hdf_createParamFile()
         plist_id   = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 1, chunk_energy);
         dspace_id = H5Screate_simple(1,dims_energy,maxdims);
-        dset_id = H5Dcreate2(file_id, "/freeEnergy/timestep", H5T_NATIVE_INT, dspace_id, H5P_DEFAULT, plist_id,
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/timestep",
+                             H5T_NATIVE_INT,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
                              H5P_DEFAULT);
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
@@ -1379,11 +1480,100 @@ void hdf_createParamFile()
         plist_id  = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 1, chunk_energy);
         dspace_id = H5Screate_simple(1,dims_energy,maxdims);
-        dset_id = H5Dcreate2(file_id, "/freeEnergy/time", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/time",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
                              H5P_DEFAULT);
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
+
+        /*creating injected dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_energy);
+        dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/injected",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /*creating dissipated dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_energy);
+        dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/dissipated",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /*creating H energy dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_energy);
+        dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/hEnergy",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /*creating phi energy dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_energy);
+        dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/phiEnergy",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+        if (systemType = ELECTROMAGNETIC){
+            /*creating B_perp energy dataset*/
+            plist_id = H5Pcreate(H5P_DATASET_CREATE);
+            H5Pset_chunk(plist_id, 1, chunk_energy);
+            dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+            dset_id = H5Dcreate2(file_id, "/freeEnergy/BperpEnergy",
+                                 H5T_NATIVE_DOUBLE,
+                                 dspace_id,
+                                 H5P_DEFAULT,
+                                 plist_id,
+                                 H5P_DEFAULT);
+            H5Sclose(dspace_id);
+            H5Dclose(dset_id);
+            H5Pclose(plist_id);
+
+            /*creating B_par energy dataset*/
+            plist_id = H5Pcreate(H5P_DATASET_CREATE);
+            H5Pset_chunk(plist_id, 1, chunk_energy);
+            dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+            dset_id = H5Dcreate2(file_id, "/freeEnergy/BparEnergy",
+                                 H5T_NATIVE_DOUBLE,
+                                 dspace_id,
+                                 H5P_DEFAULT,
+                                 plist_id,
+                                 H5P_DEFAULT);
+            H5Sclose(dspace_id);
+            H5Dclose(dset_id);
+            H5Pclose(plist_id);
+        }
 
     }
     /* Terminate access to the file. */

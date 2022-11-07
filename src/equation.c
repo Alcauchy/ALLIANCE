@@ -605,7 +605,7 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
             indKz = equation_forceKzInd[i];
             for(size_t is = 0; is < array_local_size.ns; is++){
                 ind6D = get_flat_c(is,0,local_m,indKx,indKy,indKz);
-                sumForce +=  cabs(h[ind6D]) * cabs(h[ind6D]) * equation_forcingMM[i] * 2;
+                sumForce +=  cabs(h[ind6D]) * cabs(h[ind6D]) * equation_forcingMM[i];
             }
         }
         MPI_Allreduce(MPI_IN_PLACE,&sumForce,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
@@ -620,7 +620,7 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
                 indForce = i * array_local_size.ns + is;
                 equation_forcingAr[indForce] = parameters.forcePower * h[ind6D] / sumForce;
                 rhs[ind6D] += equation_forcingAr[indForce];
-                powerInjected += creal(equation_forcingAr[indForce] * conj(h[ind6D])) * equation_forcingMM[i] * 2;
+                powerInjected += creal(equation_forcingAr[indForce] * conj(h[ind6D])) * equation_forcingMM[i];
             }
         }
     }
