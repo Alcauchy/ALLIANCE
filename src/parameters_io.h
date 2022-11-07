@@ -60,9 +60,11 @@ struct system_param {
     int checkpoints;
     int iter_checkpoint;
     int iter_distribution;
+    int iter_nonlinear;
     int save_diagnostics;
     int save_EMfield;
     int save_checkpoint;
+    int save_nonlinear;
     int save_distrib;
     double firstShell;
     double lastShell;
