@@ -24,6 +24,7 @@ void hdf_saveData(COMPLEX *h, int timestep);
 void hdf_createFiles();
 void hdf_saveEnergy(int timestep);
 void hdf_saveKSpec(int timestep);
+void hdf_saveNonlinearFlux(int timestep);
 void hdf_saveMSpec(int timestep);
 void hdf_saveForcing();
 void hdf_createFieldFile();

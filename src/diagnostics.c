@@ -372,6 +372,7 @@ void diag_getShells() {
         diag_shellCentres = malloc((diag_numOfShells) * sizeof(*diag_shellCentres));
         diag_shellNorm = calloc((diag_numOfShells), sizeof(*diag_shellNorm));
         diag_nonlinearNorm = calloc((diag_numOfShells), sizeof(*diag_nonlinearNorm));
+
         for (size_t ishell = 1; ishell < (diag_numOfShellBounds); ishell++){
             diag_shellCentres[ishell - 1] = 0.5 * (diag_shells[ishell - 1] + diag_shells[ishell ]);
             for(size_t ix = 0; ix < array_local_size.nkx; ix++){
@@ -386,7 +387,7 @@ void diag_getShells() {
                                 diag_shellNorm[ishell - 1] += 2.;
                             }
                         }
-                        if (diag_shells[ishell - 1] < space_kPerp[ind2D]){
+                        if (space_kPerp[ind2D] < diag_shells[ishell]){
                             if (iz == 0 || iz == array_local_size.nkz - 1){
                                 diag_nonlinearNorm[ishell - 1] += 1.;
                             }
@@ -435,7 +436,7 @@ void diag_getShells() {
                                 diag_shellNorm[ishell - 1] += 2.;
                             }
                         }
-                        if (diag_shells[ishell - 1] < space_kPerp[ind2D]){
+                        if (space_kPerp[ind2D] <= diag_shells[ishell]){
                             if (iz == 0 || iz == array_local_size.nkz - 1){
                                 diag_nonlinearNorm[ishell - 1] += 1.;
                             }
@@ -495,6 +496,19 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
             diag_computeMSpectrum(g, h, diag_mSpec);
             hdf_saveMSpec(timestep);
         }
+    }
+    if(parameters.compute_nonlinear && (timestep % parameters.compute_nonlinear == 0 || timestep == -1)){
+        // update fields and h first
+        fields_sendF(g);
+        fields_getFields(f00, f10, f01);
+        fields_getChi();
+        distrib_getH(h, g);
+        //compute and save free energy
+        diag_computeFreeEnergy(g, h);
+        diag_computeEnergy(h);
+        diag_computeNonlinearFlux(h);
+        hdf_saveNonlinearFlux(timestep);
+
     }
 }
 
@@ -849,14 +863,15 @@ void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c){
 void diag_computeNonlinearFlux(const COMPLEX *in){
     if (mpi_my_rank == IO_RANK) printf("computing nonlinear flux\n");
     size_t ind6D;
-    COMPLEX *nonlinearTermK = malloc(array_local_size.total_comp * sizeof(*nonlinearTermK));
+    COMPLEX *nonlinearTermK = calloc(array_local_size.total_comp, sizeof(*nonlinearTermK));
     equation_getNonlinearTerm(in,nonlinearTermK);
     fftw_copy_buffer_c(fftw_hBuf,nonlinearTermK);
+    fftw_c2r();
     free(nonlinearTermK);
-    fftw_r2c();
-    double *nonlinearTermR = malloc(array_local_size.total_real * sizeof(*nonlinearTermK));
-    fftw_copy_buffer_r(nonlinearTermR,fftw_hBuf);
+    double *nonlinearTermR = calloc(array_local_size.total_real, sizeof(*nonlinearTermR));
+    fftw_copy_buffer_r(nonlinearTermR, fftw_hBuf);
     for (size_t ii = 0; ii < diag_numOfShells; ii++){
+        diag_nonlinearFlux[ii] = 0;
         double kc = diag_shells[ii + 1]; //we don't want to compute flux through k = 0
         diag_filterK(in,fftw_hBuf,kc);
         fftw_c2r();
@@ -867,17 +882,23 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
                     for(size_t im = 0; im < array_local_size.nm; im++){
                         for(size_t il = 0; il < array_local_size.nl; il++){
                             for(size_t is = 0; is < array_local_size.ns; is++){
-                                ind6D = get_flat_r(ix,il,im,ix,iy,iz);
-                                diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
-                                diag_nonlinearFlux[ii] /= diag_shellNorm[ii];
+                                ind6D = get_flat_r(is,il,im,ix,iy,iz);
+                                h_r[ind6D] *= nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                                //diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
                             }
                         }
                     }
                 }
             }
         }
+        fftw_r2c();
+        distrib_dealiasing(fftw_hBuf);
+        for (size_t ix = 0; ix< array_local_size.total_comp; ix ++){
+            diag_nonlinearFlux[ii] += creal(fftw_hBuf[ix]);
+        }
+        diag_nonlinearFlux[ii] /= diag_nonlinearNorm[ii];
     }
     free(nonlinearTermR);
     MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
-    if (mpi_my_rank == IO_RANK) printf("nonlinear flux computed\n");
+    if (mpi_my_rank == IO_RANK){ printf("nonlinear flux computed\n");}
 }

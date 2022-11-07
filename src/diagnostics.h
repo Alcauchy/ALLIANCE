@@ -36,6 +36,8 @@ extern double *diag_shells;
 extern double *diag_shellNorm;
 extern double *diag_shellCentres;
 extern double *diag_MM;
+extern double *diag_nonlinearFlux;
+extern double *diag_nonlinearNorm;
 
 extern double diag_freeEnergy;
 extern double diag_free_energy0;

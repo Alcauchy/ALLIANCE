@@ -1442,10 +1442,29 @@ void hdf_createParamFile()
     if(parameters.compute_nonlinear){
         hid_t chunk_spec_nonl_flux_shells[2] = {1,diag_numOfShells};
         hid_t max_dims_flux[2] = {H5S_UNLIMITED,diag_numOfShells};
+        hid_t dims_spec_flux[2] = {0, diag_numOfShells};
+        hid_t chunk_flux_timestep[1] = {1};
+        hid_t maxdims_flux_timestep[1] = {H5S_UNLIMITED};
+        hid_t dims_flux_timestep[1] = {0};
         group_id = H5Gcreate2(file_id, "/nonlinearFlux", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         H5Gclose(group_id);
 
-        /*create nonlinear flux dataset,timetesp dataset and dt dataset*/
+        /*create nonlinear flux dataset, shells dataset, timestep dataset and dt dataset*/
+        /*creating nonlinear flux dataset*/
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 2, chunk_spec_nonl_flux_shells);
+        dspace_id = H5Screate_simple(2,dims_spec_flux,max_dims_flux);
+        dset_id = H5Dcreate2(file_id,
+                             "/nonlinearFlux/flux",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
         /* creating shells borders dataset */
         plist_id = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 1, &chunk_spec_nonl_flux_shells[1]);
@@ -1453,6 +1472,44 @@ void hdf_createParamFile()
         dset_id = H5Dcreate2(file_id, "/nonlinearFlux/shells", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
                              H5P_DEFAULT);
         H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &diag_shells[1]);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /* creating shells norms dataset */
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, &chunk_spec_nonl_flux_shells[1]);
+        dspace_id = H5Screate_simple(1,&chunk_spec_nonl_flux_shells[1],&chunk_spec_nonl_flux_shells[1]);
+        dset_id = H5Dcreate2(file_id, "/nonlinearFlux/norm", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+                             H5P_DEFAULT);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, diag_nonlinearNorm);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /* creating timestep dataset */
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_flux_timestep);
+        dspace_id = H5Screate_simple(1,dims_flux_timestep,maxdims_flux_timestep);
+        dset_id = H5Dcreate2(file_id, "/nonlinearFlux/timestep",
+                             H5T_NATIVE_INT,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+        /* creating dt dataset */
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_flux_timestep);
+        dspace_id = H5Screate_simple(1,dims_flux_timestep,maxdims_flux_timestep);
+        dset_id = H5Dcreate2(file_id, "/nonlinearFlux/time",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
@@ -1781,6 +1838,53 @@ void hdf_saveKSpec(int timestep) {
     H5Dclose(dset_id);
     H5Fclose(file_id);
 };
+
+/***************************
+ *  hdf_saveNonlinearFlux
+ * *************************/
+void hdf_saveNonlinearFlux(int timestep) {
+    hid_t file_id, dset_id,dspace_id,group_id,filespace,memspace;
+    hid_t plist_id; //property list id
+    hid_t dims_ext[2] = {1,diag_numOfShells};
+    hid_t dims_ext2D[3] = {1,diag_numOfShells,array_local_size.nm};
+    hid_t size[2];
+    hid_t size2D[3];
+    hid_t offset[2];
+    hid_t offset2D[3];
+    plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
+    H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, info);
+    /* open file to read and write */
+    file_id = H5Fopen(PARAMETER_FILENAME,H5F_ACC_RDWR,plist_id);
+    H5Pclose(plist_id);
+    /*opening a group and a dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/nonlinearFlux/flux", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    /*get dataset's dimensions */
+    int ndims = H5Sget_simple_extent_ndims(dspace_id);
+    hsize_t *dims = malloc(ndims * sizeof(*dims));
+    H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+    H5Sclose(dspace_id);
+    /*extend dataset size*/
+    size[0] = dims[0] + dims_ext[0];
+    size[1] = dims[1];
+    offset[0] = dims[0];
+    offset[1] = 0;
+    H5Dset_extent(dset_id, size);
+    /*write nonlinear flux to the file*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(2,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_nonlinearFlux);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    H5Fclose(file_id);
+}
 
 /***************************
  *  hdf_saveMSpec
