@@ -8,7 +8,7 @@
 #include "utils_mpi.h"
 #include "array.h"
 
-enum DEALIASING {ALIASED, TWOTHIRDS};
+
 
 void read_parameters(char *filename);
 void read_parametersFromFile(char *filename);
@@ -25,10 +25,17 @@ struct system_param {
     double Ly;
     double Lz;
 
+    double mu_k;
+    double mu_m;
+    double mu_kz;
+    double lap_k;
+    double lap_kz;
+
     int dealiasing;
     int electromagnetic;
     int adiabatic;
     int initial;
+    int allow_rescale;
     char from_simulationName[128];
     double beta;
     double *mass;
@@ -37,12 +44,17 @@ struct system_param {
     double *charge;
 
     double dt;
+    double linDt;
+    double dissipDt;
     int iter_dt;
     int Nt;
 
+    double forceKmin;
+    double forceKmax;
+    double forcePower;
+
     int compute_k;
     int compute_m;
-    int k_shells;
     int iter_diagnostics;
     int iter_EMfield;
     int checkpoints;
@@ -54,6 +66,8 @@ struct system_param {
     int save_distrib;
     double firstShell;
     double lastShell;
+    int spectrum;
+    double unitK;
 
     int nproc_m;
     int nproc_k;

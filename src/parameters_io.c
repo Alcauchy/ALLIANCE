@@ -63,6 +63,7 @@ void read_parameters(char *filename) {
     int particle_index;
     FILE *fp;
     fp = fopen(filename, "r");  /* open file for input */
+    if (mpi_my_rank == 0) printf("==============PARAMETERS==============\n");
     if (fp)  /* If no error occurred while opening file */
     {           /* input the data from the file. */
         while (fgets(string, 128, fp))
@@ -72,34 +73,34 @@ void read_parameters(char *filename) {
             if (strcmp(tmp, "nkx") == 0)
             {
                 sscanf(string, "%*s : %zu", &parameters.nkx);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] nkx = %zu\n", mpi_my_rank, parameters.nkx);
+                if (mpi_my_rank == IO_RANK) printf("nkx = %zu\n", parameters.nkx);
             }
             if (strcmp(tmp, "nky") == 0)
             {
                 sscanf(string, "%*s : %zu", &parameters.nky);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] nky = %zu\n", mpi_my_rank, parameters.nky);
+                if (mpi_my_rank == IO_RANK) printf("nky = %zu\n", parameters.nky);
             }
             if (strcmp(tmp, "nz") == 0)
             {
                 sscanf(string, "%*s : %zu", &parameters.nz);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] nz = %zu\n", mpi_my_rank, parameters.nz);
+                if (mpi_my_rank == IO_RANK) printf("nz = %zu\n", parameters.nz);
                 parameters.nkz = parameters.nz / 2 + 1;
 
             }
             if (strcmp(tmp, "nm") == 0)
             {
                 sscanf(string, "%*s : %zu", &parameters.nm);
-                if (mpi_my_rank == IO_RANK)  printf("[MPI process %d] nm = %zu\n", mpi_my_rank, parameters.nm);
+                if (mpi_my_rank == IO_RANK)  printf("nm = %zu\n", parameters.nm);
             }
             if (strcmp(tmp, "nl") == 0)
             {
                 sscanf(string, "%*s : %zu", &parameters.nl);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] ns = %zu\n", mpi_my_rank, parameters.nl);
+                if (mpi_my_rank == IO_RANK) printf("ns = %zu\n", parameters.nl);
             }
             if (strcmp(tmp, "ns") == 0)
             {
                 sscanf(string, "%*s : %zu", &parameters.ns);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] ns = %zu\n", mpi_my_rank, parameters.ns);
+                if (mpi_my_rank == IO_RANK) printf("ns = %zu\n", parameters.ns);
                 parameters.charge = malloc(parameters.ns * sizeof(parameters.charge));
                 parameters.mass = malloc(parameters.ns * sizeof(parameters.mass));
                 parameters.density = malloc(parameters.ns * sizeof(parameters.density));
@@ -108,11 +109,8 @@ void read_parameters(char *filename) {
             if (strcmp(tmp, "dealiasing") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.dealiasing);
-                if (parameters.dealiasing == TWOTHIRDS)
-                {
-                    if (mpi_my_rank == IO_RANK) printf("[MPI process %d] dealiasing rule is %d\n", mpi_my_rank, parameters.dealiasing);
-                    fftw_dealiasing = dealiasing23;
-                }
+                if (mpi_my_rank == IO_RANK) printf("dealiasing rule is %d\n", parameters.dealiasing);
+
             }
             if (strcmp(tmp, "particle") == 0)
             {
@@ -123,169 +121,230 @@ void read_parameters(char *filename) {
                            mpi_my_rank, particle_index, parameters.ns);
                     exit(1);
                 }
-                printf("[MPI process %d] particle index is %d\n", mpi_my_rank, particle_index);
+                if (mpi_my_rank == IO_RANK) printf("particle index is %d\n", particle_index);
             }
             if (strcmp(tmp, "density") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.density[particle_index]);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] particle %d, density = %3lf\n", mpi_my_rank, particle_index,
+                if (mpi_my_rank == IO_RANK) printf("particle %d, density = %3lf\n", particle_index,
                        parameters.density[particle_index]);
             }
             if (strcmp(tmp, "T") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.temperature[particle_index]);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] particle %d, temperature = %3lf\n", mpi_my_rank, particle_index,
+                if (mpi_my_rank == IO_RANK) printf("particle %d, temperature = %3lf\n", particle_index,
                        parameters.temperature[particle_index]);
             }
             if (strcmp(tmp, "charge") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.charge[particle_index]);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] particle %d, charge = %3lf\n", mpi_my_rank, particle_index,
+                if (mpi_my_rank == IO_RANK) printf("particle %d, charge = %3lf\n", particle_index,
                        parameters.charge[particle_index]);
             }
             if (strcmp(tmp, "mass") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.mass[particle_index]);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] particle %d, mass = %3lf\n", mpi_my_rank, particle_index,
+                if (mpi_my_rank == IO_RANK) printf("particle %d, mass = %3lf\n", particle_index,
                        parameters.mass[particle_index]);
             }
             if (strcmp(tmp, "electromagnetic") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.electromagnetic);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] electromagnetic = %d\n", mpi_my_rank, parameters.electromagnetic);
+                if (mpi_my_rank == IO_RANK) printf("electromagnetic = %d\n", parameters.electromagnetic);
             }
             if (strcmp(tmp, "adiabatic") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.adiabatic);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] adiabatic = %d\n", mpi_my_rank, parameters.adiabatic);
+                if (mpi_my_rank == IO_RANK) printf("adiabatic = %d\n", parameters.adiabatic);
             }
             if (strcmp(tmp, "initial") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.initial);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] initial conditions set to %d\n", mpi_my_rank, parameters.initial);
+                if (mpi_my_rank == IO_RANK) printf("initial conditions set to %d\n", parameters.initial);
             }
             if (strcmp(tmp, "simulation_name") == 0)
             {
                 sscanf(string, "%*s : %s", &parameters.from_simulationName);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] from simulation %s \n", mpi_my_rank, parameters.from_simulationName);
+                if (mpi_my_rank == IO_RANK) printf("from simulation %s \n", parameters.from_simulationName);
             }
             if (strcmp(tmp, "beta") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.beta);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] plasma beta = %f\n", mpi_my_rank, parameters.beta);
+                if (mpi_my_rank == IO_RANK) printf("plasma beta = %f\n", parameters.beta);
             }
             if (strcmp(tmp, "dt") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.dt);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] dt = %f\n", mpi_my_rank, parameters.dt);
+                if (mpi_my_rank == IO_RANK) printf("dt = %f\n",parameters.dt);
             }
             if (strcmp(tmp, "timesteps") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.Nt);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] number of timesteps = %d\n", mpi_my_rank, parameters.Nt);
+                if (mpi_my_rank == IO_RANK) printf("number of timesteps = %d\n", parameters.Nt);
             }
             if (strcmp(tmp, "compute_k") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.compute_k);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] compute k spec = %d\n", mpi_my_rank, parameters.compute_k);
-            }
-            if (strcmp(tmp, "k_shells") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.k_shells);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] number of k shells = %d\n", mpi_my_rank, parameters.k_shells);
+                if (mpi_my_rank == IO_RANK) printf("compute k spec = %d\n",parameters.compute_k);
             }
             if (strcmp(tmp, "compute_m") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.compute_m);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] compute m spectra = %d\n", mpi_my_rank, parameters.compute_m);
+                if (mpi_my_rank == IO_RANK) printf("compute m spectra = %d\n",parameters.compute_m);
             }
             if (strcmp(tmp, "first_shell") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.firstShell);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] first shell = %f\n", mpi_my_rank, parameters.firstShell);
+                if (mpi_my_rank == IO_RANK) printf("first shell = %f\n",parameters.firstShell);
             }
             if (strcmp(tmp, "last_shell") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.lastShell);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] last shell =  %f\n", mpi_my_rank, parameters.lastShell);
+                if (mpi_my_rank == IO_RANK) printf("last shell =  %f\n",parameters.lastShell);
             }
             if (strcmp(tmp, "iter_EMfield") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.iter_EMfield);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save field every %d timesteps\n", mpi_my_rank, parameters.iter_EMfield);
+                if (mpi_my_rank == IO_RANK) printf("save field every %d timesteps\n",parameters.iter_EMfield);
             }
             if (strcmp(tmp, "checkpoints") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.checkpoints);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] number of checkpoints = %d \n", mpi_my_rank, parameters.checkpoints);
+                if (mpi_my_rank == IO_RANK) printf("number of checkpoints = %d \n",parameters.checkpoints);
             }
             if (strcmp(tmp, "iter_checkpoint") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.iter_checkpoint);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save checkpoint every %d timesteps\n", mpi_my_rank, parameters.iter_checkpoint);
+                if (mpi_my_rank == IO_RANK) printf("save checkpoint every %d timesteps\n", parameters.iter_checkpoint);
             }
             if (strcmp(tmp, "iter_distribution") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.iter_distribution);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save distribution function every %d timesteps\n", mpi_my_rank, parameters.iter_distribution);
+                if (mpi_my_rank == IO_RANK) printf("save distribution function every %d timesteps\n", parameters.iter_distribution);
             }
             if (strcmp(tmp, "save_distribution") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.save_distrib);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save distribution = %d\n", mpi_my_rank, parameters.save_distrib);
+                if (mpi_my_rank == IO_RANK) printf("save distribution = %d\n", parameters.save_distrib);
             }
             if (strcmp(tmp, "iter_diagnostics") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.iter_diagnostics);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save free energy every %d timesteps\n", mpi_my_rank, parameters.iter_diagnostics);
+                if (mpi_my_rank == IO_RANK) printf("save free energy every %d timesteps\n", parameters.iter_diagnostics);
             }
             if (strcmp(tmp, "save_diagnostics") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.save_diagnostics);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_diagnostics);
+                if (mpi_my_rank == IO_RANK) printf("save free energy = %d \n", parameters.save_diagnostics);
             }
             if (strcmp(tmp, "save_energy") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.save_diagnostics);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save free energy = %d \n", mpi_my_rank, parameters.save_diagnostics);
+                if (mpi_my_rank == IO_RANK) printf("save free energy = %d \n", parameters.save_diagnostics);
             }
             if (strcmp(tmp, "save_EMfield") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.save_EMfield);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] save electromagnetic fields = %d \n", mpi_my_rank, parameters.save_EMfield);
+                if (mpi_my_rank == IO_RANK) printf("save electromagnetic fields = %d \n", parameters.save_EMfield);
             }
             if (strcmp(tmp, "Lx") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.Lx);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] Lx = %f \n", mpi_my_rank, parameters.Lx);
+                if (mpi_my_rank == IO_RANK) printf("Lx = %f \n",parameters.Lx);
             }
             if (strcmp(tmp, "Ly") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.Ly);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] Ly = %f \n", mpi_my_rank, parameters.Ly);
+                if (mpi_my_rank == IO_RANK) printf("Ly = %f \n",parameters.Ly);
             }
             if (strcmp(tmp, "Lz") == 0)
             {
                 sscanf(string, "%*s : %lf", &parameters.Lz);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] Lz = %f \n", mpi_my_rank, parameters.Lz);
+                if (mpi_my_rank == IO_RANK) printf("Lz = %f \n", parameters.Lz);
             }
             if (strcmp(tmp, "nproc_m") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.nproc_m);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] num of processes in m used is %d \n", mpi_my_rank, parameters.nproc_m);
+                if (mpi_my_rank == IO_RANK) printf("num of processes in m used is %d \n", parameters.nproc_m);
             }
             if (strcmp(tmp, "nproc_k") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.nproc_k);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] num of processes in k used is %d \n", mpi_my_rank, parameters.nproc_k);
+                if (mpi_my_rank == IO_RANK) printf("num of processes in k used is %d \n",parameters.nproc_k);
             }
             if (strcmp(tmp, "iter_dt") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.iter_dt);
-                if (mpi_my_rank == IO_RANK) printf("[MPI process %d] update dt every %d steps \n", mpi_my_rank, parameters.iter_dt);
+                if (mpi_my_rank == IO_RANK) printf("update dt every %d steps \n", parameters.iter_dt);
+            }
+            if (strcmp(tmp, "dissip_k") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.mu_k);
+                if (mpi_my_rank == IO_RANK) printf("dissipation in k is %f \n", parameters.mu_k);
+            }
+            if (strcmp(tmp, "dissip_m") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.mu_m);
+                if (mpi_my_rank == IO_RANK) printf("dissipation in m is %f \n", parameters.mu_m);
+            }
+            if (strcmp(tmp, "dt_dissip") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.dissipDt);
+                if (mpi_my_rank == IO_RANK) printf("dissipation time step is %f \n", parameters.dissipDt);
+            }
+            if (strcmp(tmp, "dt_linear") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.linDt);
+                if (mpi_my_rank == IO_RANK) printf("linear time step is %f \n", parameters.linDt);
+            }
+            if (strcmp(tmp, "k_max") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.forceKmax);
+                if (mpi_my_rank == IO_RANK) printf("forcing kmax = %f \n",parameters.forceKmax);
+            }
+            if (strcmp(tmp, "k_min") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.forceKmin);
+                if (mpi_my_rank == IO_RANK) printf("forcing k_min = %f \n",parameters.forceKmin);
+            }
+            if (strcmp(tmp, "power") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.forcePower);
+                if (mpi_my_rank == IO_RANK) printf("forcing power = %f \n",parameters.forcePower);
+            }
+            if (strcmp(tmp, "spectrum_type") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.spectrum);
+                if (mpi_my_rank == IO_RANK) printf("spectrum type = %d \n",parameters.spectrum);
+            }
+            if (strcmp(tmp, "k_unit") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.unitK);
+                if (mpi_my_rank == IO_RANK) printf("unit k = %lf \n", parameters.unitK);
+            }
+            if (strcmp(tmp, "allow_rescale") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.allow_rescale);
+                if (mpi_my_rank == IO_RANK) printf("allow_rescale = %d \n", parameters.allow_rescale);
+            }
+            if (strcmp(tmp, "dissip_kz") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.mu_kz);
+                if (mpi_my_rank == IO_RANK) printf("dissip_kz = %f \n", parameters.mu_kz);
+            }
+            if (strcmp(tmp, "hyper_k") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.lap_k);
+                if (mpi_my_rank == IO_RANK) printf("hyperlaplacian power for k_perp = %f \n", parameters.lap_k);
+            }
+            if (strcmp(tmp, "hyper_kz") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.lap_kz);
+                if (mpi_my_rank == IO_RANK) printf("hyperlaplacian power for k_perp = %f \n", parameters.lap_kz);
             }
         }
     }
+    if (mpi_my_rank == 0) printf("=====================================\n");
     init_global_size();
    // if (parameters.initial == 1)
    // {

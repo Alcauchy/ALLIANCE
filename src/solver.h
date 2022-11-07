@@ -3,7 +3,7 @@
 #include "parameters_io.h"
 #include "distrib.h"
 
-enum solverType {RK4};
+enum solverType {RK4,EULER};
 void solver_init(); // initialize solver depending on the choice.
 void solver_makeStep(COMPLEX **g, COMPLEX *h, int it);
 void solver_updateDt(COMPLEX *g, COMPLEX *h, int it);
@@ -18,6 +18,11 @@ struct solver{
 };
 struct rk4{
     COMPLEX* K_buf;
+    COMPLEX* RHS_buf;
+    COMPLEX* g_buf;
+};
+
+struct euler{
     COMPLEX* RHS_buf;
     COMPLEX* g_buf;
 };

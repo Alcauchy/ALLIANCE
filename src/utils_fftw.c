@@ -57,7 +57,6 @@ COMPLEX* fftw_hBuf;                                   // complex data array buff
 COMPLEX* fftw_chiBuf;                             // complex data array buffer for chi transformation;
 COMPLEX *fftw_field;                              //complex data to transform fields
 double fftw_norm;                               //normalization coefficient for backward fft transform
-void (*fftw_dealiasing)(COMPLEX*) = NULL;
 int *global_nkx_index;                          // array which stores the global position of nkx on the processor. Needed for dealiasing, in order to find Nkx/3 and 2*Nkx/3 and put all modes between those to zeros.
 
 /***************************************
@@ -71,7 +70,7 @@ void fftw_init(MPI_Comm communicator){
     size_c[1] = array_global_size.nky;
     size_c[2] = array_global_size.nkz;
     size_r[0] = array_global_size.ny;
-    size_r[1] = array_global_size.nkx;
+    size_r[1] = array_global_size.nx;
     size_r[2] = array_global_size.nz;
     //size_r[0] = array_global_size.nkx;
     //size_r[1] = array_global_size.nky;
@@ -91,17 +90,16 @@ void fftw_init(MPI_Comm communicator){
                                           &local_x_start,
                                           &local_ny,
                                           &local_y_start); // getting local size stored on each processor;
-    printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
+    if (VERBOSE) printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
 
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
         global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_row_rank + i;
-        //printf("[MPI process %d] my row rank = %d\t global_nkx_index[%d] = %d\n", mpi_my_rank,mpi_my_row_rank,i, global_nkx_index[i]);
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);
-    int flags_c2r = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_IN;
-    int flags_r2c = FFTW_ESTIMATE|FFTW_MPI_TRANSPOSED_OUT;
+    unsigned int flags_c2r = FFTW_MPI_TRANSPOSED_IN|FFTW_ESTIMATE;
+    unsigned int flags_r2c = FFTW_MPI_TRANSPOSED_OUT|FFTW_ESTIMATE;
     plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                           size_r,
                                           howmany,
@@ -121,14 +119,14 @@ void fftw_init(MPI_Comm communicator){
                                           communicator,
                                           flags_r2c);
     plan_transposeToXY = fftw_mpi_plan_many_transpose(size_r[0], size_r[1],
-                                                      howmany*(size_r[2] + 2),
+                                                      howmany*(size_r[2]+2),
                                                       local_ny, local_nx,
                                                       fftw_hBuf, fftw_hBuf,
                                                       communicator,
                                                       FFTW_ESTIMATE);
 
     plan_transposeToYX = fftw_mpi_plan_many_transpose(size_r[1], size_r[0],
-                                                      howmany*(size_r[2] + 2),
+                                                      howmany*(size_r[2]+2),
                                                       local_nx, local_ny,
                                                       fftw_hBuf, fftw_hBuf,
                                                       communicator,
@@ -159,10 +157,9 @@ void fftw_init(MPI_Comm communicator){
                                                          &local_y_start_chi); // getting local size stored on each processor;
 
 
-    printf("[MPI process %d] CHI TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_chi, howmany_chi);
+    if (VERBOSE) printf("[MPI process %d] CHI TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_chi, howmany_chi);
     fftw_chiBuf = fftw_alloc_complex(local_size_chi);
     for (size_t ii = 0; ii < local_size_chi; ii++) fftw_chiBuf[ii] = 0;
-    //fftw_chiBuf = fftw_alloc_real(2 * local_size_chi);
     plan_c2r_chi = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                               size_r,
                                               howmany_chi,
@@ -208,10 +205,8 @@ void fftw_init(MPI_Comm communicator){
                                                            &local_x_start_field,
                                                            &local_ny_field,
                                                            &local_y_start_field);
-    //local_size_field = fftw_mpi_local_size_3d(size_c[0],size_c[1],size_c[2],communicator,array_local_size.nkx,&local_nx_field);
 
-    printf("[MPI process %d] FIELD TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_field, 1);
-    //exit(0);
+    if (VERBOSE) printf("[MPI process %d] FIELD TRANSFORM: local size is %td, howmany is %d\n", mpi_my_rank,local_size_field, 1);
     fftw_field = fftw_alloc_complex(local_size_field);
     for (size_t ii = 0; ii < local_size_field; ii++) fftw_field[ii] = 0;
     //creating r2c and c2r plans
@@ -587,30 +582,6 @@ void fftw_normalise_chi_r(double *data) {
 void fftw_normalise_field_r(double *data) {
     for(size_t i = 0; i < array_local_size.nx * array_local_size.ny * (array_local_size.nz + 2); i++) {
         data[i] *= fftw_norm;
-    }
-}
-
-
-/***************************************
- * \fn void dealiasing23(COMPLEX *data_c)
- * \brief 2/3 rule dealiasing
- * \param data_c: complex 6D data array
- ***************************************/
-void dealiasing23(COMPLEX *data_c){
-    size_t ind6D;
-    for(size_t ikx = 0; ikx < array_local_size.nkx; ikx++){
-        for(size_t iky = 0; iky < array_local_size.nky; iky++){
-            for(size_t ikz = 0; ikz < array_local_size.nkz; ikz++){
-                for(size_t im = 0; im < array_local_size.nm; im++){
-                    for(size_t il = 0; il < array_local_size.nl; il++){
-                        for(size_t is = 0; is <array_local_size.ns; is++){
-                            ind6D = get_flat_c(is,il,im,ikx,iky,ikz);
-                            data_c[ind6D] *= space_zerosKx[ikx]*space_zerosKy[iky]*space_zerosKz[ikz];
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

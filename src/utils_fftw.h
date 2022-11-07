@@ -30,7 +30,6 @@ void fftw_normalise_chi_r(double *data);
 void fftw_normalise_data_r(double *data);
 void fftw_normalise_field_r(double *data);
 void fftw_test_fill(double *ar,double f);                   // fills input real array with cos(2*pi*f*x).
-void dealiasing23(COMPLEX *data_c);                         // performs dealiasing by employing 2/3 rule. Turns all the aliased modes to zero.
 void fftw_transposeToXY();
 void fftw_transposeToYX();
 void fftw_transposeToXY_chi();
@@ -42,7 +41,7 @@ double cosinus(double f,int ix);                            // returns cos(2*pi*
 extern COMPLEX *fftw_hBuf;
 extern COMPLEX *fftw_chiBuf;
 extern COMPLEX *fftw_field;
+extern double fftw_norm;
 extern int *global_nkx_index;
-extern void (*fftw_dealiasing)(COMPLEX *);                  // pointer to the dealiasing function. Used to choose the dealiasing function user wants to use.
 
 #endif //ALLIANCE_ALPHA_1_0_UTILS_FFTW_H
