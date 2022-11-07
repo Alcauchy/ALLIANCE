@@ -24,6 +24,7 @@ void diag_computeEnergyBalance(const COMPLEX *h);
 void diag_computeEnergy(const COMPLEX *h);
 void diag_print(const COMPLEX *h, int it);
 void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c);
+void diag_computeNonlinearFlux(const COMPLEX *in);
 
 extern double *diag_mSpec;
 extern double *diag_kSpec;

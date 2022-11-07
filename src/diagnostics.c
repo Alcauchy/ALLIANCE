@@ -19,7 +19,7 @@
 // diag_getShells
 // diag_compute
 // diag_filterK
-//
+// diag_computeNonlinearFlux
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
 #include "diagnostics.h"
@@ -27,6 +27,7 @@
 
 #define TO_ROOT 0
 #define BUFFER_SIZE 1
+#define IO_RANK 0
 /**\var double *diag_kSpec
  * \brief used to store free energy k spectra*/
 double *diag_kSpec = 0;
@@ -70,10 +71,6 @@ double *diag_nonlinearFlux = 0;
 /**\var double diag_nonlinearNorm
 * \brief normalization factor for nonlinear flux */
 double *diag_nonlinearNorm = 0;
-
-/**\var double diag_nonlinearShells
-* \brief shells through which nonlinear flux is computed */
-double *diag_nonlinearShells = 0;
 
 /**\var double diag_freeEnergy
  * \brief free energy*/
@@ -192,7 +189,7 @@ void diag_initSpec() {
                 }
             }
             if(parameters.compute_nonlinear){
-                diag_nonlinearFlux = calloc((diag_numOfShellBounds),sizeof(*diag_nonlinearFlux));
+                diag_nonlinearFlux = calloc((diag_numOfShells),sizeof(*diag_nonlinearFlux));
             }
         }
 
@@ -812,8 +809,8 @@ void diag_print(const COMPLEX *h, int it){
  * \param k_c: cutoff wave number
  ***************************************/
 void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c){
-    COMPLEX *maskKx = calloc(array_local_size.nkx, sizeof(maskKx));
-    COMPLEX *maskKy = calloc(array_local_size.nky, sizeof(maskKx));
+    COMPLEX *maskKx = calloc(array_local_size.nkx, sizeof(*maskKx));
+    COMPLEX *maskKy = calloc(array_local_size.nky, sizeof(*maskKx));
     size_t ind2D;
     size_t ind6D;
 
@@ -840,8 +837,47 @@ void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c){
             }
         }
     }
-
     free(maskKx);
     free(maskKy);
 }
 
+/***************************************
+ * \fn diag_computeNonlinearFlux(const COMPLEX *in)
+ * \brief computes nonlinear free energy flux
+ * \param in: input 6D array
+ ***************************************/
+void diag_computeNonlinearFlux(const COMPLEX *in){
+    if (mpi_my_rank == IO_RANK) printf("computing nonlinear flux\n");
+    size_t ind6D;
+    COMPLEX *nonlinearTermK = malloc(array_local_size.total_comp * sizeof(*nonlinearTermK));
+    equation_getNonlinearTerm(in,nonlinearTermK);
+    fftw_copy_buffer_c(fftw_hBuf,nonlinearTermK);
+    free(nonlinearTermK);
+    fftw_r2c();
+    double *nonlinearTermR = malloc(array_local_size.total_real * sizeof(*nonlinearTermK));
+    fftw_copy_buffer_r(nonlinearTermR,fftw_hBuf);
+    for (size_t ii = 0; ii < diag_numOfShells; ii++){
+        double kc = diag_shells[ii + 1]; //we don't want to compute flux through k = 0
+        diag_filterK(in,fftw_hBuf,kc);
+        fftw_c2r();
+        double *h_r = fftw_hBuf;
+        for(size_t iy = 0; iy < array_local_size.ny; iy++){
+            for(size_t ix = 0; ix < array_local_size.nx; ix++){
+                for(size_t iz = 0; iz < array_local_size.nz; iz++){
+                    for(size_t im = 0; im < array_local_size.nm; im++){
+                        for(size_t il = 0; il < array_local_size.nl; il++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                ind6D = get_flat_r(ix,il,im,ix,iy,iz);
+                                diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                                diag_nonlinearFlux[ii] /= diag_shellNorm[ii];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    free(nonlinearTermR);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    if (mpi_my_rank == IO_RANK) printf("nonlinear flux computed\n");
+}

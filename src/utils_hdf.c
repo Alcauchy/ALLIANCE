@@ -1438,6 +1438,25 @@ void hdf_createParamFile()
         }
 
     }
+    /*creating a group to save nonlinear flux*/
+    if(parameters.compute_nonlinear){
+        hid_t chunk_spec_nonl_flux_shells[2] = {1,diag_numOfShells};
+        hid_t max_dims_flux[2] = {H5S_UNLIMITED,diag_numOfShells};
+        group_id = H5Gcreate2(file_id, "/nonlinearFlux", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        H5Gclose(group_id);
+
+        /*create nonlinear flux dataset,timetesp dataset and dt dataset*/
+        /* creating shells borders dataset */
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, &chunk_spec_nonl_flux_shells[1]);
+        dspace_id = H5Screate_simple(1,&chunk_spec_nonl_flux_shells[1],&chunk_spec_nonl_flux_shells[1]);
+        dset_id = H5Dcreate2(file_id, "/nonlinearFlux/shells", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+                             H5P_DEFAULT);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &diag_shells[1]);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+    }
 
     /*creating a group to save free energy*/
     if(parameters.save_diagnostics)

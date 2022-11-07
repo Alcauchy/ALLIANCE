@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
         diag_compute(g, h, it);
         //save data
         hdf_saveData(g, it);
+        diag_computeNonlinearFlux(h);
         if (it%10000 == 0){
             char distrib_name[32];
             sprintf(distrib_name, "g_%d.h5", it);
