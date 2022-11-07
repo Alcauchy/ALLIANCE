@@ -12,6 +12,7 @@
 // diag_computeFreeEnergy
 // diag_computeFreeEnergyFields
 // diag_initSpec
+// diag_initNonlinearFLux
 // diag_computeKSpectrum
 // diag_computeMSpectrum
 // diag_initSpec
@@ -60,6 +61,18 @@ double *diag_shellCentres = 0;
 /**\var double diag_shellCentres
  * \brief centers of shells*/
 double *diag_shellNorm = 0;
+
+/**\var double diag_nonlinearFlux
+ * \brief used to store nonlinear flux */
+double *diag_nonlinearFlux = 0;
+
+/**\var double diag_nonlinearNorm
+* \brief normalization factor for nonlinear flux */
+double *diag_nonlinearNorm = 0;
+
+/**\var double diag_nonlinearShells
+* \brief shells through which nonlinear flux is computed */
+double *diag_nonlinearShells = 0;
 
 /**\var double diag_freeEnergy
  * \brief free energy*/
@@ -153,17 +166,17 @@ void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
  * Called in #init_start function
  ***************************************/
 void diag_initSpec() {
-    if (parameters.compute_k) {
+    diag_MM = malloc((array_local_size.nkz) * sizeof(*diag_MM));
+    for (size_t iz = 0; iz < array_local_size.nkz; iz++ ){
+        if(iz == 0 || iz == array_local_size.nkz - 1){
+            diag_MM[iz] = 1.0;
+        }
+        else{
+            diag_MM[iz] = 2.0;
+        }
+    if (parameters.compute_k || parameters.compute_nonlinear) {
         diag_getShells();
         diag_kSpec = malloc((diag_numOfShells) * sizeof(*diag_kSpec));
-        diag_MM = malloc((array_local_size.nkz) * sizeof(*diag_MM));
-        for (size_t iz = 0; iz < array_local_size.nkz; iz++ ){
-            if(iz == 0 || iz == array_local_size.nkz - 1){
-                diag_MM[iz] = 1.0;
-            }
-            else{
-                diag_MM[iz] = 2.0;
-            }
         }
         if(systemType == ELECTROMAGNETIC){
             diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
@@ -311,6 +324,7 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
  * last_shell and first_shell as provided
  * by user in parameter file. Position of \f$i^{th}\f$ shell is computed as
  * \f$k^{shell}_i = (last\_shell - first\_shell)/(k\_shells) \cdot i\f$
+ * also computes norms for nonlinear flux
  ***************************************/
 void diag_getShells() {
     diag_sqrtGoldenRatio = sqrt((1. + sqrt(5.)) * 0.5);

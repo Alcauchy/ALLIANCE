@@ -342,15 +342,10 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.lap_kz);
                 if (mpi_my_rank == IO_RANK) printf("hyperlaplacian power for k_perp = %f \n", parameters.lap_kz);
             }
-            if (strcmp(tmp, "save_nonlinear") == 0)
+            if (strcmp(tmp, "compute_nonlinear") == 0)
             {
-                sscanf(string, "%*s : %d", &parameters.save_nonlinear);
-                if (mpi_my_rank == IO_RANK) printf("nonlinear flux will be saved \n");
-            }
-            if (strcmp(tmp, "iter_nonlinear") == 0)
-            {
-                sscanf(string, "%*s : %d", &parameters.iter_nonlinear);
-                if (mpi_my_rank == IO_RANK) printf("compute nonlinear flux every %d steps\n",&parameters.iter_nonlinear);
+                sscanf(string, "%*s : %d", &parameters.compute_nonlinear);
+                if (mpi_my_rank == IO_RANK) printf("compute nonlinear flux every %d steps\n",&parameters.compute_nonlinear);
             }
         }
     }
