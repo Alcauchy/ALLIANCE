@@ -413,7 +413,7 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     equation_getForcing(in_h, out);
     equation_getDissipation(in_h, out);
     /* computing nonlinear term */
-    equation_getNonlinearTerm(in_h, out);
+    //equation_getNonlinearTerm(in_h, out);
     free(minus_boundary);
     free(plus_boundary);
 };

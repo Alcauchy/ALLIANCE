@@ -216,6 +216,7 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
     COMPLEX sum = 0;
     COMPLEX freeEnergy = 0;
     size_t ind6D;
+    size_t indJ0;
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
             for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
@@ -223,6 +224,7 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
                             ind6D = get_flat_c(is, il, im, ix, iy, iz);
+                            indJ0 = var_getJIndex(ix,iy,is);
                             sum += 0.5 * var_var.T[is] * var_var.n[is] * g[ind6D] * conj(h[ind6D]) * diag_MM[iz];
                         }
                     }
@@ -232,7 +234,7 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
     }
     MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_C_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
     diag_freeEnergy = cabs(freeEnergy);
-    printf("computed as old = %f\n",diag_freeEnergy);
+    //printf("computed as old = %f\n",diag_freeEnergy);
 
 };
 
@@ -481,8 +483,8 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
         //compute and save free energy
         diag_computeFreeEnergy(g, h);
         diag_computeEnergy(h);
-        diag_freeEnergy = diag_energyTotal;
-        if (timestep == 0) diag_free_energy0 = diag_freeEnergy;
+        //diag_freeEnergy = diag_energyTotal;
+        if (timestep == 0) diag_free_energy0 = diag_energyTotal;
         hdf_saveEnergy(timestep);
         hdf_saveForcing();
         //compute spectra
@@ -714,6 +716,7 @@ void diag_computeEnergy(const COMPLEX *h){
     size_t ind6D;
     size_t ind3D;
     size_t ind2D;
+    size_t indJ0;
     switch(systemType){
         case ELECTROSTATIC:
             for (size_t ix = 0; ix < array_local_size.nkx; ix++){
@@ -723,8 +726,9 @@ void diag_computeEnergy(const COMPLEX *h){
                         for (size_t im = 0; im < array_local_size.nm; im++){
                             for (size_t il = 0; il < array_local_size.nl; il++){
                                 for (size_t is = 0; is < array_local_size.ns; is++){
+                                    indJ0 = var_getJIndex(ix,iy,is);
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
+                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz] ;
                                     diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
                                                       * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
                                 }
@@ -751,17 +755,18 @@ void diag_computeEnergy(const COMPLEX *h){
                     ind2D = ix * array_local_size.nky  + iy;
                     for (size_t iz = 0; iz < array_local_size.nkz; iz++){
                         ind3D = get_flatIndexComplex3D(ix,iy,iz);
+                        diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) / 8. / M_PI * diag_MM[iz];
+                        diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])/ 8. / M_PI * diag_MM[iz];
+                        for (size_t is = 0; is < array_local_size.ns; is++){
+                            diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
+                                              * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
+                        }
                         for (size_t im = 0; im < array_local_size.nm; im++){
                             for (size_t il = 0; il < array_local_size.nl; il++){
                                 for (size_t is = 0; is < array_local_size.ns; is++){
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    size_t ind4D = var_getJIndex(ix,iy,is);
+                                    indJ0 = var_getJIndex(ix,iy,is);
                                     diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
-                                    diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
-                                                      * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
-                                    diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) / 8. / M_PI * diag_MM[iz];
-                                    diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])/ 8. / M_PI * diag_MM[iz];
-
                                 }
                             }
                         }
@@ -802,7 +807,9 @@ void diag_print(const COMPLEX *h, int it){
         if(mpi_my_rank == 0){
             if (mpi_my_rank == 0) printf("============TIMESTEP = %d============\n",it);
             printf("W/W0 = %.16f\n", diag_energyTotal / diag_free_energy0);
+            printf(" old W/W0 = %.16f\n", diag_freeEnergy / diag_free_energy0);
             printf("total energy = %f\n", diag_energyTotal);
+            printf("old total energy = %f\n", diag_freeEnergy);
             printf("diag_injected = %f\n", diag_injected);
             printf("diag_dissipated = %f\n", diag_dissipated);
             printf("h energy = %f\n", diag_energyH);
@@ -883,20 +890,20 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
                         for(size_t il = 0; il < array_local_size.nl; il++){
                             for(size_t is = 0; is < array_local_size.ns; is++){
                                 ind6D = get_flat_r(is,il,im,ix,iy,iz);
-                                h_r[ind6D] *= nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
-                                //diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                                //h_r[ind6D] *= nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                                diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
                             }
                         }
                     }
                 }
             }
         }
-        fftw_r2c();
-        distrib_dealiasing(fftw_hBuf);
-        for (size_t ix = 0; ix< array_local_size.total_comp; ix ++){
-            diag_nonlinearFlux[ii] += creal(fftw_hBuf[ix]);
-        }
-        diag_nonlinearFlux[ii] /= diag_nonlinearNorm[ii];
+        //fftw_r2c();
+        //distrib_dealiasing(fftw_hBuf);
+        //for (size_t ix = 0; ix< array_local_size.total_comp; ix ++){
+        //    diag_nonlinearFlux[ii] += creal(fftw_hBuf[ix]);
+        //}
+        //diag_nonlinearFlux[ii] /= diag_nonlinearNorm[ii];
     }
     free(nonlinearTermR);
     MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
