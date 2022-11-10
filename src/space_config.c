@@ -24,6 +24,8 @@
 double space_Lx;
 double space_Ly;
 double space_Lz;
+double space_LperpMax;
+double space_LperpMin;
 double space_dx;
 double space_dy;
 double space_dz;
@@ -109,10 +111,12 @@ void space_generateWaveSpace() {
     space_Lx = parameters.Lx;
     space_Ly = parameters.Ly;
     space_Lz = parameters.Lz;
+    space_LperpMax =  (space_Lx > space_Ly) ? space_Lx : space_Ly;
 
     space_dx = space_Lx / array_global_size.nx;
     space_dy = space_Ly / array_global_size.ny;
     space_dz = space_Lz / array_global_size.nz;
+    space_LperpMin =  (space_dx < space_dy) ? space_dx : space_dy;
 
     space_dKx = 2. * M_PI / ( space_Lx);
     space_dKy = 2. * M_PI / ( space_Ly);

@@ -17,6 +17,8 @@ void space_generateMSpace();
 extern double space_Lx;
 extern double space_Ly;
 extern double space_Lz;
+extern double space_LperpMax;
+extern double space_LperpMin;
 extern double space_dx;
 extern double space_dy;
 extern double space_dz;
