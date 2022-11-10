@@ -48,6 +48,14 @@ double *diag_kSpecBpar = 0;
  * \brief used to store h energy k spectra*/
 double *diag_kSpecH = 0;
 
+/**\var double *diag_LDis
+ * \brief dissipation length scale*/
+double diag_LDis;
+
+/**\var double *diag_LInt
+ * \brief integral length scale*/
+double diag_LInt;
+
 /**\var double *diag_mSpec
  * \brief used to store free energy m spectra*/
 double *diag_mSpec = 0;
@@ -278,10 +286,26 @@ void diag_computeKSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
         }
     }
     MPI_Reduce(sum, buf, diag_numOfShells, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
+    diag_LDis = 0;
+    diag_LInt = 0;
+    double divisorLDis = 0;
+    double divisorLInt = 0;
     if (mpi_my_rank == TO_ROOT) {
         for (size_t i = 0; i < diag_numOfShells; i++) {
             diag_kSpec[i] = creal(buf[i])/diag_shellNorm[i];
+            //computing sum(k^(2 alpha) * E(k))
+            divisorLDis += pow(diag_shellCentres[i],2 * var_var.mu_k) * diag_kSpec[i];
+            //computing sum (E(k))
+            divisorLInt += diag_kSpec[i];
+            //computing sum(k^(2 alpha - 1) * E(k))
+            diag_LDis += pow(diag_shellCentres[i],2 * var_var.mu_k - 1) * diag_kSpec[i];
+            //computing sum(k^(-1) * E(k))
+            diag_LInt += diag_kSpec[i]/diag_shellCentres[i];
         }
+        printf("%f\n", diag_LDis);
+        printf("%f\n", diag_LInt);
+        diag_LDis *= 2 * M_PI / divisorLDis;
+        diag_LInt *= 2 * M_PI / divisorLInt;
     }
 };
 
@@ -313,8 +337,8 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
         }
     }
     MPI_Reduce(sum, buf, array_local_size.nm, MPI_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, mpi_row_comm);
-    if (mpi_my_row_rank == TO_ROOT) {
-        for (size_t i = 0; i < array_local_size.nm; i++) {
+    if (mpi_my_row_rank == TO_ROOT){
+        for (size_t i = 0; i < array_local_size.nm; i++){
             diag_mSpec[i] = creal(buf[i]);
         }
     }
@@ -817,6 +841,8 @@ void diag_print(const COMPLEX *h, int it){
             printf("B_par energy = %f\n", diag_energyBpar);
             printf("B_perp energy = %f\n", diag_energyBperp);
             printf("eta * kmax = %f\n", diag_etakmax);
+            printf("L_dis/L_min = %f\n", diag_LDis/space_LperpMin);
+            printf("L_int/L_max = %f\n", diag_LInt/space_LperpMax);
 
         }
     }

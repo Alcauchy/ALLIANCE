@@ -51,5 +51,7 @@ extern double diag_energyTotal;
 extern double diag_injected;
 extern double diag_dissipated;
 extern double diag_etakmax;
+extern double diag_LInt;
+extern double diag_LDis;
 
 #endif //ALLIANCE_ALPHA_1_0_DIAGNOSTICS_H

@@ -1307,6 +1307,27 @@ void hdf_createParamFile()
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
+
+        /* creating L_dissipation dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, &chunk_spec_k[0]);
+        dspace_id = H5Screate_simple(1,&dims_spec_k[0],&max_dims_k[0]);
+        dset_id = H5Dcreate2(file_id, "/spectra/L_dissipation", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /* creating L_integral dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, &chunk_spec_k[0]);
+        dspace_id = H5Screate_simple(1,&dims_spec_k[0],&max_dims_k[0]);
+        dset_id = H5Dcreate2(file_id, "/spectra/L_integral", H5T_NATIVE_DOUBLE, dspace_id, H5P_DEFAULT, plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
         if(parameters.compute_k)
         {
             /* creating shells borders dataset */
@@ -1833,6 +1854,42 @@ void hdf_saveKSpec(int timestep) {
     {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&solver.curTime);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+
+    /*write a L_dissipation dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/spectra/L_dissipation", H5P_DEFAULT);
+    /*open a dataset...*/
+    dspace_id = H5Dget_space(dset_id);
+    /*... and extend it*/
+    H5Dset_extent(dset_id, &size[0]);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, &offset[0], NULL, &dims_ext[0], NULL);
+    memspace = H5Screate_simple(1,&dims_ext[0],NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_LDis);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+
+    /*write a L_dissipation dataset*/
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/spectra/L_integral", H5P_DEFAULT);
+    /*open a dataset...*/
+    dspace_id = H5Dget_space(dset_id);
+    /*... and extend it*/
+    H5Dset_extent(dset_id, &size[0]);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, &offset[0], NULL, &dims_ext[0], NULL);
+    memspace = H5Screate_simple(1,&dims_ext[0],NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_LInt);
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
