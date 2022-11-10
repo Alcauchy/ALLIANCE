@@ -459,7 +459,7 @@ void fields_getPhi(const COMPLEX* g0, const COMPLEX* g1) {
                                                                                                I_B[ind3D] *
                                                                                                (g0[ind4D] + g1[ind4D]);
                                     }
-                                    fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] *=  1.0 / phiB_denom[ind2D];
+                                    fields_fields.phi[get_flatIndexComplex3D(ix,iy,iz)] *= 1.0 / phiB_denom[ind2D];
                                 }
 
                             }

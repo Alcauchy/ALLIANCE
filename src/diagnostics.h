@@ -23,6 +23,8 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep);
 void diag_computeEnergyBalance(const COMPLEX *h);
 void diag_computeEnergy(const COMPLEX *h);
 void diag_print(const COMPLEX *h, int it);
+void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c);
+void diag_computeNonlinearFlux(const COMPLEX *in);
 
 extern double *diag_mSpec;
 extern double *diag_kSpec;
@@ -34,6 +36,8 @@ extern double *diag_shells;
 extern double *diag_shellNorm;
 extern double *diag_shellCentres;
 extern double *diag_MM;
+extern double *diag_nonlinearFlux;
+extern double *diag_nonlinearNorm;
 
 extern double diag_freeEnergy;
 extern double diag_free_energy0;

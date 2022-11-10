@@ -63,6 +63,7 @@ struct system_param {
     int save_diagnostics;
     int save_EMfield;
     int save_checkpoint;
+    int compute_nonlinear;
     int save_distrib;
     double firstShell;
     double lastShell;

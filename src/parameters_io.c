@@ -342,6 +342,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.lap_kz);
                 if (mpi_my_rank == IO_RANK) printf("hyperlaplacian power for k_perp = %f \n", parameters.lap_kz);
             }
+            if (strcmp(tmp, "compute_nonlinear") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.compute_nonlinear);
+                if (mpi_my_rank == IO_RANK) printf("compute nonlinear flux every %d steps\n",&parameters.compute_nonlinear);
+            }
         }
     }
     if (mpi_my_rank == 0) printf("=====================================\n");

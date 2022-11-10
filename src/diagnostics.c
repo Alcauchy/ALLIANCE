@@ -12,12 +12,14 @@
 // diag_computeFreeEnergy
 // diag_computeFreeEnergyFields
 // diag_initSpec
+// diag_initNonlinearFLux
 // diag_computeKSpectrum
 // diag_computeMSpectrum
 // diag_initSpec
 // diag_getShells
 // diag_compute
-//
+// diag_filterK
+// diag_computeNonlinearFlux
 // VERSION 1.0
 ////////////////////////////////////////////////////////////////////////////////
 #include "diagnostics.h"
@@ -25,6 +27,7 @@
 
 #define TO_ROOT 0
 #define BUFFER_SIZE 1
+#define IO_RANK 0
 /**\var double *diag_kSpec
  * \brief used to store free energy k spectra*/
 double *diag_kSpec = 0;
@@ -60,6 +63,14 @@ double *diag_shellCentres = 0;
 /**\var double diag_shellCentres
  * \brief centers of shells*/
 double *diag_shellNorm = 0;
+
+/**\var double diag_nonlinearFlux
+ * \brief used to store nonlinear flux */
+double *diag_nonlinearFlux = 0;
+
+/**\var double diag_nonlinearNorm
+* \brief normalization factor for nonlinear flux */
+double *diag_nonlinearNorm = 0;
 
 /**\var double diag_freeEnergy
  * \brief free energy*/
@@ -153,29 +164,35 @@ void diag_computeSpectra(const COMPLEX *g, const COMPLEX *h, int timestep) {
  * Called in #init_start function
  ***************************************/
 void diag_initSpec() {
-    if (parameters.compute_k) {
-        diag_getShells();
-        diag_kSpec = malloc((diag_numOfShells) * sizeof(*diag_kSpec));
-        diag_MM = malloc((array_local_size.nkz) * sizeof(*diag_MM));
-        for (size_t iz = 0; iz < array_local_size.nkz; iz++ ){
-            if(iz == 0 || iz == array_local_size.nkz - 1){
-                diag_MM[iz] = 1.0;
-            }
-            else{
-                diag_MM[iz] = 2.0;
-            }
+    diag_MM = malloc((array_local_size.nkz) * sizeof(*diag_MM));
+    for (size_t iz = 0; iz < array_local_size.nkz; iz++ ) {
+        if (iz == 0 || iz == array_local_size.nkz - 1) {
+            diag_MM[iz] = 1.0;
         }
-        if(systemType == ELECTROMAGNETIC){
-            diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
-            diag_kSpecBperp = calloc((diag_numOfShells), sizeof(*diag_kSpecBperp));
-            diag_kSpecBpar = calloc((diag_numOfShells), sizeof(*diag_kSpecBpar));
-            diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
-        }
-        if(systemType == ELECTROSTATIC){
-            diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
-            diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
+        else {
+            diag_MM[iz] = 2.0;
         }
     }
+        if (parameters.compute_k || parameters.compute_nonlinear){
+            diag_getShells();
+            diag_kSpec = malloc((diag_numOfShells) * sizeof(*diag_kSpec));
+            if(parameters.compute_k){
+                if (systemType == ELECTROMAGNETIC){
+                    diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
+                    diag_kSpecBperp = calloc((diag_numOfShells), sizeof(*diag_kSpecBperp));
+                    diag_kSpecBpar = calloc((diag_numOfShells), sizeof(*diag_kSpecBpar));
+                    diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
+                }
+                if (systemType == ELECTROSTATIC){
+                    diag_kSpecPhi = calloc((diag_numOfShells), sizeof(*diag_kSpecPhi));
+                    diag_kSpecH = calloc((diag_numOfShells) * array_local_size.nm, sizeof(*diag_kSpecH));
+                }
+            }
+            if(parameters.compute_nonlinear){
+                diag_nonlinearFlux = calloc((diag_numOfShells),sizeof(*diag_nonlinearFlux));
+            }
+        }
+
     if (parameters.compute_m) {
         if (mpi_my_row_rank == 0) {
             diag_mSpec = malloc(array_local_size.nm * sizeof(*diag_mSpec));
@@ -199,6 +216,7 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
     COMPLEX sum = 0;
     COMPLEX freeEnergy = 0;
     size_t ind6D;
+    size_t indJ0;
     for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
         for (size_t iy = 0; iy < array_local_size.nky; iy++) {
             for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
@@ -206,6 +224,7 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
                             ind6D = get_flat_c(is, il, im, ix, iy, iz);
+                            indJ0 = var_getJIndex(ix,iy,is);
                             sum += 0.5 * var_var.T[is] * var_var.n[is] * g[ind6D] * conj(h[ind6D]) * diag_MM[iz];
                         }
                     }
@@ -215,7 +234,7 @@ void diag_computeFreeEnergy(COMPLEX *g, COMPLEX *h) {
     }
     MPI_Reduce(&sum, &freeEnergy, BUFFER_SIZE, MPI_C_DOUBLE_COMPLEX, MPI_SUM, TO_ROOT, MPI_COMM_WORLD);
     diag_freeEnergy = cabs(freeEnergy);
-    printf("computed as old = %f\n",diag_freeEnergy);
+    //printf("computed as old = %f\n",diag_freeEnergy);
 
 };
 
@@ -311,6 +330,7 @@ void diag_computeMSpectrum(const COMPLEX *g, const COMPLEX *h, double *spec) {
  * last_shell and first_shell as provided
  * by user in parameter file. Position of \f$i^{th}\f$ shell is computed as
  * \f$k^{shell}_i = (last\_shell - first\_shell)/(k\_shells) \cdot i\f$
+ * also computes norms for nonlinear flux
  ***************************************/
 void diag_getShells() {
     diag_sqrtGoldenRatio = sqrt((1. + sqrt(5.)) * 0.5);
@@ -353,6 +373,8 @@ void diag_getShells() {
         //shell centres and normalizations
         diag_shellCentres = malloc((diag_numOfShells) * sizeof(*diag_shellCentres));
         diag_shellNorm = calloc((diag_numOfShells), sizeof(*diag_shellNorm));
+        diag_nonlinearNorm = calloc((diag_numOfShells), sizeof(*diag_nonlinearNorm));
+
         for (size_t ishell = 1; ishell < (diag_numOfShellBounds); ishell++){
             diag_shellCentres[ishell - 1] = 0.5 * (diag_shells[ishell - 1] + diag_shells[ishell ]);
             for(size_t ix = 0; ix < array_local_size.nkx; ix++){
@@ -367,11 +389,20 @@ void diag_getShells() {
                                 diag_shellNorm[ishell - 1] += 2.;
                             }
                         }
+                        if (space_kPerp[ind2D] < diag_shells[ishell]){
+                            if (iz == 0 || iz == array_local_size.nkz - 1){
+                                diag_nonlinearNorm[ishell - 1] += 1.;
+                            }
+                            else{
+                                diag_nonlinearNorm[ishell - 1] += 2.;
+                            }
+                        }
                     }
                 }
             }
         }
         MPI_Allreduce(MPI_IN_PLACE, diag_shellNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+        MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
     }
 
     if (spectrumType == UNIT){
@@ -392,6 +423,7 @@ void diag_getShells() {
         //shell normalizations and centres
         diag_shellCentres = malloc((diag_numOfShells) * sizeof(*diag_shellCentres));
         diag_shellNorm = calloc((diag_numOfShells), sizeof(*diag_shellNorm));
+        diag_nonlinearNorm = calloc((diag_numOfShells), sizeof(*diag_nonlinearNorm));
         for (size_t ishell = 1; ishell < (diag_numOfShellBounds); ishell++){
             diag_shellCentres[ishell - 1] = 0.5 * (diag_shells[ishell - 1] + diag_shells[ishell ]);
             for(size_t ix = 0; ix < array_local_size.nkx; ix++){
@@ -406,11 +438,20 @@ void diag_getShells() {
                                 diag_shellNorm[ishell - 1] += 2.;
                             }
                         }
+                        if (space_kPerp[ind2D] <= diag_shells[ishell]){
+                            if (iz == 0 || iz == array_local_size.nkz - 1){
+                                diag_nonlinearNorm[ishell - 1] += 1.;
+                            }
+                            else{
+                                diag_nonlinearNorm[ishell - 1] += 2.;
+                            }
+                        }
                     }
                 }
             }
         }
         MPI_Allreduce(MPI_IN_PLACE, diag_shellNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+        MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearNorm,diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
     }
 
 }
@@ -442,8 +483,8 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
         //compute and save free energy
         diag_computeFreeEnergy(g, h);
         diag_computeEnergy(h);
-        diag_freeEnergy = diag_energyTotal;
-        if (timestep == 0) diag_free_energy0 = diag_freeEnergy;
+        //diag_freeEnergy = diag_energyTotal;
+        if (timestep == 0) diag_free_energy0 = diag_energyTotal;
         hdf_saveEnergy(timestep);
         hdf_saveForcing();
         //compute spectra
@@ -457,6 +498,19 @@ void diag_compute(COMPLEX *g, COMPLEX *h, int timestep) {
             diag_computeMSpectrum(g, h, diag_mSpec);
             hdf_saveMSpec(timestep);
         }
+    }
+    if(parameters.compute_nonlinear && (timestep % parameters.compute_nonlinear == 0 || timestep == -1)){
+        // update fields and h first
+        fields_sendF(g);
+        fields_getFields(f00, f10, f01);
+        fields_getChi();
+        distrib_getH(h, g);
+        //compute and save free energy
+        diag_computeFreeEnergy(g, h);
+        diag_computeEnergy(h);
+        diag_computeNonlinearFlux(h);
+        hdf_saveNonlinearFlux(timestep);
+
     }
 }
 
@@ -662,6 +716,7 @@ void diag_computeEnergy(const COMPLEX *h){
     size_t ind6D;
     size_t ind3D;
     size_t ind2D;
+    size_t indJ0;
     switch(systemType){
         case ELECTROSTATIC:
             for (size_t ix = 0; ix < array_local_size.nkx; ix++){
@@ -671,8 +726,9 @@ void diag_computeEnergy(const COMPLEX *h){
                         for (size_t im = 0; im < array_local_size.nm; im++){
                             for (size_t il = 0; il < array_local_size.nl; il++){
                                 for (size_t is = 0; is < array_local_size.ns; is++){
+                                    indJ0 = var_getJIndex(ix,iy,is);
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
+                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz] ;
                                     diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
                                                       * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
                                 }
@@ -699,17 +755,18 @@ void diag_computeEnergy(const COMPLEX *h){
                     ind2D = ix * array_local_size.nky  + iy;
                     for (size_t iz = 0; iz < array_local_size.nkz; iz++){
                         ind3D = get_flatIndexComplex3D(ix,iy,iz);
+                        diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) / 8. / M_PI * diag_MM[iz];
+                        diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])/ 8. / M_PI * diag_MM[iz];
+                        for (size_t is = 0; is < array_local_size.ns; is++){
+                            diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
+                                              * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
+                        }
                         for (size_t im = 0; im < array_local_size.nm; im++){
                             for (size_t il = 0; il < array_local_size.nl; il++){
                                 for (size_t is = 0; is < array_local_size.ns; is++){
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    size_t ind4D = var_getJIndex(ix,iy,is);
+                                    indJ0 = var_getJIndex(ix,iy,is);
                                     diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
-                                    diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
-                                                      * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
-                                    diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) / 8. / M_PI * diag_MM[iz];
-                                    diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])/ 8. / M_PI * diag_MM[iz];
-
                                 }
                             }
                         }
@@ -750,7 +807,9 @@ void diag_print(const COMPLEX *h, int it){
         if(mpi_my_rank == 0){
             if (mpi_my_rank == 0) printf("============TIMESTEP = %d============\n",it);
             printf("W/W0 = %.16f\n", diag_energyTotal / diag_free_energy0);
+            printf(" old W/W0 = %.16f\n", diag_freeEnergy / diag_free_energy0);
             printf("total energy = %f\n", diag_energyTotal);
+            printf("old total energy = %f\n", diag_freeEnergy);
             printf("diag_injected = %f\n", diag_injected);
             printf("diag_dissipated = %f\n", diag_dissipated);
             printf("h energy = %f\n", diag_energyH);
@@ -763,3 +822,90 @@ void diag_print(const COMPLEX *h, int it){
     }
 }
 
+/***************************************
+ * \fn diag_filterK(const COMPLEX *in, COMPLEX *out, k_c)
+ * \brief low-pass sharp filter in \f$ k_\perp \f$
+ * \param in: input 6D array
+ * \param out: output 6D array
+ * \param k_c: cutoff wave number
+ ***************************************/
+void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c){
+    COMPLEX *maskKx = calloc(array_local_size.nkx, sizeof(*maskKx));
+    COMPLEX *maskKy = calloc(array_local_size.nky, sizeof(*maskKx));
+    size_t ind2D;
+    size_t ind6D;
+
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            ind2D = ix * array_local_size.nky + iy;
+            if (space_kPerp[ind2D] <= k_c){
+                maskKx[ix] = 1.0;
+                maskKy[iy] = 1.0;
+            }
+        }
+    }
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                            out[ind6D] =  in[ind6D] * maskKx[ix] * maskKy[iy];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    free(maskKx);
+    free(maskKy);
+}
+
+/***************************************
+ * \fn diag_computeNonlinearFlux(const COMPLEX *in)
+ * \brief computes nonlinear free energy flux
+ * \param in: input 6D array
+ ***************************************/
+void diag_computeNonlinearFlux(const COMPLEX *in){
+    if (mpi_my_rank == IO_RANK) printf("computing nonlinear flux\n");
+    size_t ind6D;
+    COMPLEX *nonlinearTermK = calloc(array_local_size.total_comp, sizeof(*nonlinearTermK));
+    equation_getNonlinearTerm(in,nonlinearTermK);
+    fftw_copy_buffer_c(fftw_hBuf,nonlinearTermK);
+    fftw_c2r();
+    free(nonlinearTermK);
+    double *nonlinearTermR = calloc(array_local_size.total_real, sizeof(*nonlinearTermR));
+    fftw_copy_buffer_r(nonlinearTermR, fftw_hBuf);
+    for (size_t ii = 0; ii < diag_numOfShells; ii++){
+        diag_nonlinearFlux[ii] = 0;
+        double kc = diag_shells[ii + 1]; //we don't want to compute flux through k = 0
+        diag_filterK(in,fftw_hBuf,kc);
+        fftw_c2r();
+        double *h_r = fftw_hBuf;
+        for(size_t iy = 0; iy < array_local_size.ny; iy++){
+            for(size_t ix = 0; ix < array_local_size.nx; ix++){
+                for(size_t iz = 0; iz < array_local_size.nz; iz++){
+                    for(size_t im = 0; im < array_local_size.nm; im++){
+                        for(size_t il = 0; il < array_local_size.nl; il++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                ind6D = get_flat_r(is,il,im,ix,iy,iz);
+                                //h_r[ind6D] *= nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                                diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        //fftw_r2c();
+        //distrib_dealiasing(fftw_hBuf);
+        //for (size_t ix = 0; ix< array_local_size.total_comp; ix ++){
+        //    diag_nonlinearFlux[ii] += creal(fftw_hBuf[ix]);
+        //}
+        //diag_nonlinearFlux[ii] /= diag_nonlinearNorm[ii];
+    }
+    free(nonlinearTermR);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    if (mpi_my_rank == IO_RANK){ printf("nonlinear flux computed\n");}
+}
