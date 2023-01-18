@@ -25,6 +25,7 @@ struct phys_params{
         double *q;
         double *vT;
         double *rho;
+        double k_rg;
         double *b;
         double B0;
         double mu_k;
@@ -32,6 +33,7 @@ struct phys_params{
         double mu_kz;
         double lap_k;
         double lap_kz;
+        double pwr_m;
 };
 
 extern struct phys_params var_var;

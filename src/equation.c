@@ -42,7 +42,7 @@ int *equation_forceKzIndGathered;
 int equation_forceKn;
 int equation_forceKnTotal;
 int equation_forceNorm;
-int equation_forcedM = 0;
+int equation_forcedM;
 int *equation_forceKnAr;
 int *equation_displacements;
 double equation_forcingCoef;
@@ -99,7 +99,6 @@ void equation_getLinearTerm(const COMPLEX *in, const COMPLEX *plus_boundary, con
                                 ind6DMinus = get_flat_c(is, il, im - 1, ix, iy, iz);
                                 out[ind6D] += space_iKz[iz] * var_var.vT[is] *
                                               (space_sqrtM[im + 1] * in[ind6DPlus] + space_sqrtM[im] * in[ind6DMinus]);
-
                             }
                         }
                     }
@@ -409,11 +408,12 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
     /* computing linear term */
     //equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
-    /* computing dissipation and forcing*/
-    equation_getForcing(in_h, out);
-    equation_getDissipation(in_h, out);
     /* computing nonlinear term */
     equation_getNonlinearTerm(in_h, out);
+    /* computing dissipation and forcing*/
+    equation_getForcing(in_h, out);
+    equation_getDissipation(in_g, out);
+
     free(minus_boundary);
     free(plus_boundary);
 };
@@ -444,6 +444,7 @@ void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
             }
         }
     }
+
 };
 
 /***************************************
@@ -451,7 +452,7 @@ void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
  * \brief computes dissipation at a given k and m.
  ***************************************/
 COMPLEX equation_getLocalDissipation(const COMPLEX h, double kPerpSq, double kz, double m) {
-    return (var_var.mu_k * pow(kPerpSq, var_var.lap_k) + var_var.mu_m * m + var_var.mu_kz * pow(kz,2.*var_var.lap_kz)) * h;
+    return (var_var.mu_k * pow(kPerpSq, var_var.lap_k) + var_var.mu_m * pow(m,var_var.pwr_m) + var_var.mu_kz * pow(kz,2.*var_var.lap_kz)) * h;
 };
 
 
@@ -466,6 +467,7 @@ void equation_init() {
     size_t ind2D;
     equation_forceKn = 0;
     equation_forceNorm = 0;
+    equation_forcedM = parameters.forceM;
 
     // find out how many wave numbers will be forced
     if (!FORCE2D){
@@ -609,12 +611,13 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
             }
         }
         MPI_Allreduce(MPI_IN_PLACE,&sumForce,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
+        if (fabs(sumForce) <= 1e-16) sumForce = 1.0;
         double powerInjected = 0;
-
         for(size_t i = 0; i < equation_forceKn; i++){
             indKx = equation_forceKxInd[i];
             indKy = equation_forceKyInd[i];
             indKz = equation_forceKzInd[i];
+
             for(size_t is = 0; is < array_local_size.ns; is++){
                 ind6D = get_flat_c(is,0,local_m,indKx,indKy,indKz);
                 indForce = i * array_local_size.ns + is;
@@ -624,4 +627,5 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
             }
         }
     }
+
 };

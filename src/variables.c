@@ -105,11 +105,13 @@ void var_varInit(){
     var_var.b = malloc(parameters.ns * array_local_size.nky * array_local_size.nkx * sizeof(*var_var.b));
 
     var_var.beta = parameters.beta;
+    var_var.k_rg = parameters.k_rg;
     var_var.mu_k = parameters.mu_k;
     var_var.mu_m = parameters.mu_m;
     var_var.mu_kz = parameters.mu_kz;
     var_var.lap_k = parameters.lap_k;
     var_var.lap_kz = parameters.lap_kz;
+    var_var.pwr_m = parameters.pwr_m;
     var_var.B0 = 1.0;
     for(size_t i = 0; i < parameters.ns; i++)
     {
@@ -118,7 +120,7 @@ void var_varInit(){
         var_var.T[i] = parameters.temperature[i];
         var_var.n[i] = parameters.density[i];
         var_var.vT[i] = sqrt(2.* var_var.T[i]/var_var.m[i]);
-        var_var.rho[i] = sqrt(var_var.m[i]);
+        var_var.rho[i] = 2 * M_PI / var_var.k_rg * sqrt(var_var.m[i]);
     }
 
     for(size_t ix = 0; ix < array_local_size.nkx; ix++)

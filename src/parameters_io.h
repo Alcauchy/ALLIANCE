@@ -30,14 +30,17 @@ struct system_param {
     double mu_kz;
     double lap_k;
     double lap_kz;
+    double pwr_m;
 
     int dealiasing;
     int electromagnetic;
     int adiabatic;
+    int postprocess;
     int initial;
     int allow_rescale;
     char from_simulationName[128];
     double beta;
+    double k_rg;
     double *mass;
     double *density;
     double *temperature;
@@ -52,6 +55,7 @@ struct system_param {
     double forceKmin;
     double forceKmax;
     double forcePower;
+    double forceM;
 
     int compute_k;
     int compute_m;

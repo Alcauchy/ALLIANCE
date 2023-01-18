@@ -30,7 +30,7 @@ void init_initFlags();
 void init_conditions(COMPLEX *data);
 void init_computation();
 void init_physicalSystem();
-double init_energySpec(double k, double m, double amp, double disp);
+double init_energySpec(double k, double m, double amp, double disp, double k_z, double disp_z);
 double init_sinc(double amp, double f, double x, double y, double z, double x0, double y0, double z0);
 double init_exp2(double amp, double f, double x, double y, double z, double x0, double y0, double z0);
 double init_sinX(double amp, double f, double x);

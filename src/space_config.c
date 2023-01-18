@@ -163,7 +163,7 @@ void space_generateWaveSpace() {
         space_kz[iz] = space_dKz * iz;
         space_iKz[iz] = 1.j * space_kz[iz];
         //filling space_zerosKz array either with zeros or ones - needed for dealiasing
-        if(fabs(space_ky[iz]) > space_dKz * array_global_size.nz / 3.){
+        if(fabs(space_kz[iz]) > space_dKz * array_global_size.nz / 3.){
             space_zerosKz[iz] = 0.;
         }
         else{

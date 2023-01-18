@@ -40,7 +40,6 @@ enum dealiasing dealiasingType;
  ***************************************/
 void init_start(char *filename){
     mpi_init();
-
     read_parameters(filename);
     init_computation();
     init_physicalSystem();
@@ -134,6 +133,14 @@ void init_printParameters(){
  * and type of initial conditions
  ***************************************/
 void init_initFlags(){
+   if (parameters.postprocess){
+       parameters.initial = 1;
+       parameters.compute_k = 1;
+       parameters.compute_m = 1;
+       parameters.save_diagnostics = 1;
+       parameters.save_EMfield = 1;
+       parameters.compute_nonlinear = 1;
+   }
    kinetic = parameters.adiabatic;
    systemType = parameters.electromagnetic;
    initialConditions = parameters.initial;
@@ -160,7 +167,7 @@ void fill_rand(COMPLEX *ar1) {
                 for (size_t im = 0; im < array_global_size.nm; im++){
                     for (size_t il = 0; il < array_global_size.nl; il++){
                         for (size_t is = 0; is < array_global_size.ns; is++){
-                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && (im == 0)){
+                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && ((im == 0)||(im == 1))){//mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && (im == 0)
                                 size_t ix_local = mpi_whereIsX[2 * ix + 1];
                                 size_t im_local = mpi_whereIsM[2 * im + 1];
                                 size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
@@ -168,7 +175,8 @@ void fill_rand(COMPLEX *ar1) {
                                                iy;
                                 double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
                                 ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
-                                double amplitude = sqrt(init_energySpec(space_kPerp[ind3D], 0, 1e-9, 5.) / 2.0/ M_PI);
+                                double amplitude = sqrt(
+                                        init_energySpec(space_kPerp[ind3D], 0, 1e-9, 3., space_kz[iz], 3.) / 2.0 / M_PI);
                                 ar1[ind6D] *=amplitude;
                                 if(global_nkx_index[ix_local] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
                             }
@@ -245,7 +253,7 @@ void fill_randSingleKM(COMPLEX *ar1) {
                             if (space_globalMIndex[im] == 1 || space_globalMIndex[im] == 0 && global_nkx_index[ix] == 0) {
 
                                 //printf("%f\n", space_kz[2]);
-                                ind6D = get_flat_c(is, il, im, ix, 0, 2);
+                                ind6D = get_flat_c(is, il, im, ix, 0, iz);
                                 ar1[ind6D] = ((0.5 - (double) rand() / (double) (RAND_MAX)) +
                                                    (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j)
                                                            * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
@@ -306,8 +314,8 @@ void init_conditions(COMPLEX *data){
  * This function is supposed to be used in-module only
  * and should not be used elsewhere outside init.c file.
  ***************************************/
-double init_energySpec(double k, double m, double amp, double disp){
-    return amp * k*k * exp( - 2.0 * (k * k / disp / disp  ));
+double init_energySpec(double k, double m, double amp, double disp, double k_z, double disp_z) {
+    return amp * k * k * k * k * exp( - 2.0 * (k * k / disp / disp )) * k_z * k_z * k_z * k_z * exp( - 2.0 * (k_z * k_z / disp_z / disp_z ));
 };
 
 /***************************************

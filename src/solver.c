@@ -21,7 +21,6 @@ enum solverType solverType;
 struct solver solver;
 struct rk4 rk4;
 struct euler euler;
-
 /***************************************
  * \fn void solver_init():
  * \brief initializes solver
@@ -30,7 +29,6 @@ struct euler euler;
  ***************************************/
 void solver_init() {
     solver.dt = parameters.dt;
-    printf("dt = %f\n",solver.dt);
     solver.linDt = parameters.linDt;
     solver.linDt = parameters.linDt;
     solver.dissipDt = parameters.dissipDt;
@@ -44,7 +42,6 @@ void solver_init() {
         rk4.K_buf = calloc(array_local_size.total_comp, sizeof(*rk4.K_buf));
         rk4.RHS_buf = calloc(array_local_size.total_comp, sizeof(*rk4.RHS_buf));
         rk4.g_buf = calloc(array_local_size.total_comp, sizeof(*rk4.g_buf));
-
     }
     if (solverType == EULER) {
         if (mpi_my_rank == IORANK) printf("CHOSEN SOLVER IS EULER\n");
@@ -72,9 +69,9 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h, int it) {
             distrib_enforceReality(rk4.K_buf);
             distrib_setZeroNHalf(rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
-                rk4.RHS_buf[i] = g_ar[i] + 0.5 * solver.dt * rk4.K_buf[i];
-                rk4.g_buf[i] = g_ar[i] + solver.dt/6. * rk4.K_buf[i];
-                rk4.K_buf[i] = 0.j;
+                *(rk4.RHS_buf+i) = *(g_ar + i) + 0.5 * solver.dt * (*(rk4.K_buf + i));
+                *(rk4.g_buf+i) = *(g_ar + i) + solver.dt/6. * (*(rk4.K_buf+i));
+                *(rk4.K_buf+i) = 0.j;
             }
             // computing k2
             equation_getRHS(rk4.RHS_buf, h, rk4.K_buf);
@@ -82,7 +79,7 @@ void solver_makeStep(COMPLEX **g, COMPLEX *h, int it) {
             distrib_enforceReality(rk4.K_buf);
             distrib_setZeroNHalf(rk4.K_buf);
             for (size_t i = 0; i < array_local_size.total_comp; i++) {
-                rk4.RHS_buf[i] = g_ar[i] + 0.5 * solver.dt * rk4.K_buf[i];
+               rk4.RHS_buf[i] = g_ar[i] + 0.5 * solver.dt * rk4.K_buf[i];
                 rk4.g_buf[i] += solver.dt/3. * rk4.K_buf[i];
                 rk4.K_buf[i] = 0.j;
             }
@@ -189,6 +186,7 @@ void solver_updateDt(COMPLEX *g, COMPLEX *h, int it) {
                                 for (size_t ifield = 0; ifield < 3; ifield++) {
                                     indChi = getIndChiBufEM_r(ix, iy, iz, is, ifield);
                                     v_temp = fabs(vField[indChi]);
+                                    if (ifield == 1) v_temp *= 2;
                                     if (ifield == 2) v_temp *= sqrt((array_global_size.nm + 1.) / 2.);
                                     v_perp[0] = (v_perp[0] > v_temp) ? v_perp[0] : v_temp;
                                 }
@@ -206,6 +204,7 @@ void solver_updateDt(COMPLEX *g, COMPLEX *h, int it) {
                                 for (size_t ifield = 0; ifield < 3; ifield++) {
                                     indChi = getIndChiBufEM_r(ix, iy, iz, is, ifield);
                                     v_temp = fabs(vField[indChi]);
+                                    if (ifield == 1) v_temp *= 2;
                                     if (ifield == 2) v_temp *= sqrt((array_global_size.nm + 1.) / 2.);
                                     v_perp[1] = (v_perp[1] > v_temp) ? v_perp[1] : v_temp;
                                 }

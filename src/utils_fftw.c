@@ -98,8 +98,8 @@ void fftw_init(MPI_Comm communicator){
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);
-    unsigned int flags_c2r = FFTW_MPI_TRANSPOSED_IN|FFTW_ESTIMATE;
-    unsigned int flags_r2c = FFTW_MPI_TRANSPOSED_OUT|FFTW_ESTIMATE;
+    unsigned int flags_c2r = FFTW_MPI_TRANSPOSED_IN|FFTW_MEASURE;
+    unsigned int flags_r2c = FFTW_MPI_TRANSPOSED_OUT|FFTW_MEASURE;
     plan_c2r = fftw_mpi_plan_many_dft_c2r(FFTW_RANK,
                                           size_r,
                                           howmany,
@@ -123,14 +123,14 @@ void fftw_init(MPI_Comm communicator){
                                                       local_ny, local_nx,
                                                       fftw_hBuf, fftw_hBuf,
                                                       communicator,
-                                                      FFTW_ESTIMATE);
+                                                      FFTW_MEASURE);
 
     plan_transposeToYX = fftw_mpi_plan_many_transpose(size_r[1], size_r[0],
                                                       howmany*(size_r[2]+2),
                                                       local_nx, local_ny,
                                                       fftw_hBuf, fftw_hBuf,
                                                       communicator,
-                                                      FFTW_ESTIMATE);
+                                                      FFTW_MEASURE);
 
     /*preparing chi transform*/
     howmany_chi = array_local_size.ns;
@@ -184,14 +184,14 @@ void fftw_init(MPI_Comm communicator){
                                                       local_ny, local_nx,
                                                       fftw_chiBuf, fftw_chiBuf,
                                                       communicator,
-                                                      FFTW_ESTIMATE);
+                                                          FFTW_MEASURE);
 
     plan_transposeToYX_chi = fftw_mpi_plan_many_transpose(size_r[1], size_r[0],
                                                       howmany_chi * (size_r[2] + 2),
                                                       local_nx, local_ny,
                                                       fftw_chiBuf, fftw_chiBuf,
                                                       communicator,
-                                                      FFTW_ESTIMATE);
+                                                          FFTW_MEASURE);
 
     /* preparing field transform */
     //getting local size
@@ -231,14 +231,14 @@ void fftw_init(MPI_Comm communicator){
                                                           local_ny, local_nx,
                                                           fftw_field, fftw_field,
                                                           communicator,
-                                                          FFTW_ESTIMATE);
+                                                            FFTW_MEASURE);
 
     plan_transposeToYX_field = fftw_mpi_plan_many_transpose(size_r[0], size_r[1],
                                                             (size_r[2] + 2),
                                                             local_ny, local_nx,
                                                             fftw_field, fftw_field,
                                                             communicator,
-                                                            FFTW_ESTIMATE);
+                                                            FFTW_MEASURE);
 }
 
 /***************************************

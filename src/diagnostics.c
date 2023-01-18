@@ -76,6 +76,10 @@ double *diag_shellNorm = 0;
  * \brief used to store nonlinear flux */
 double *diag_nonlinearFlux = 0;
 
+/**\var double diag_nonlinearFluxInverse
+ * \brief used to store inverse nonlinear flux */
+double *diag_nonlinearFluxInverse = 0;
+
 /**\var double diag_nonlinearNorm
 * \brief normalization factor for nonlinear flux */
 double *diag_nonlinearNorm = 0;
@@ -128,6 +132,18 @@ double diag_injected;
 /**\var double diag_dissipated
  * \brief diag_dissipated amount of energy*/
 double diag_dissipated;
+
+/**\var double diag_dissipated_kPerp
+ * \brief diag_dissipated amount of energy in k_perp*/
+double diag_dissipated_kPerp;
+
+/**\var double diag_dissipated_kZ
+ * \brief diag_dissipated amount of energy in k_z*/
+double diag_dissipated_kZ;
+
+/**\var double diag_dissipated_m
+ * \brief diag_dissipated amount of energy in m*/
+double diag_dissipated_m;
 
 /**\var double diag_etakmax
  * \brief eta*kmax*/
@@ -198,6 +214,7 @@ void diag_initSpec() {
             }
             if(parameters.compute_nonlinear){
                 diag_nonlinearFlux = calloc((diag_numOfShells),sizeof(*diag_nonlinearFlux));
+                diag_nonlinearFluxInverse = calloc((diag_numOfShells),sizeof(*diag_nonlinearFluxInverse));
             }
         }
 
@@ -669,15 +686,17 @@ void diag_computeHSpectrum(const COMPLEX *h) {
  * \f$ W(k^{shell}_i) = \frac{1}{N}\sum_{k^{shell}_{i-1}<|\mathbf{k}_{\perp}|<k^{shell}_{i}}\sum_{k_z,l,m,s} g \bar{h}\f$
  * where \f$N\f$ is a number of wave vectors between shells \f$k^{shell}_{i-1}\f$ and \f$k^{shell}_{i}\f$
  ***************************************/
-void diag_computeEnergyBalance(const COMPLEX *h){
+void diag_computeEnergyBalance(const COMPLEX *h, const COMPLEX *g) {
     diag_injected = 0;
     diag_dissipated = 0;
+    diag_dissipated_kPerp = 0;
+    diag_dissipated_kZ = 0;
+    diag_dissipated_m = 0;
     double dissipated_k = 0;
     double dissipated_local_k;
     int forced_proc = mpi_whereIsM[2];
     size_t ind6D;
     size_t ind2D;
-
     // amount of energy diag_injected
     if (mpi_my_col_rank == forced_proc){
         for(size_t i = 0; i < equation_forceKn; i++){
@@ -702,9 +721,16 @@ void diag_computeEnergyBalance(const COMPLEX *h){
                         for (size_t is = 0; is < array_local_size.ns; is++){
                             ind2D = ix * array_local_size.nky + iy;
                             ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                            dissipated_local_k = cabs(equation_getLocalDissipation(h[ind6D], space_kPerp2[ind2D], 0.0, 0.0))  * cabs(h[ind6D]) * diag_MM[iz];
+                            dissipated_local_k = creal(equation_getLocalDissipation(g[ind6D], space_kPerp2[ind2D], 0.0, 0.0)
+                                    * conj(h[ind6D]) * diag_MM[iz]);
                             dissipated_k += dissipated_local_k;
-                            diag_dissipated += cabs(equation_getLocalDissipation(h[ind6D], space_kPerp2[ind2D], space_kz[iz], global_nm_index[im])) * cabs(h[ind6D]) * diag_MM[iz];
+                            diag_dissipated_kPerp += dissipated_local_k;
+                            diag_dissipated_kZ += creal(equation_getLocalDissipation(g[ind6D], 0.0, space_kz[iz], 0.0)
+                                                        * conj(h[ind6D]) * diag_MM[iz]);
+                            diag_dissipated_m += creal(equation_getLocalDissipation(g[ind6D], 0.0, 0.0, global_nm_index[im])
+                                                        * conj(h[ind6D]) * diag_MM[iz]);
+                            diag_dissipated += creal(equation_getLocalDissipation(g[ind6D], space_kPerp2[ind2D], space_kz[iz], global_nm_index[im])
+                                    * conj(h[ind6D]) * diag_MM[iz]);
                         }
                     }
                 }
@@ -740,47 +766,12 @@ void diag_computeEnergy(const COMPLEX *h){
     size_t ind6D;
     size_t ind3D;
     size_t ind2D;
-    size_t indJ0;
     switch(systemType){
         case ELECTROSTATIC:
             for (size_t ix = 0; ix < array_local_size.nkx; ix++){
                 for (size_t iy = 0; iy < array_local_size.nky; iy++){
                     for (size_t iz = 0; iz < array_local_size.nkz; iz++){
                         ind3D = get_flatIndexComplex3D(ix,iy,iz);
-                        for (size_t im = 0; im < array_local_size.nm; im++){
-                            for (size_t il = 0; il < array_local_size.nl; il++){
-                                for (size_t is = 0; is < array_local_size.ns; is++){
-                                    indJ0 = var_getJIndex(ix,iy,is);
-                                    ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz] ;
-                                    diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
-                                                      * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if(mpi_my_rank == 0){
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyTotal, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyH, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyPhi, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-            }
-            else{
-                MPI_Reduce(&diag_energyTotal, &diag_energyTotal, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&diag_energyH, &diag_energyH, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&diag_energyPhi, &diag_energyPhi, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-            }
-            break;
-        case ELECTROMAGNETIC:
-            for (size_t ix = 0; ix < array_local_size.nkx; ix++){
-                for (size_t iy = 0; iy < array_local_size.nky; iy++){
-                    ind2D = ix * array_local_size.nky  + iy;
-                    for (size_t iz = 0; iz < array_local_size.nkz; iz++){
-                        ind3D = get_flatIndexComplex3D(ix,iy,iz);
-                        diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) / 8. / M_PI * diag_MM[iz];
-                        diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])/ 8. / M_PI * diag_MM[iz];
                         for (size_t is = 0; is < array_local_size.ns; is++){
                             diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
                                               * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
@@ -789,7 +780,34 @@ void diag_computeEnergy(const COMPLEX *h){
                             for (size_t il = 0; il < array_local_size.nl; il++){
                                 for (size_t is = 0; is < array_local_size.ns; is++){
                                     ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                                    indJ0 = var_getJIndex(ix,iy,is);
+                                    diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz] ;
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            MPI_Allreduce(MPI_IN_PLACE, &diag_energyH,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &diag_energyPhi,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
+            diag_energyTotal = diag_energyH - diag_energyPhi;
+            break;
+        case ELECTROMAGNETIC:
+            for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+                for (size_t iy = 0; iy < array_local_size.nky; iy++){
+                    ind2D = ix * array_local_size.nky  + iy;
+                    for (size_t iz = 0; iz < array_local_size.nkz; iz++){
+                        ind3D = get_flatIndexComplex3D(ix,iy,iz);
+                        diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) * diag_MM[iz];// / 8. / M_PI
+                        diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])* diag_MM[iz];// / 8. / M_PI
+                        for (size_t is = 0; is < array_local_size.ns; is++){
+                            diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
+                                              * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
+                        }
+                        for (size_t im = 0; im < array_local_size.nm; im++){
+                            for (size_t il = 0; il < array_local_size.nl; il++){
+                                for (size_t is = 0; is < array_local_size.ns; is++){
+                                    ind6D = get_flat_c(is,il,im,ix,iy,iz);
                                     diag_energyH += 0.5 * var_var.T[is] * var_var.n[is] * cabs(h[ind6D]) * cabs(h[ind6D]) * diag_MM[iz];
                                 }
                             }
@@ -797,21 +815,11 @@ void diag_computeEnergy(const COMPLEX *h){
                     }
                 }
             }
+            MPI_Allreduce(MPI_IN_PLACE, &diag_energyH,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &diag_energyPhi,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
+            MPI_Allreduce(MPI_IN_PLACE, &diag_energyBpar,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
+            MPI_Allreduce(MPI_IN_PLACE, &diag_energyBperp,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
             diag_energyTotal = diag_energyH - diag_energyPhi + diag_energyBpar + diag_energyBperp;
-            if(mpi_my_rank == 0){
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyTotal, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyH, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyPhi, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyBpar, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(MPI_IN_PLACE, &diag_energyBperp, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-            }
-            else{
-                MPI_Reduce(&diag_energyTotal, &diag_energyTotal, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&diag_energyH, &diag_energyH, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&diag_energyPhi, &diag_energyPhi, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&diag_energyBpar, &diag_energyBpar, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&diag_energyBperp, &diag_energyBperp, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-            }
             break;
         default:
             exit(1);
@@ -824,22 +832,25 @@ void diag_computeEnergy(const COMPLEX *h){
  * \f$ W(k^{shell}_i) = \frac{1}{N}\sum_{k^{shell}_{i-1}<|\mathbf{k}_{\perp}|<k^{shell}_{i}}\sum_{k_z,l,m,s} g \bar{h}\f$
  * where \f$N\f$ is a number of wave vectors between shells \f$k^{shell}_{i-1}\f$ and \f$k^{shell}_{i}\f$
  ***************************************/
-void diag_print(const COMPLEX *h, int it){
+void diag_print(const COMPLEX *h, const COMPLEX *g, int it) {
     if (it%parameters.iter_diagnostics == 0){
-        diag_computeEnergyBalance(h);
+        diag_computeEnergyBalance(h, g);
         diag_computeEnergy(h);
         if(mpi_my_rank == 0){
             if (mpi_my_rank == 0) printf("============TIMESTEP = %d============\n",it);
             printf("W/W0 = %.16f\n", diag_energyTotal / diag_free_energy0);
-            printf(" old W/W0 = %.16f\n", diag_freeEnergy / diag_free_energy0);
+            printf("old W/W0 = %.16f\n", diag_freeEnergy / diag_free_energy0);
             printf("total energy = %f\n", diag_energyTotal);
             printf("old total energy = %f\n", diag_freeEnergy);
             printf("diag_injected = %f\n", diag_injected);
-            printf("diag_dissipated = %f\n", diag_dissipated);
-            printf("h energy = %f\n", diag_energyH);
-            printf("phi energy = %f\n", diag_energyPhi);
-            printf("B_par energy = %f\n", diag_energyBpar);
-            printf("B_perp energy = %f\n", diag_energyBperp);
+            printf("dissipated / injected = %f\n", diag_dissipated / diag_injected);
+            printf("dissipated_kP / dissipated = %f\n",diag_dissipated_kPerp / diag_dissipated);
+            printf("dissipated_kZ / dissipated = %f\n", diag_dissipated_kZ / diag_dissipated);
+            printf("dissipated_m / dissipated = %f\n", diag_dissipated_m / diag_dissipated);
+            printf("h energy / total = %f\n", diag_energyH / diag_energyTotal);
+            printf("phi energy / total = %f\n", diag_energyPhi / diag_energyTotal);
+            printf("B_par energy / total = %f\n", diag_energyBpar / diag_energyTotal);
+            printf("B_perp energy / total = %f\n", diag_energyBperp / diag_energyTotal);
             printf("eta * kmax = %f\n", diag_etakmax);
             printf("L_dis/L_min = %f\n", diag_LDis/space_LperpMin);
             printf("L_int/L_max = %f\n", diag_LInt/space_LperpMax);
@@ -889,6 +900,46 @@ void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c){
 }
 
 /***************************************
+ * \fn diag_filterKHP(const COMPLEX *in, COMPLEX *out, k_c)
+ * \brief high-pass sharp filter in \f$ k_\perp \f$
+ * \param in: input 6D array
+ * \param out: output 6D array
+ * \param k_c: cutoff wave number
+ ***************************************/
+void diag_filterKHP(const COMPLEX *in, COMPLEX *out, double k_c){
+    COMPLEX *maskKx = calloc(array_local_size.nkx, sizeof(*maskKx));
+    COMPLEX *maskKy = calloc(array_local_size.nky, sizeof(*maskKx));
+    size_t ind2D;
+    size_t ind6D;
+
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            ind2D = ix * array_local_size.nky + iy;
+            if (space_kPerp[ind2D] <= k_c){
+                maskKx[ix] = 1.0;
+                maskKy[iy] = 1.0;
+            }
+        }
+    }
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                            out[ind6D] =  in[ind6D] * (1.0 - maskKx[ix] * maskKy[iy]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    free(maskKx);
+    free(maskKy);
+}
+
+/***************************************
  * \fn diag_computeNonlinearFlux(const COMPLEX *in)
  * \brief computes nonlinear free energy flux
  * \param in: input 6D array
@@ -903,6 +954,7 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
     free(nonlinearTermK);
     double *nonlinearTermR = calloc(array_local_size.total_real, sizeof(*nonlinearTermR));
     fftw_copy_buffer_r(nonlinearTermR, fftw_hBuf);
+    // forward cascade
     for (size_t ii = 0; ii < diag_numOfShells; ii++){
         diag_nonlinearFlux[ii] = 0;
         double kc = diag_shells[ii + 1]; //we don't want to compute flux through k = 0
@@ -916,7 +968,6 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
                         for(size_t il = 0; il < array_local_size.nl; il++){
                             for(size_t is = 0; is < array_local_size.ns; is++){
                                 ind6D = get_flat_r(is,il,im,ix,iy,iz);
-                                //h_r[ind6D] *= nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
                                 diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
                             }
                         }
@@ -924,14 +975,37 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
                 }
             }
         }
-        //fftw_r2c();
-        //distrib_dealiasing(fftw_hBuf);
-        //for (size_t ix = 0; ix< array_local_size.total_comp; ix ++){
-        //    diag_nonlinearFlux[ii] += creal(fftw_hBuf[ix]);
-        //}
-        //diag_nonlinearFlux[ii] /= diag_nonlinearNorm[ii];
     }
+
+    //inverse cascade
+    for (size_t ii = 0; ii < diag_numOfShells; ii++){
+        diag_nonlinearFluxInverse[ii] = 0;
+        double kc = diag_shells[ii + 1]; //we don't want to compute flux through k = 0
+        diag_filterKHP(in,fftw_hBuf,kc);
+        fftw_c2r();
+        double *h_r = fftw_hBuf;
+        for(size_t iy = 0; iy < array_local_size.ny; iy++){
+            for(size_t ix = 0; ix < array_local_size.nx; ix++){
+                for(size_t iz = 0; iz < array_local_size.nz; iz++){
+                    for(size_t im = 0; im < array_local_size.nm; im++){
+                        for(size_t il = 0; il < array_local_size.nl; il++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                ind6D = get_flat_r(is,il,im,ix,iy,iz);
+                                diag_nonlinearFluxInverse[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
     free(nonlinearTermR);
     MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxInverse, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxInverse, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
     if (mpi_my_rank == IO_RANK){ printf("nonlinear flux computed\n");}
 }

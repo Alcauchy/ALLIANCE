@@ -713,6 +713,51 @@ void hdf_saveEnergy(int timestep)
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
+    /*write dissipated kPerp energy to the file*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/dissipated_kPerp", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_dissipated_kPerp);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    /*write dissipated kZ energy to the file*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/dissipated_kZ", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_dissipated_kZ);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    /*write dissipated m energy to the file*/
+    dset_id = H5Dopen2(file_id, "/freeEnergy/dissipated_m", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Dset_extent(dset_id, size);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(1,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,&diag_dissipated_m);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
     /*write h energy to the file*/
     dset_id = H5Dopen2(file_id, "/freeEnergy/hEnergy", H5P_DEFAULT);
     /*open a dataset*/
@@ -820,16 +865,19 @@ void hdf_saveData(COMPLEX *h, int timestep) {
     if (parameters.save_EMfield && timestep % parameters.iter_EMfield == 0) {
         if (mpi_my_rank == 0) printf("saving fields\n");
         hdf_saveFields(timestep);
+        if (mpi_my_rank == 0) printf("fields are saved\n");
     }
     if (parameters.checkpoints && timestep % parameters.iter_checkpoint == 0)
     {
         if (mpi_my_rank == 0) printf("saving checkpoint\n");
         hdf_createCheckpoint(h, timestep);
+        if (mpi_my_rank == 0) printf("checkpoint is saved\n");
     }
     if (parameters.save_distrib && timestep % parameters.iter_distribution == 0)
     {
         if (mpi_my_rank == 0) printf("saving distribution function\n");
         hdf_saveDistrib(h,timestep);
+        if (mpi_my_rank == 0) printf("distribution function is saved\n");
     }
 }
 
@@ -1485,6 +1533,20 @@ void hdf_createParamFile()
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
+        /*creating nonlinear flux dataset*/
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 2, chunk_spec_nonl_flux_shells);
+        dspace_id = H5Screate_simple(2,dims_spec_flux,max_dims_flux);
+        dset_id = H5Dcreate2(file_id,
+                             "/nonlinearFlux/fluxInverse",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
 
         /* creating shells borders dataset */
         plist_id = H5Pcreate(H5P_DATASET_CREATE);
@@ -1606,6 +1668,48 @@ void hdf_createParamFile()
         H5Pset_chunk(plist_id, 1, chunk_energy);
         dspace_id = H5Screate_simple(1,dims_energy,maxdims);
         dset_id = H5Dcreate2(file_id, "/freeEnergy/dissipated",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /*creating dissipated by perp dissipation dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_energy);
+        dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/dissipated_kPerp",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /*creating dissipated by kz dissipation dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_energy);
+        dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/dissipated_kZ",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /*creating dissipated by m dissipation dataset*/
+        plist_id = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 1, chunk_energy);
+        dspace_id = H5Screate_simple(1,dims_energy,maxdims);
+        dset_id = H5Dcreate2(file_id, "/freeEnergy/dissipated_m",
                              H5T_NATIVE_DOUBLE,
                              dspace_id,
                              H5P_DEFAULT,
@@ -1937,6 +2041,32 @@ void hdf_saveNonlinearFlux(int timestep) {
     {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_nonlinearFlux);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+
+    //saving inverse flux now
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/nonlinearFlux/fluxInverse", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    /*get dataset's dimensions */
+    H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+    H5Sclose(dspace_id);
+    /*extend dataset size*/
+    size[0] = dims[0] + dims_ext[0];
+    size[1] = dims[1];
+    offset[0] = dims[0];
+    offset[1] = 0;
+    H5Dset_extent(dset_id, size);
+    /*write nonlinear flux to the file*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(2,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_nonlinearFluxInverse);
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);

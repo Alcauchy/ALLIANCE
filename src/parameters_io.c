@@ -312,6 +312,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.forcePower);
                 if (mpi_my_rank == IO_RANK) printf("forcing power = %f \n",parameters.forcePower);
             }
+            if (strcmp(tmp, "force_m") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.forceM);
+                if (mpi_my_rank == IO_RANK) printf("forcing m = %d \n",parameters.forceM);
+            }
             if (strcmp(tmp, "spectrum_type") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.spectrum);
@@ -342,10 +347,25 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %lf", &parameters.lap_kz);
                 if (mpi_my_rank == IO_RANK) printf("hyperlaplacian power for k_perp = %f \n", parameters.lap_kz);
             }
+            if (strcmp(tmp, "hyper_m") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.pwr_m);
+                if (mpi_my_rank == IO_RANK) printf("power dissipation in m = %f\n",parameters.pwr_m);
+            }
             if (strcmp(tmp, "compute_nonlinear") == 0)
             {
                 sscanf(string, "%*s : %d", &parameters.compute_nonlinear);
-                if (mpi_my_rank == IO_RANK) printf("compute nonlinear flux every %d steps\n",&parameters.compute_nonlinear);
+                if (mpi_my_rank == IO_RANK) printf("compute nonlinear flux every %d steps\n",parameters.compute_nonlinear);
+            }
+            if (strcmp(tmp, "k_rg") == 0)
+            {
+                sscanf(string, "%*s : %lf", &parameters.k_rg);
+                if (mpi_my_rank == IO_RANK) printf("k*rho_i = 1 at k = %f\n",parameters.k_rg);
+            }
+            if (strcmp(tmp, "postprocess") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.postprocess);
+                if (mpi_my_rank == IO_RANK && parameters.postprocess) printf("POST PROCESSING TOOL WILL BE LAUNCHED\n");
             }
         }
     }
@@ -505,7 +525,6 @@ void read_parametersFromFile(char *filename){
     H5Dclose(dset_id);
     H5Sclose(dspace_id);
     H5Sclose(memspace);
-
     H5Fclose(file_id);
 
 
