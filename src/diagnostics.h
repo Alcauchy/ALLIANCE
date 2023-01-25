@@ -48,7 +48,7 @@ extern double diag_freeEnergy;
 extern double diag_free_energy0;
 extern int diag_numOfShells;
 extern int diag_numOfShellBounds;
-extern double diag_energyH;
+extern double *diag_energyH;
 extern double diag_energyPhi;
 extern double diag_energyBperp;
 extern double diag_energyBpar;
