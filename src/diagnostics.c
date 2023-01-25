@@ -80,6 +80,18 @@ double *diag_nonlinearFlux = 0;
  * \brief used to store inverse nonlinear flux */
 double *diag_nonlinearFluxInverse = 0;
 
+/**\var double diag_nonlinearFluxForward
+ * \brief used to store forrward nonlinear flux */
+double *diag_nonlinearFluxForward = 0;
+
+/**\var double diag_LinearFlux
+ * \brief used to store linear flux */
+double *diag_linearFlux = 0;
+
+/**\var double diag_LinearFluxInverse
+ * \brief used to store inverse linear flux */
+double *diag_linearFluxInverse = 0;
+
 /**\var double diag_nonlinearNorm
 * \brief normalization factor for nonlinear flux */
 double *diag_nonlinearNorm = 0;
@@ -213,8 +225,11 @@ void diag_initSpec() {
                 }
             }
             if(parameters.compute_nonlinear){
-                diag_nonlinearFlux = calloc((diag_numOfShells),sizeof(*diag_nonlinearFlux));
-                diag_nonlinearFluxInverse = calloc((diag_numOfShells),sizeof(*diag_nonlinearFluxInverse));
+                diag_nonlinearFlux = calloc((diag_numOfShells), sizeof(*diag_nonlinearFlux));
+                diag_nonlinearFluxInverse = calloc((diag_numOfShells), sizeof(*diag_nonlinearFluxInverse));
+                diag_linearFlux = calloc(array_global_size.nkz, sizeof(*diag_linearFlux));
+                diag_linearFluxInverse = calloc(array_global_size.nkz, sizeof(*diag_linearFluxInverse));
+                diag_nonlinearFluxForward = calloc(array_global_size.nkz, sizeof(*diag_linearFluxInverse));
             }
         }
 
@@ -739,14 +754,15 @@ void diag_computeEnergyBalance(const COMPLEX *h, const COMPLEX *g) {
     }
     if(mpi_my_rank == 0){
         MPI_Reduce(MPI_IN_PLACE, &diag_dissipated, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-        //computing eta kmax
-        MPI_Reduce(MPI_IN_PLACE,&dissipated_k,1,MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        diag_etakmax = pow(var_var.mu_k * var_var.mu_k * var_var.mu_k / dissipated_k, 0.25) * space_kPerpMax;
+        MPI_Reduce(MPI_IN_PLACE, &diag_dissipated_kPerp, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(MPI_IN_PLACE, &diag_dissipated_kZ, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(MPI_IN_PLACE, &diag_dissipated_m, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     }
     else{
         MPI_Reduce(&diag_dissipated, &diag_dissipated, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&dissipated_k,&dissipated_k,1,MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&diag_dissipated_kPerp, &diag_dissipated_kPerp, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&diag_dissipated_kZ, &diag_dissipated_kZ, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&diag_dissipated_m, &diag_dissipated_m, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     }
 }
 
@@ -867,36 +883,34 @@ void diag_print(const COMPLEX *h, const COMPLEX *g, int it) {
  * \param k_c: cutoff wave number
  ***************************************/
 void diag_filterK(const COMPLEX *in, COMPLEX *out, double k_c){
-    COMPLEX *maskKx = calloc(array_local_size.nkx, sizeof(*maskKx));
-    COMPLEX *maskKy = calloc(array_local_size.nky, sizeof(*maskKx));
+    COMPLEX *maskK = calloc(array_local_size.nkx*array_local_size.nky, sizeof(*maskK));
     size_t ind2D;
     size_t ind6D;
 
     for (size_t ix = 0; ix < array_local_size.nkx; ix++){
         for(size_t iy = 0; iy < array_local_size.nky; iy++){
             ind2D = ix * array_local_size.nky + iy;
-            if (space_kPerp[ind2D] <= k_c){
-                maskKx[ix] = 1.0;
-                maskKy[iy] = 1.0;
+            if (space_kPerp2[ind2D] <= k_c * k_c){
+                maskK[ind2D] = 1.0;
             }
         }
     }
     for (size_t ix = 0; ix < array_local_size.nkx; ix++){
         for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            ind2D = ix * array_local_size.nky + iy;
             for(size_t iz = 0; iz < array_local_size.nkz; iz++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
                     for(size_t il = 0; il < array_local_size.nl; il++){
                         for(size_t is = 0; is < array_local_size.ns; is++){
                             ind6D = get_flat_c(is,il,im,ix,iy,iz);
-                            out[ind6D] =  in[ind6D] * maskKx[ix] * maskKy[iy];
+                            out[ind6D] = in[ind6D] * maskK[ind2D];
                         }
                     }
                 }
             }
         }
     }
-    free(maskKx);
-    free(maskKy);
+    free(maskK);
 }
 
 /***************************************
@@ -940,6 +954,72 @@ void diag_filterKHP(const COMPLEX *in, COMPLEX *out, double k_c){
 }
 
 /***************************************
+ * \fn diag_filterKz(const COMPLEX *in, COMPLEX *out, k_c)
+ * \brief low-pass sharp filter in \f$ k_z \f$
+ * \param in: input 6D array
+ * \param out: output 6D array
+ * \param k_c: cutoff wave number
+ ***************************************/
+void diag_filterKz(const COMPLEX *in, COMPLEX *out, double k_c){
+    COMPLEX *maskKz = calloc(array_local_size.nkz, sizeof(*maskKz));
+    size_t ind6D;
+
+    for (size_t iz = 0; iz < array_local_size.nkz; iz++){
+        if (space_kz[iz] <= k_c){
+            maskKz[iz] = 1.0;
+        }
+    }
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                            out[ind6D] =  in[ind6D] * maskKz[iz];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    free(maskKz);
+}
+
+/***************************************
+ * \fn diag_filterKzHP(const COMPLEX *in, COMPLEX *out, k_c)
+ * \brief high-pass sharp filter in \f$ k_z \f$
+ * \param in: input 6D array
+ * \param out: output 6D array
+ * \param k_c: cutoff wave number
+ ***************************************/
+void diag_filterKzHP(const COMPLEX *in, COMPLEX *out, double k_c){
+    COMPLEX *maskKz = calloc(array_local_size.nkz, sizeof(*maskKz));
+    size_t ind6D;
+
+    for (size_t iz = 0; iz < array_local_size.nkz; iz++){
+        if (space_kz[iz] <= k_c){
+            maskKz[iz] = 1.0;
+        }
+    }
+    for (size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy < array_local_size.nky; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                for(size_t im = 0; im < array_local_size.nm; im++){
+                    for(size_t il = 0; il < array_local_size.nl; il++){
+                        for(size_t is = 0; is < array_local_size.ns; is++){
+                            ind6D = get_flat_c(is,il,im,ix,iy,iz);
+                            out[ind6D] =  in[ind6D] * (1.0 - maskKz[iz]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    free(maskKz);
+}
+
+/***************************************
  * \fn diag_computeNonlinearFlux(const COMPLEX *in)
  * \brief computes nonlinear free energy flux
  * \param in: input 6D array
@@ -953,10 +1033,13 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
     fftw_c2r();
     free(nonlinearTermK);
     double *nonlinearTermR = calloc(array_local_size.total_real, sizeof(*nonlinearTermR));
+    double localFlux;
     fftw_copy_buffer_r(nonlinearTermR, fftw_hBuf);
     // forward cascade
     for (size_t ii = 0; ii < diag_numOfShells; ii++){
         diag_nonlinearFlux[ii] = 0;
+        diag_nonlinearFluxInverse[ii] = 0;
+        diag_nonlinearFluxForward[ii] = 0;
         double kc = diag_shells[ii + 1]; //we don't want to compute flux through k = 0
         diag_filterK(in,fftw_hBuf,kc);
         fftw_c2r();
@@ -968,7 +1051,61 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
                         for(size_t il = 0; il < array_local_size.nl; il++){
                             for(size_t is = 0; is < array_local_size.ns; is++){
                                 ind6D = get_flat_r(is,il,im,ix,iy,iz);
+                                localFlux = h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
                                 diag_nonlinearFlux[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                                if (localFlux > 0){
+                                    diag_nonlinearFluxForward[ii] += localFlux;
+                                }
+                                else{
+                                    diag_nonlinearFluxInverse[ii] += localFlux;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    free(nonlinearTermR);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxForward, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxForward, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxInverse, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxInverse, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
+    if (mpi_my_rank == IO_RANK){ printf("nonlinear flux computed\n");}
+}
+
+/***************************************
+ * \fn diag_computeLinearFlux(const COMPLEX *in)
+ * \brief computes nonlinear free energy flux
+ * \param in: input 6D array
+ ***************************************/
+void diag_computeLinearFlux(const COMPLEX *in){
+    if (mpi_my_rank == IO_RANK) printf("computing linear flux\n");
+    size_t ind6D;
+    COMPLEX *linearTermK = calloc(array_local_size.total_comp, sizeof(*linearTermK));
+    //equation_getLinearTerm(in,linearTermK);
+    fftw_copy_buffer_c(fftw_hBuf,linearTermK);
+    fftw_c2r();
+    free(linearTermK);
+    double *linearTermR = calloc(array_local_size.total_real, sizeof(*linearTermR));
+    fftw_copy_buffer_r(linearTermR, fftw_hBuf);
+    // forward cascade
+    for (size_t ii = 0; ii < array_local_size.nkz; ii++){
+        diag_linearFlux[ii] = 0;
+        diag_filterKz(in,fftw_hBuf,space_kz[ii]);
+        fftw_c2r();
+        double *h_r = fftw_hBuf;
+        for(size_t iy = 0; iy < array_local_size.ny; iy++){
+            for(size_t ix = 0; ix < array_local_size.nx; ix++){
+                for(size_t iz = 0; iz < array_local_size.nz; iz++){
+                    for(size_t im = 0; im < array_local_size.nm; im++){
+                        for(size_t il = 0; il < array_local_size.nl; il++){
+                            for(size_t is = 0; is < array_local_size.ns; is++){
+                                ind6D = get_flat_r(is,il,im,ix,iy,iz);
+                                diag_linearFlux[ii] += h_r[ind6D] * linearTermR[ind6D] * var_var.T[is] * var_var.n[is];
                             }
                         }
                     }
@@ -979,9 +1116,9 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
 
     //inverse cascade
     for (size_t ii = 0; ii < diag_numOfShells; ii++){
-        diag_nonlinearFluxInverse[ii] = 0;
+        diag_linearFluxInverse[ii] = 0;
         double kc = diag_shells[ii + 1]; //we don't want to compute flux through k = 0
-        diag_filterKHP(in,fftw_hBuf,kc);
+        diag_filterKzHP(in,fftw_hBuf,space_kz[ii]);
         fftw_c2r();
         double *h_r = fftw_hBuf;
         for(size_t iy = 0; iy < array_local_size.ny; iy++){
@@ -991,7 +1128,7 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
                         for(size_t il = 0; il < array_local_size.nl; il++){
                             for(size_t is = 0; is < array_local_size.ns; is++){
                                 ind6D = get_flat_r(is,il,im,ix,iy,iz);
-                                diag_nonlinearFluxInverse[ii] += h_r[ind6D] * nonlinearTermR[ind6D] * var_var.T[is] * var_var.n[is];
+                                diag_linearFluxInverse[ii] += h_r[ind6D] * linearTermR[ind6D] * var_var.T[is] * var_var.n[is];
                             }
                         }
                     }
@@ -1002,10 +1139,10 @@ void diag_computeNonlinearFlux(const COMPLEX *in){
 
 
 
-    free(nonlinearTermR);
-    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
-    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFlux, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
-    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxInverse, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
-    MPI_Allreduce(MPI_IN_PLACE, diag_nonlinearFluxInverse, diag_numOfShells, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
-    if (mpi_my_rank == IO_RANK){ printf("nonlinear flux computed\n");}
+    free(linearTermR);
+    MPI_Allreduce(MPI_IN_PLACE, diag_linearFlux, array_local_size.nz, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_linearFlux, array_local_size.nz, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_linearFluxInverse, array_local_size.nz, MPI_DOUBLE, MPI_SUM, mpi_row_comm);
+    MPI_Allreduce(MPI_IN_PLACE, diag_linearFluxInverse, array_local_size.nz, MPI_DOUBLE, MPI_SUM, mpi_col_comm);
+    if (mpi_my_rank == IO_RANK){ printf("linear flux computed\n");}
 }

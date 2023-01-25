@@ -1533,12 +1533,27 @@ void hdf_createParamFile()
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
-        /*creating nonlinear flux dataset*/
+        /*creating nonlinear inverse flux dataset*/
         plist_id   = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 2, chunk_spec_nonl_flux_shells);
         dspace_id = H5Screate_simple(2,dims_spec_flux,max_dims_flux);
         dset_id = H5Dcreate2(file_id,
                              "/nonlinearFlux/fluxInverse",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /*creating nonlinear forward flux dataset*/
+        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_chunk(plist_id, 2, chunk_spec_nonl_flux_shells);
+        dspace_id = H5Screate_simple(2,dims_spec_flux,max_dims_flux);
+        dset_id = H5Dcreate2(file_id,
+                             "/nonlinearFlux/fluxForward",
                              H5T_NATIVE_DOUBLE,
                              dspace_id,
                              H5P_DEFAULT,
@@ -2070,7 +2085,35 @@ void hdf_saveNonlinearFlux(int timestep) {
     }
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
+
+    //saving forward flux now
+    /*opening a group*/
+    dset_id = H5Dopen2(file_id, "/nonlinearFlux/fluxForward", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    /*get dataset's dimensions */
+    H5Sget_simple_extent_dims(dspace_id, dims, NULL);
+    H5Sclose(dspace_id);
+    /*extend dataset size*/
+    size[0] = dims[0] + dims_ext[0];
+    size[1] = dims[1];
+    offset[0] = dims[0];
+    offset[1] = 0;
+    H5Dset_extent(dset_id, size);
+    /*write nonlinear flux to the file*/
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
+    memspace = H5Screate_simple(2,dims_ext,NULL);
+    if(mpi_my_rank == 0)
+    {
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_nonlinearFluxForward);
+    }
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
     H5Fclose(file_id);
+
+
 }
 
 /***************************
