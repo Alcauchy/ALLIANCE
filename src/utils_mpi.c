@@ -30,8 +30,8 @@
 #define SUBARRAY_DIMS 6
 int mpi_my_rank;                        // rank of the process for 2D MPI communicator
 int mpi_size;                           // size of the communicator
-int mpi_my_row_rank;                    // rank of the process in a kx direction of parallelization
-int mpi_my_col_rank;                    // rank of the process in Hermite direction of parallelization
+int mpi_my_kx_rank;                    // rank of the process in a kx direction of parallelization
+int mpi_my_m_rank;                    // rank of the process in Hermite direction of parallelization
 int mpi_my_coords[2];                   // coordinates of the process in 2D topology
 int mpi_dims[] = {0, 0};                // size of the dimensions. {0,0} means there is no limits in defining the size. 0th dimension is for Hermite parallelization, and 1st dimension is for kx.
 int m_neighbour_ranks[2];               // ranks of the neighbours
@@ -42,8 +42,8 @@ int *mpi_whereIsM;
 int *mpi_whereIsY;                      //arrays which returns the rank of a process which has a required y
 size_t mpi_vectorSliceLength;
 MPI_Comm mpi_cube_comm;                 // 2D topology communicator
-MPI_Comm mpi_row_comm;                  // row communicator (kx direction)
-MPI_Comm mpi_col_comm;                  // column communicator (Hermite direction)
+MPI_Comm mpi_kx_comm;                  // row communicator (kx direction)
+MPI_Comm mpi_m_comm;                  // column communicator (Hermite direction)
 MPI_Datatype mpi_subarray_type_plus;    // subarray type to perform the m+1 boundary exchange
 MPI_Datatype mpi_subarray_type_minus;   // subarray type to perform the m-1 boundary exchange
 MPI_Datatype mpi_subarray_type_plus_r;    // subarray type to perform the m+1 boundary exchange for real data
@@ -238,9 +238,9 @@ void mpi_findHermiteNeighbours() {
  *  mpi_splitInRows
  * *************************/
 void mpi_splitInRows(){
-    mpi_my_row_rank = mpi_my_coords[1];
-    MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_row_rank, &mpi_row_comm);
-    if (VERBOSE) printf("[MPI process %d] I am from row %d with row rank %d\n",mpi_my_rank,mpi_my_coords[0],mpi_my_row_rank);
+    mpi_my_kx_rank = mpi_my_coords[1];
+    MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[0], mpi_my_kx_rank, &mpi_kx_comm);
+    if (VERBOSE) printf("[MPI process %d] I am from row %d with row rank %d\n", mpi_my_rank, mpi_my_coords[0], mpi_my_kx_rank);
     mpi_whereIsX = malloc(2 * array_global_size.nkx * sizeof(*mpi_whereIsX));
     mpi_whereIsY = malloc(2 * array_global_size.ny * sizeof(*mpi_whereIsY));
     mpi_whereIsM = malloc(2 * array_global_size.nm * sizeof(*mpi_whereIsM));
@@ -314,9 +314,9 @@ void mpi_splitInRows(){
  *  mpi_splitInCols
  * *************************/
 void mpi_splitInCols(){
-    mpi_my_col_rank = mpi_my_coords[0];
-    MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[1], mpi_my_col_rank, &mpi_col_comm);
-    if (VERBOSE) printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_col_rank);
+    mpi_my_m_rank = mpi_my_coords[0];
+    MPI_Comm_split(MPI_COMM_WORLD, mpi_my_coords[1], mpi_my_m_rank, &mpi_m_comm);
+    if (VERBOSE) printf("[MPI process %d] I am from column %d with column rank %d\n", mpi_my_rank, mpi_my_coords[1], mpi_my_m_rank);
 };
 
 /***************************
@@ -413,14 +413,14 @@ void mpi_exchangeMBoundaries(COMPLEX *input_array, COMPLEX *plus_boundary, COMPL
              mpi_cube_comm,
              MPI_STATUS_IGNORE);
     if (VERBOSE) printf("[MPI process %d] received plus, t = %.2fs.! buf_size = %d, my_col_rank = %d\n", mpi_my_rank, MPI_Wtime() - start,
-           mpi_sub_buf_size,mpi_my_col_rank);
+                        mpi_sub_buf_size, mpi_my_m_rank);
     start = MPI_Wtime();
     MPI_Send(input_array, SUBARRAY_COUNT, mpi_subarray_type_plus, m_neighbour_ranks[PLUS], 1, mpi_cube_comm);
     MPI_Recv(minus_boundary, mpi_sub_buf_size, MPI_C_DOUBLE_COMPLEX, m_neighbour_ranks[MINUS], 1, mpi_cube_comm,
              MPI_STATUS_IGNORE);
     if (VERBOSE)printf("[MPI process %d] received minus, t = %.2fs.! buf_size = %d,my_col_rank = %d\n", mpi_my_rank,
            MPI_Wtime() - start,
-           mpi_sub_buf_size,mpi_my_col_rank);
+                       mpi_sub_buf_size, mpi_my_m_rank);
 }
 
 /***************************
@@ -468,13 +468,13 @@ void mpi_exchangeMBoundaries_r(double *input_array, double *plus_boundary, doubl
  *  mpi_sendVector(COMPLEX *from_array, COMPLEX *to_buffer, int to_proc)
  * *************************/
 void mpi_sendVector(COMPLEX *from_array, COMPLEX *to_buffer, int from_proc, int to_proc) {
-    if(mpi_my_row_rank == from_proc) {
-        MPI_Send(from_array, 1, mpi_vector_kxSlice, to_proc,1,mpi_row_comm);
+    if(mpi_my_kx_rank == from_proc) {
+        MPI_Send(from_array, 1, mpi_vector_kxSlice, to_proc, 1, mpi_kx_comm);
         if (VERBOSE)printf("[MPI process %d] sent kx slice to process %d!\n",mpi_my_rank, to_proc);
         if (VERBOSE)printf("[MPI process %d] from =  %f!\n",mpi_my_rank, cabs(from_array[0]));
     }
-    if(mpi_my_row_rank == to_proc) {
-        MPI_Recv(to_buffer, mpi_vectorSliceLength, MPI_C_DOUBLE_COMPLEX, from_proc, 1, mpi_row_comm, MPI_STATUS_IGNORE);
+    if(mpi_my_kx_rank == to_proc) {
+        MPI_Recv(to_buffer, mpi_vectorSliceLength, MPI_C_DOUBLE_COMPLEX, from_proc, 1, mpi_kx_comm, MPI_STATUS_IGNORE);
         if (VERBOSE) printf("[MPI process %d] received kx slice from %d!\n", mpi_my_rank, from_proc);
     }
 };

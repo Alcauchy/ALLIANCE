@@ -77,7 +77,7 @@ COMPLEX *f01;
 void fields_init() {
     global_nm_index = malloc(array_local_size.nm * sizeof(*global_nm_index));
     for (size_t i = 0; i < array_local_size.nm; i++){
-        global_nm_index[i] = array_global_size.nm / mpi_dims[0] * mpi_my_col_rank + i;
+        global_nm_index[i] = array_global_size.nm / mpi_dims[0] * mpi_my_m_rank + i;
     }
     switch (systemType)
     {
@@ -633,7 +633,7 @@ void fields_sendF(COMPLEX *f){
     size_t m1 = mpi_whereIsM[3];            // local index of the 1st Hermite moment
     switch(systemType){
         case ELECTROSTATIC:
-            if (mpi_my_col_rank = broadcast_root0){
+            if (mpi_my_m_rank = broadcast_root0){
                 for(size_t ix = 0; ix < array_local_size.nkx; ix++){
                     for(size_t iy = 0; iy < array_local_size.nky; iy++){
                         for(size_t iz = 0; iz < array_local_size.nkz; iz++){
@@ -648,10 +648,10 @@ void fields_sendF(COMPLEX *f){
                     }
                 }
             }
-            MPI_Bcast(f00, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_col_comm);
+            MPI_Bcast(f00, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_m_comm);
             break;
         case ELECTROMAGNETIC:
-            if (mpi_my_col_rank == broadcast_root0){
+            if (mpi_my_m_rank == broadcast_root0){
                 for(size_t ix = 0; ix < array_local_size.nkx; ix++){
                     for(size_t iy = 0; iy < array_local_size.nky; iy++){
                         for(size_t iz = 0; iz < array_local_size.nkz; iz++){
@@ -667,7 +667,7 @@ void fields_sendF(COMPLEX *f){
                     }
                 }
             }
-            if (mpi_my_col_rank == broadcast_root1){
+            if (mpi_my_m_rank == broadcast_root1){
                 for(size_t ix = 0; ix < array_local_size.nkx; ix++){
                     for(size_t iy = 0; iy < array_local_size.nky; iy++){
                         for(size_t iz = 0; iz < array_local_size.nkz; iz++){
@@ -683,9 +683,9 @@ void fields_sendF(COMPLEX *f){
                 }
             }
             count = array_local_size.nkx * array_local_size.nky * array_local_size.nkz * array_local_size.ns;
-            MPI_Bcast(f00, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_col_comm);
-            MPI_Bcast(f01, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_col_comm);
-            MPI_Bcast(f10, count, MPI_DOUBLE_COMPLEX, broadcast_root1, mpi_col_comm);
+            MPI_Bcast(f00, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_m_comm);
+            MPI_Bcast(f01, count, MPI_DOUBLE_COMPLEX, broadcast_root0, mpi_m_comm);
+            MPI_Bcast(f10, count, MPI_DOUBLE_COMPLEX, broadcast_root1, mpi_m_comm);
             break;
     }
 };

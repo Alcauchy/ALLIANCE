@@ -108,14 +108,14 @@ void distrib_getG(COMPLEX *g, const COMPLEX *h) {
                                     iy * array_local_size.nkz * array_local_size.ns +
                                     iz * array_local_size.ns +
                                     is;
-                            if (mpi_my_col_rank == proc0){
+                            if (mpi_my_m_rank == proc0){
                                 ind6D = get_flat_c(is, 0, local_m0, ix, iy, iz);
                                 g[ind6D] -= var_var.q[is] / var_var.T[is] *
                                             (fields_chi.phi[ind4D] + fields_chi.B[ind4D]);
                                 ind6D = get_flat_c(is, 1, local_m0, ix, iy, iz);
                                 g[ind6D] -= var_var.q[is] / var_var.T[is] * fields_chi.B[ind4D];
                             }
-                            if (mpi_my_col_rank == proc1){
+                            if (mpi_my_m_rank == proc1){
                                 ind6D = get_flat_c(is, 0, local_m1, ix, iy, iz);
                                 g[ind6D] -= var_var.q[is] / var_var.T[is] * sqrt(0.5) * fields_chi.A[ind4D];
                             }
@@ -242,7 +242,7 @@ void distrib_enforceReality(COMPLEX *f){
         kxNeg = (ix == 0)  ? ix : array_global_size.nkx - ix;
         where_neg = mpi_whereIsX[kxNeg * 2];
         local_kxNegInd = mpi_whereIsX[kxNeg * 2 + 1];
-        if (where_pos == where_neg && mpi_my_row_rank == where_neg){
+        if (where_pos == where_neg && mpi_my_kx_rank == where_neg){
             for(size_t iy = 0; iy < array_local_size.nky; iy++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
                     for(size_t il = 0; il < array_local_size.nl; il++){
@@ -259,7 +259,7 @@ void distrib_enforceReality(COMPLEX *f){
         else{
             ind6D = get_flat_c(0,0,0,local_kxPosInd,0,0);
             mpi_sendVector(&f[ind6D],buffer,where_pos,where_neg);
-            if(mpi_my_row_rank == where_neg){
+            if(mpi_my_kx_rank == where_neg){
                 for(size_t iy = 0; iy < array_local_size.nky; iy++){
                     for(size_t im = 0; im < array_local_size.nm; im++){
                         for(size_t il = 0; il < array_local_size.nl; il++){
@@ -288,9 +288,11 @@ void distrib_enforceReality(COMPLEX *f){
  *
  * sets Nkx/2, Nky/2 and Nz/2 modes of distribution function to zero.
  * Due to reality condition, for kz yhe last mode should be set to zero.
+ * Additionally, sets all unphysical modes (0,0,kz) to zero.
  ***************************************/
 void distrib_setZeroNHalf(COMPLEX *f){
     size_t ind6D;
+    size_t ind2D;
     //setting f(nky/2) = 0;
     for(size_t ix = 0; ix < array_local_size.nkx; ix++){
         for(size_t iz = 0; iz < array_local_size.nkz; iz++){
@@ -320,7 +322,7 @@ void distrib_setZeroNHalf(COMPLEX *f){
     //setting f(nkx/2) = 0
     int local_kx = mpi_whereIsX[2 * array_global_size.nkx/2 + 1];
     int iproc = mpi_whereIsX[2 * array_global_size.nkx/2];
-    if (mpi_my_row_rank == iproc){
+    if (mpi_my_kx_rank == iproc){
         for(size_t iy = 0; iy < array_local_size.nky; iy++){
             for(size_t iz = 0; iz < array_local_size.nkz; iz++){
                 for(size_t im = 0; im < array_local_size.nm; im++){
@@ -329,6 +331,21 @@ void distrib_setZeroNHalf(COMPLEX *f){
                             ind6D = get_flat_c(is,il,im,local_kx,iy,iz);
                             f[ind6D] = 0;
                         }
+                    }
+                }
+            }
+        }
+    }
+    //setting f(0,0,kz) to zero
+    local_kx = mpi_whereIsX[1];
+    iproc = mpi_whereIsX[0];
+    if (mpi_my_kx_rank == iproc){
+        for (size_t iz = 0; iz < array_local_size.nkz; iz++){
+            for (size_t im = 0; im < array_local_size.nm; im++){
+                for (size_t il = 0; il < array_local_size.nl; il++){
+                    for (size_t is = 0; is < array_local_size.ns; is++){
+                        ind6D = get_flat_c(is,il,im,local_kx,0,iz);
+                        f[ind6D] = 0.;
                     }
                 }
             }

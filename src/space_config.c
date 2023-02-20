@@ -59,7 +59,7 @@ COMPLEX *space_iKz;
 void space_init() {
     space_globalMIndex = malloc(array_local_size.nm * sizeof(*space_globalMIndex));
     for (size_t i = 0; i < array_local_size.nm; i++){
-        space_globalMIndex[i] = array_global_size.nm / mpi_dims[0] * mpi_my_col_rank + i;
+        space_globalMIndex[i] = array_global_size.nm / mpi_dims[0] * mpi_my_m_rank + i;
     }
     space_generateWaveSpace();
     space_generateMSpace();

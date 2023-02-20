@@ -497,7 +497,7 @@ void hdf_saveFieldA(char *filename){
     hid_t file_space, memory_space;
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
-    H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
+    H5Pset_fapl_mpio(plist_id, mpi_kx_comm, info);
     if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
     if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
@@ -537,7 +537,7 @@ void hdf_saveField_r(double *f, char *filename){
     hid_t file_space, memory_space;
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
-    H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
+    H5Pset_fapl_mpio(plist_id, mpi_kx_comm, info);
     if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
     if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
@@ -578,7 +578,7 @@ void hdf_saveFieldB(char *filename){
     hid_t file_space, memory_space;
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
-    H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
+    H5Pset_fapl_mpio(plist_id, mpi_kx_comm, info);
     if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
     if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
@@ -615,7 +615,7 @@ void hdf_saveFieldPhi(char *filename){
     hid_t file_space, memory_space;
     hid_t plist_id; //property list id
     plist_id = H5Pcreate(H5P_FILE_ACCESS); // access property list
-    H5Pset_fapl_mpio(plist_id, mpi_row_comm, info);
+    H5Pset_fapl_mpio(plist_id, mpi_kx_comm, info);
     if(VERBOSE) printf("[process id %d] trying to create a file to write fields\n",mpi_my_rank);
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id); //creating new file collectively
     if(VERBOSE) printf("[process id %d] file created\n",mpi_my_rank);
@@ -1338,13 +1338,16 @@ void hdf_createParamFile()
         H5Gclose(group_id);
 
         hid_t dims_spec_k[2] = {0,diag_numOfShells};
+        hid_t dims_spec_kZ[2] = {0,diag_numOfShells};
         hid_t dims_spec_k2D[4] = {0,diag_numOfShells,parameters.nm, array_global_size.ns};
         hid_t dims_spec_m[2] = {0,parameters.nm};
         hid_t chunk_spec_k[2] = {1, diag_numOfShells};
+        hid_t chunk_spec_kZ[2] = {1, array_global_size.nkz};
         hid_t chunk_spec_k2D[4] = {1, diag_numOfShells, parameters.nm, array_global_size.ns};
         hid_t chunk_spec_k_borders[2] = {1,diag_numOfShellBounds};
         hid_t chunk_spec_m[2] = {1,parameters.nm};
         hid_t max_dims_k[2] = {H5S_UNLIMITED,diag_numOfShells};
+        hid_t max_dims_kZ[2] = {H5S_UNLIMITED,array_global_size.nkz};
         hid_t max_dims_k2D[4] = {H5S_UNLIMITED,diag_numOfShells,parameters.nm,array_global_size.ns};
         hid_t max_dims_m[2] = {H5S_UNLIMITED,parameters.nm};
         /*creating a dt and timestep datasets*/
@@ -1531,20 +1534,6 @@ void hdf_createParamFile()
         H5Gclose(group_id);
 
         /*create nonlinear flux dataset, shells dataset, timestep dataset and dt dataset*/
-        /*creating nonlinear flux dataset*/
-        plist_id   = H5Pcreate(H5P_DATASET_CREATE);
-        H5Pset_chunk(plist_id, 3, chunk_spec_nonl_flux_shells);
-        dspace_id = H5Screate_simple(3,dims_spec_flux,max_dims_flux);
-        dset_id = H5Dcreate2(file_id,
-                             "/nonlinearFlux/flux",
-                             H5T_NATIVE_DOUBLE,
-                             dspace_id,
-                             H5P_DEFAULT,
-                             plist_id,
-                             H5P_DEFAULT);
-        H5Sclose(dspace_id);
-        H5Dclose(dset_id);
-        H5Pclose(plist_id);
         /*creating nonlinear inverse flux dataset*/
         plist_id   = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_chunk(plist_id, 3, chunk_spec_nonl_flux_shells);
@@ -1571,6 +1560,72 @@ void hdf_createParamFile()
                              H5P_DEFAULT,
                              plist_id,
                              H5P_DEFAULT);
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        /* creating linear flux dataset*/
+        hid_t flux_dims[4] = {0,diag_numOfShells, array_global_size.nm, array_local_size.ns};
+        hid_t flux_chunk[4] = {1,diag_numOfShells, array_global_size.nm, array_local_size.ns};
+        hid_t flux_maxdims[4] = {H5S_UNLIMITED, diag_numOfShells, array_global_size.nm, array_local_size.ns};
+
+        plist_id = H5Pcreate(H5P_DATASET_CREATE); // access property list
+        H5Pset_chunk(plist_id, 4, flux_chunk);
+        dspace_id = H5Screate_simple(4,flux_dims,flux_maxdims);
+        dset_id = H5Dcreate2(file_id,
+                             "/nonlinearFlux/fluxLinear",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+        //inverse linear flux
+        plist_id = H5Pcreate(H5P_DATASET_CREATE); // access property list
+        H5Pset_chunk(plist_id, 4, flux_chunk);
+        dspace_id = H5Screate_simple(4,flux_dims,flux_maxdims);
+        dset_id = H5Dcreate2(file_id,
+                             "/nonlinearFlux/fluxInverseLinear",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+        //forward linear flux
+        plist_id = H5Pcreate(H5P_DATASET_CREATE); // access property list
+        H5Pset_chunk(plist_id, 4, flux_chunk);
+        dspace_id = H5Screate_simple(4,flux_dims,flux_maxdims);
+        dset_id = H5Dcreate2(file_id,
+                             "/nonlinearFlux/fluxForwardLinear",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
+        H5Sclose(dspace_id);
+        H5Dclose(dset_id);
+        H5Pclose(plist_id);
+
+        //nonlinear flux
+        plist_id = H5Pcreate(H5P_DATASET_CREATE); // access property list
+        H5Pset_chunk(plist_id, 4, flux_chunk);
+        dspace_id = H5Screate_simple(4,flux_dims,flux_maxdims);
+        dset_id = H5Dcreate2(file_id,
+                             "/nonlinearFlux/flux",
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT,
+                             plist_id,
+                             H5P_DEFAULT);
+
         H5Sclose(dspace_id);
         H5Dclose(dset_id);
         H5Pclose(plist_id);
@@ -1885,7 +1940,7 @@ void hdf_saveKSpec(int timestep) {
     size2D[3] = dims2D[3];
     offset2D[0] = dims2D[0];
     offset2D[1] = 0;
-    offset2D[2] = mpi_my_col_rank * parameters.nm / mpi_dims[0];
+    offset2D[2] = mpi_my_m_rank * parameters.nm / mpi_dims[0];
     offset2D[3] = 0;
     /*extent dataset dims*/
     H5Dset_extent(dset_id, size2D);
@@ -1894,7 +1949,7 @@ void hdf_saveKSpec(int timestep) {
     H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset2D, NULL, dims_ext2D, NULL);
     memspace = H5Screate_simple(4,dims_ext2D,NULL);
 
-    if(mpi_my_row_rank == 0)
+    if(mpi_my_kx_rank == 0)
     {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_kSpecH);
@@ -2050,41 +2105,14 @@ void hdf_saveNonlinearFlux(int timestep) {
     file_id = H5Fopen(PARAMETER_FILENAME,H5F_ACC_RDWR,plist_id);
     H5Pclose(plist_id);
     /*opening a group and a dataset*/
-    /*opening a group*/
-    dset_id = H5Dopen2(file_id, "/nonlinearFlux/flux", H5P_DEFAULT);
-    /*open a dataset*/
-    dspace_id = H5Dget_space(dset_id);
-    /*get dataset's dimensions */
-    int ndims = H5Sget_simple_extent_ndims(dspace_id);
-    hsize_t *dims = malloc(ndims * sizeof(*dims));
-    H5Sget_simple_extent_dims(dspace_id, dims, NULL);
-    H5Sclose(dspace_id);
-    /*extend dataset size*/
-    size[0] = dims[0] + dims_ext[0];
-    size[1] = dims[1];
-    size[2] = dims[2];
-    offset[0] = dims[0];
-    offset[1] = 0;
-    offset[2] = 0;
-    H5Dset_extent(dset_id, size);
-    /*write nonlinear flux to the file*/
-    dspace_id = H5Dget_space(dset_id);
-    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, NULL, dims_ext, NULL);
-    memspace = H5Screate_simple(3,dims_ext,NULL);
-    if(mpi_my_rank == 0)
-    {
-        plist_id = H5Pcreate(H5P_DATASET_XFER);
-        H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,memspace, dspace_id,plist_id,diag_nonlinearFlux);
-    }
-    H5Sclose(dspace_id);
-    H5Dclose(dset_id);
-
     //saving inverse flux now
     /*opening a group*/
     dset_id = H5Dopen2(file_id, "/nonlinearFlux/fluxInverse", H5P_DEFAULT);
     /*open a dataset*/
     dspace_id = H5Dget_space(dset_id);
     /*get dataset's dimensions */
+    int ndims = H5Sget_simple_extent_ndims(dspace_id);
+    hsize_t *dims = malloc(ndims * sizeof(*dims));
     H5Sget_simple_extent_dims(dspace_id, dims, NULL);
     H5Sclose(dspace_id);
     /*extend dataset size*/
@@ -2132,11 +2160,170 @@ void hdf_saveNonlinearFlux(int timestep) {
         plist_id = H5Pcreate(H5P_DATASET_XFER);
         H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, diag_nonlinearFluxForward);
     }
+    H5Sclose(memspace);
     H5Sclose(dspace_id);
     H5Dclose(dset_id);
+
+    //linear flux saving
+    dset_id = H5Dopen2(file_id, "/nonlinearFlux/fluxLinear", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    //get dataset's dimensions
+    ndims = H5Sget_simple_extent_ndims(dspace_id);
+    hsize_t *dims_flux = malloc(ndims * sizeof(*dims_flux));
+    H5Sget_simple_extent_dims(dspace_id, dims_flux, NULL);
+    H5Sclose(dspace_id);
+    //extend dataset size
+    hid_t size_flux[4];
+    hid_t offset_flux[4];
+    hid_t dims_ext_flux[4] = {1,diag_numOfShells, array_global_size.nm, array_global_size.ns};
+    hid_t dims_ext_local_flux[4] = {1,diag_numOfShells, array_local_size.nm, array_global_size.ns};
+    hid_t max_dims_local_flux[4] = {H5S_UNLIMITED, diag_numOfShells, array_local_size.nm, array_global_size.ns};
+    hid_t max_dims_flux[4] = {H5S_UNLIMITED, diag_numOfShells, array_global_size.nm, array_global_size.ns};
+    hid_t stride_flux[4] = {1,1,1,1};
+    hid_t count_flux[4] = {1,1,1,1};
+    size_flux[0] = dims_flux[0] + dims_ext_flux[0];
+    size_flux[1] = dims_flux[1];
+    size_flux[2] = dims_flux[2];
+    size_flux[3] = dims_flux[3];
+    offset_flux[0] = dims_flux[0];
+    offset_flux[1] = 0;
+    offset_flux[2] = mpi_my_m_rank * parameters.nm / mpi_dims[0];
+    offset_flux[3] = 0;
+    H5Dset_extent(dset_id, size_flux);
+    // write linear flux collectively
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset_flux, stride_flux,count_flux, dims_ext_local_flux);
+    memspace = H5Screate_simple(3,&dims_ext_local_flux[1],&max_dims_local_flux[1]);
+    if (mpi_my_kx_rank != 0)
+    {
+        H5Sselect_none(dspace_id);
+        H5Sselect_none(memspace);
+    }
+
+    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, diag_linearFlux);
+
+    H5Sclose(memspace);
+    H5Sclose(dspace_id);
+    H5Pclose(plist_id);
+    H5Dclose(dset_id);
+
+    // linear flux forward saving
+    dset_id = H5Dopen2(file_id, "/nonlinearFlux/fluxForwardLinear", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    //get dataset's dimensions
+    ndims = H5Sget_simple_extent_ndims(dspace_id);
+    H5Sget_simple_extent_dims(dspace_id, dims_flux, NULL);
+    H5Sclose(dspace_id);
+    //extend dataset size
+    size_flux[0] = dims_flux[0] + dims_ext_flux[0];
+    size_flux[1] = dims_flux[1];
+    size_flux[2] = dims_flux[2];
+    size_flux[3] = dims_flux[3];
+    offset_flux[0] = dims_flux[0];
+    offset_flux[1] = 0;
+    offset_flux[2] = mpi_my_m_rank * parameters.nm / mpi_dims[0];
+    offset_flux[3] = 0;
+
+    H5Dset_extent(dset_id, size_flux);
+    // write linear forward flux collectively
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset_flux, stride_flux,count_flux, dims_ext_local_flux);
+
+    memspace = H5Screate_simple(3,&dims_ext_local_flux[1],&max_dims_local_flux[1]);
+    if (mpi_my_kx_rank != 0)
+    {
+        H5Sselect_none(dspace_id);
+        H5Sselect_none(memspace);
+    }
+
+    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, diag_linearFluxForward);
+
+    H5Sclose(memspace);
+    H5Sclose(dspace_id);
+    H5Pclose(plist_id);
+    H5Dclose(dset_id);
+
+    // linear flux forward saving
+    dset_id = H5Dopen2(file_id, "/nonlinearFlux/fluxInverseLinear", H5P_DEFAULT);
+    dspace_id = H5Dget_space(dset_id);
+    // get dataset's dimensions
+    ndims = H5Sget_simple_extent_ndims(dspace_id);
+    H5Sget_simple_extent_dims(dspace_id, dims_flux, NULL);
+    H5Sclose(dspace_id);
+    // extend dataset size
+    size_flux[0] = dims_flux[0] + dims_ext_flux[0];
+    size_flux[1] = dims_flux[1];
+    size_flux[2] = dims_flux[2];
+    size_flux[3] = dims_flux[3];
+    offset_flux[0] = dims_flux[0];
+    offset_flux[1] = 0;
+    offset_flux[2] = mpi_my_m_rank * parameters.nm / mpi_dims[0];
+    offset_flux[3] = 0;
+
+    H5Dset_extent(dset_id, size_flux);
+    // write linear inverse flux collectively
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset_flux, stride_flux,count_flux, dims_ext_local_flux);
+
+    memspace = H5Screate_simple(3,&dims_ext_local_flux[1],&max_dims_local_flux[1]);
+    if (mpi_my_kx_rank != 0)
+    {
+        H5Sselect_none(dspace_id);
+        H5Sselect_none(memspace);
+    }
+
+    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, diag_linearFluxInverse);
+    H5Sclose(memspace);
+    H5Sclose(dspace_id);
+    H5Pclose(plist_id);
+    H5Dclose(dset_id);
+
+    // nonlinear flux saving
+    dset_id = H5Dopen2(file_id, "/nonlinearFlux/flux", H5P_DEFAULT);
+    /*open a dataset*/
+    dspace_id = H5Dget_space(dset_id);
+    /*get dataset's dimensions */
+    ndims = H5Sget_simple_extent_ndims(dspace_id);
+    H5Sget_simple_extent_dims(dspace_id, dims_flux, NULL);
+    H5Sclose(dspace_id);
+    /*extend dataset size*/
+    size_flux[0] = dims_flux[0] + dims_ext_flux[0];
+    size_flux[1] = dims_flux[1];
+    size_flux[2] = dims_flux[2];
+    size_flux[3] = dims_flux[3];
+    offset_flux[0] = dims_flux[0];
+    offset_flux[1] = 0;
+    offset_flux[2] = mpi_my_m_rank * parameters.nm / mpi_dims[0];
+    offset_flux[3] = 0;
+
+    H5Dset_extent(dset_id, size_flux);
+    /*write nonlinear flux to the file*/
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+    dspace_id = H5Dget_space(dset_id);
+    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset_flux, stride_flux,count_flux, dims_ext_local_flux);
+
+    memspace = H5Screate_simple(3,&dims_ext_local_flux[1],&max_dims_local_flux[1]);
+    if (mpi_my_kx_rank != 0)
+    {
+        H5Sselect_none(dspace_id);
+        H5Sselect_none(memspace);
+    }
+
+    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace, dspace_id, plist_id, diag_nonlinearFlux);
+    H5Sclose(memspace);
+    H5Sclose(dspace_id);
+    H5Pclose(plist_id);
+    H5Dclose(dset_id);
+
     H5Fclose(file_id);
-
-
 }
 
 /***************************
@@ -2172,7 +2359,7 @@ void hdf_saveMSpec(int timestep){
     size[0] = dims[0] + dims_ext_full[0];
     size[1] = dims[1];
     offset[0] = dims[0];
-    offset[1] =  mpi_my_col_rank * parameters.nm / mpi_dims[0];
+    offset[1] = mpi_my_m_rank * parameters.nm / mpi_dims[0];
     H5Dset_extent(dset_id, size);
     /*write m spec to the file*/
     plist_id = H5Pcreate(H5P_DATASET_XFER);
@@ -2180,7 +2367,7 @@ void hdf_saveMSpec(int timestep){
     dspace_id = H5Dget_space(dset_id);
     H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
     memspace = H5Screate_simple(1,&dims_ext_local[1],&max_dims_local[1]);
-    if (mpi_my_row_rank != 0)
+    if (mpi_my_kx_rank != 0)
     {
         H5Sselect_none(dspace_id);
         H5Sselect_none(memspace);
@@ -2227,7 +2414,7 @@ void hdf_saveForcing(){
     size[1] = dims[1];
     size[2] = dims[2];
     offset[0] = dims[0];
-    offset[1] = equation_displacements[mpi_my_row_rank];
+    offset[1] = equation_displacements[mpi_my_kx_rank];
     offset[2] = 0;
     H5Dset_extent(dset_id, size);
     /*write forcing to the file*/
@@ -2237,7 +2424,7 @@ void hdf_saveForcing(){
     H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
     memspace = H5Screate_simple(2,&dims_ext_local[1],&max_dims_local[1]);
     int forced_proc = mpi_whereIsM[equation_forcedM];
-    if (mpi_my_col_rank != forced_proc)
+    if (mpi_my_m_rank != forced_proc)
     {
         H5Sselect_none(dspace_id);
         H5Sselect_none(memspace);
@@ -2971,7 +3158,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -2981,7 +3168,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
         memspace = H5Screate_simple(3,&dims_ext_local[1],&max_dims_local[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3008,7 +3195,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -3024,7 +3211,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
         memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3055,7 +3242,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -3065,7 +3252,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
         memspace = H5Screate_simple(3,&dims_ext_local[1],&max_dims_local[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3092,7 +3279,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -3107,7 +3294,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
         memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3132,7 +3319,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -3142,7 +3329,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
         memspace = H5Screate_simple(3,&dims_ext_local[1],&max_dims_local[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3169,7 +3356,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -3184,7 +3371,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
         memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3209,7 +3396,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -3219,7 +3406,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local);
         memspace = H5Screate_simple(3,&dims_ext_local[1],&max_dims_local[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3246,7 +3433,7 @@ void hdf_saveFields(int timestep){
         size[2] = dims[2];
         size[3] = dims[3];
         offset[0] = dims[0];
-        offset[1] =  mpi_my_row_rank * parameters.nkx / mpi_dims[1];
+        offset[1] = mpi_my_kx_rank * parameters.nkx / mpi_dims[1];
         offset[2] =  0;
         offset[3] =  0;
         H5Dset_extent(dset_id, size);
@@ -3261,7 +3448,7 @@ void hdf_saveFields(int timestep){
         dspace_id = H5Dget_space(dset_id);
         H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset, stride,count, dims_ext_local_r);
         memspace = H5Screate_simple(3,&dims_ext_local_r[1],&max_dims_local_r[1]);
-        if (mpi_my_col_rank != 0)
+        if (mpi_my_m_rank != 0)
         {
             H5Sselect_none(dspace_id);
             H5Sselect_none(memspace);
@@ -3482,22 +3669,22 @@ void hdf_readData(char *filename, COMPLEX *h) {
         chunk_dims_c_file[4] = dims[4];
         chunk_dims_c_file[5] = dims[5];
         /* first we set offsets for m, as well as chunk sizes*/
-        if(mpi_my_col_rank <= procId_mMax){
-            offset_file[3] = mpi_my_col_rank * array_local_size.nm;
+        if(mpi_my_m_rank <= procId_mMax){
+            offset_file[3] = mpi_my_m_rank * array_local_size.nm;
             chunk_dims_c_file[3] = array_local_size.nm;
-            if (mpi_my_col_rank == procId_mMax) chunk_dims_c_file[3] = dims[3] - mpi_my_col_rank * array_local_size.nm;
+            if (mpi_my_m_rank == procId_mMax) chunk_dims_c_file[3] = dims[3] - mpi_my_m_rank * array_local_size.nm;
         }
         else{
             offset_file[3] = 0;
             chunk_dims_c_file[3] = 0;
         }
-        //printf("my_col_rank = %d, chunk_size for m = %zu, offset = %zu\n",mpi_my_col_rank, chunk_dims_c_file[3],offset_file[3]);
+        //printf("my_col_rank = %d, chunk_size for m = %zu, offset = %zu\n",mpi_my_m_rank, chunk_dims_c_file[3],offset_file[3]);
 
         /* setting offsets and chunk sizes for kx, positive array*/
-        if(mpi_my_row_rank <= procId_kMaxPos){
-            offset_file[0] = mpi_my_row_rank * array_local_size.nkx;
+        if(mpi_my_kx_rank <= procId_kMaxPos){
+            offset_file[0] = mpi_my_kx_rank * array_local_size.nkx;
             chunk_dims_c_file[0] = array_local_size.nkx;
-            if (mpi_my_row_rank == procId_kMaxPos) chunk_dims_c_file[0] = (maxXPositive + 1) - mpi_my_row_rank * array_local_size.nkx;
+            if (mpi_my_kx_rank == procId_kMaxPos) chunk_dims_c_file[0] = (maxXPositive + 1) - mpi_my_kx_rank * array_local_size.nkx;
         }
         else{
             offset_file[0] = 0;
@@ -3564,16 +3751,16 @@ void hdf_readData(char *filename, COMPLEX *h) {
         offset_file[0] = 0;
         chunk_dims_c_file[0] = 0;
         int negativeOffsetStart = 0;
-        if (mpi_my_row_rank == procId_kMaxNeg){
+        if (mpi_my_kx_rank == procId_kMaxNeg){
             offset_file[0] = maxXNegativeData;
             int local_kx = mpi_whereIsX[2 * (maxXNegative) + 1];
             chunk_dims_c_file[0] = array_local_size.nkx - local_kx;
             negativeOffsetStart = chunk_dims_c_file[0] + offset_file[0];
         }
 
-        MPI_Bcast(&negativeOffsetStart,1,MPI_INT,procId_kMaxNeg,mpi_row_comm);
-        if(mpi_my_row_rank > procId_kMaxNeg){
-            offset_file[0] =  negativeOffsetStart + (mpi_my_row_rank - procId_kMaxNeg - 1) * array_local_size.nkx;
+        MPI_Bcast(&negativeOffsetStart, 1, MPI_INT, procId_kMaxNeg, mpi_kx_comm);
+        if(mpi_my_kx_rank > procId_kMaxNeg){
+            offset_file[0] =  negativeOffsetStart + (mpi_my_kx_rank - procId_kMaxNeg - 1) * array_local_size.nkx;
             chunk_dims_c_file[0] = array_local_size.nkx;
         }
 
@@ -3597,7 +3784,7 @@ void hdf_readData(char *filename, COMPLEX *h) {
         size_t kxNeg;
         for(size_t ix = 0; ix < chunk_dims_c_file[0]; ix++){
             //printf("ix = %zu\n",ix);
-            if(mpi_my_row_rank == procId_kMaxNeg){
+            if(mpi_my_kx_rank == procId_kMaxNeg){
                 kxNeg = mpi_whereIsX[2 * (maxXNegative + ix) + 1];
                 //printf("kxNeg = %zu\n",kxNeg);
             }

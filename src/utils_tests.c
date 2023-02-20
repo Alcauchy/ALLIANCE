@@ -370,13 +370,13 @@ void test_Poisson(){
    // printf( "%zu, %zu\n", total_size, array_local_size.total_real);
     int my_proc = mpi_whereIsX[2*2];
     int my_local_x = mpi_whereIsX[2*2 + 1];
-    if (mpi_my_row_rank == my_proc){
+    if (mpi_my_kx_rank == my_proc){
         size_t ind6D = get_flat_c(0,0,0,my_local_x,0,0);
         h[ind6D] = array_global_size.nkx * array_global_size.nky * array_global_size.nz;
     }
     my_proc = mpi_whereIsX[2*(array_global_size.nkx - 2)];
     my_local_x = mpi_whereIsX[2*(array_global_size.nkx - 2) + 1];
-    if (mpi_my_row_rank == my_proc){
+    if (mpi_my_kx_rank == my_proc){
         size_t ind6D = get_flat_c(0,0,0,my_local_x,0,0);
         h[ind6D] = array_global_size.nkx * array_global_size.nky * array_global_size.nz;
     }
@@ -513,13 +513,13 @@ void test_Poisson(){
                   MPI_COMM_WORLD);
     printf("[MPI process %d] POISSON BRACKET 1  = %16.5e\n",mpi_my_rank, total_reduced);
     for (size_t ii = 0; ii < array_local_size.total_comp; ii++){h[ii] = 0;}
-    if (mpi_my_row_rank == my_proc){
+    if (mpi_my_kx_rank == my_proc){
         size_t ind6D = get_flat_c(0,0,0,my_local_x,0,0);
         h[ind6D] = array_global_size.nkx * array_global_size.nky * array_global_size.nz;
     }
     my_proc = mpi_whereIsX[2*(array_global_size.nkx - 2)];
     my_local_x = mpi_whereIsX[2*(array_global_size.nkx - 2) + 1];
-    if (mpi_my_row_rank == my_proc){
+    if (mpi_my_kx_rank == my_proc){
         size_t ind6D = get_flat_c(0,0,0,my_local_x,0,0);
         h[ind6D] = array_global_size.nkx * array_global_size.nky * array_global_size.nz;
     }
@@ -911,7 +911,7 @@ void test_transposedFFTW(){
     kx_local = mpi_whereIsX[2 * kx + 1];
     procNeg = mpi_whereIsX[2*kxNeg];
     kx_localNeg = mpi_whereIsX[2*kxNeg + 1];
-    if(mpi_my_row_rank == proc){
+    if(mpi_my_kx_rank == proc){
         size_t iy = 2;
         size_t ind6D = get_flat_c(0,0,0,kx_local,iy,0);
         h[ind6D] = array_global_size.nkx*array_global_size.nky*array_global_size.nz/2.;

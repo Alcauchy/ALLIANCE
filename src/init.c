@@ -69,7 +69,7 @@ void init_computation(){
     init_initFlags();
     mpi_generateTopology();
     mpi_initMExchange();
-    fftw_init(mpi_row_comm);
+    fftw_init(mpi_kx_comm);
     hdf_init();
 };
 
@@ -167,7 +167,7 @@ void fill_rand(COMPLEX *ar1) {
                 for (size_t im = 0; im < array_global_size.nm; im++){
                     for (size_t il = 0; il < array_global_size.nl; il++){
                         for (size_t is = 0; is < array_global_size.ns; is++){
-                            if (mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && ((im == 0)||(im == 1))){//mpi_whereIsX[2*ix] == mpi_my_row_rank && mpi_whereIsM[2*im] == mpi_my_col_rank && (im == 0)
+                            if (mpi_whereIsX[2*ix] == mpi_my_kx_rank && mpi_whereIsM[2 * im] == mpi_my_m_rank && ((im == 0) || (im == 1))){//mpi_whereIsX[2*ix] == mpi_my_kx_rank && mpi_whereIsM[2*im] == mpi_my_m_rank && (im == 0)
                                 size_t ix_local = mpi_whereIsX[2 * ix + 1];
                                 size_t im_local = mpi_whereIsM[2 * im + 1];
                                 size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
@@ -176,7 +176,7 @@ void fill_rand(COMPLEX *ar1) {
                                 double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
                                 ar1[ind6D] = cexp(1.j * theta) * (array_global_size.nkx*array_global_size.nky*array_global_size.nz);
                                 double amplitude = sqrt(
-                                        init_energySpec(space_kPerp[ind3D], 0, 1e-9, 3., space_kz[iz], 3.) / 2.0 / M_PI);
+                                        init_energySpec(space_kPerp[ind3D], im_local, 1e-9, 100., space_kz[iz], 3.) / 2.0 / M_PI);
                                 ar1[ind6D] *=amplitude;
                                 if(global_nkx_index[ix_local] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
                             }
@@ -251,8 +251,6 @@ void fill_randSingleKM(COMPLEX *ar1) {
                     for (size_t il = 0; il < array_local_size.nl; il++) {
                         for (size_t is = 0; is < array_local_size.ns; is++) {
                             if (space_globalMIndex[im] == 1 || space_globalMIndex[im] == 0 && global_nkx_index[ix] == 0) {
-
-                                //printf("%f\n", space_kz[2]);
                                 ind6D = get_flat_c(is, il, im, ix, 0, iz);
                                 ar1[ind6D] = ((0.5 - (double) rand() / (double) (RAND_MAX)) +
                                                    (0.5 - (double) rand() / (double) (RAND_MAX)) * 1.j)
@@ -280,9 +278,11 @@ void init_conditions(COMPLEX *data){
     switch(initialConditions)
     {
         case RANDOM:
-            fill_rand(data);
+            //fill_rand(data);
+            init_localPertirbation(data);
             //init_fillSinc(data);
             //fill_randM0(data);
+            //init_fillCosZ(data);
             //fill_randSingleKM(data);
             break;
 
@@ -370,14 +370,14 @@ void init_fillSinc(COMPLEX *out) {
     x0 = space_dx * array_global_size.nx/2;
     y0 = space_dy * array_global_size.ny/2;
     z0 = space_dz * array_global_size.nz/2;
-    if(mpi_my_col_rank == proc_id){
+    if(mpi_my_m_rank == proc_id){
         for(size_t iy = 0; iy < array_local_size.ny; iy++){
             for(size_t ix = 0; ix< array_local_size.nx; ix++){
                 for(size_t iz = 0; iz <  array_local_size.nz + 2; iz++){
                     for(size_t is = 0; is< array_local_size.ns; is++){
                         ind6D = get_flat_r(is,0,local_m,ix,iy,iz);
                         x = space_dx * (ix);
-                        y = space_dy * (iy + array_global_size.ny * mpi_my_row_rank / mpi_dims[1]);
+                        y = space_dy * (iy + array_global_size.ny * mpi_my_kx_rank / mpi_dims[1]);
                         z = space_dz * (iz);
                         //real[ind6D] = init_sinc(0.01,4,x,y,z,x0,y0,z0);
                         real[ind6D] = init_exp2(1.,disp[is],x,y,z,x0,y0,z0);
@@ -418,6 +418,67 @@ double init_exp2(double amp, double f, double x, double y, double z, double x0, 
     return amp * valueX * valueY * valueZ;
 }
 
+void init_fillCosZ(COMPLEX *out){
+    int mProc;
+    int mLocal;
+    mProc = mpi_whereIsM[0];
+    mLocal = mpi_whereIsM[1];
+    double *cosZ = calloc(array_local_size.total_real, sizeof(*cosZ));
+    if (mpi_my_m_rank == mProc){
+        for (size_t iy = 0; iy < array_local_size.ny; iy ++){
+            for (size_t ix = 0; ix < array_local_size.nx; ix ++){
+                for (size_t iz = 0; iz < array_local_size.nz; iz ++){
+                    for (size_t il = 0; il < array_local_size.nl; il ++){
+                        for (size_t is = 0; is < array_local_size.ns; is ++){
+                            size_t ind6D = get_flat_r(is,il,mLocal,ix,iy,iz);
+                            size_t iyInd = global_ny_index[iy];
+                            cosZ[ind6D] = init_cosZ(var_var.q[is] * 1.0,1.0,iz * space_dz)
+                                    * init_sinY(1.0,1.0,iyInd * space_dy)
+                                    * init_cosX(1.0,1.0,ix * space_dx);
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+    fftw_copy_buffer_r(fftw_hBuf,cosZ);
+    fftw_r2c();
+    fftw_copy_buffer_c(out,fftw_hBuf);
+    free(cosZ);
+
+}
+
+void init_localPertirbation(COMPLEX *out){
+    int mProc;
+    int mLocal;
+    mProc = mpi_whereIsM[0];
+    mLocal = mpi_whereIsM[1];
+    double *realInit = calloc(array_local_size.total_real, sizeof(*realInit));
+
+    if(mpi_my_m_rank == mProc){
+        for (size_t iy = 0; iy < array_local_size.ny; iy ++){
+            for (size_t ix = 0; ix < array_local_size.nx; ix ++){
+                for (size_t iz = 0; iz < array_local_size.nz; iz ++){
+                    for (size_t il = 0; il < array_local_size.nl; il ++){
+                        for (size_t is = 0; is < array_local_size.ns; is ++){
+                            size_t ind6D = get_flat_r(is,il,mLocal,ix,iy,iz);
+                            size_t iyInd = global_ny_index[iy];
+                            realInit[ind6D] = init_cosZ(var_var.q[is] * 1.0, 1.0, iz * space_dz)
+                                    * init_exp2(60.0, 2.0, ix * space_dx, iyInd * space_dy, 0.0, M_PI, M_PI, 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    fftw_copy_buffer_r(fftw_hBuf, realInit);
+    fftw_r2c();
+    fftw_copy_buffer_c(out,fftw_hBuf);
+    //hdf_create_file_r("init.h5",realInit);
+    free(realInit);
+}
+
 /***************************************
  * \fn double init_exp2(double k, double m, double amp, double disp)
  * \brief returns energy spectrum
@@ -428,10 +489,14 @@ double init_exp2(double amp, double f, double x, double y, double z, double x0, 
  * This function is supposed to be used in-module only
  * and should not be used elsewhere outside init.c file.
  ***************************************/
-double init_sinX(double amp, double f, double x){
-    return amp * sin( 2 * M_PI * f * x);
+double init_sinY(double amp, double f, double y){
+    return amp * sin( 2 * M_PI * f / space_Ly * y);
 }
 
 double init_cosX(double amp, double f, double x){
-    return amp * cos( 2 * M_PI * f * x);
+    return amp * cos( 2 * M_PI * f / space_Lx * x);
+}
+
+double init_cosZ(double amp, double f, double x){
+    return amp * cos( 2 * M_PI * f / space_Lz * x);
 }

@@ -367,6 +367,11 @@ void read_parameters(char *filename) {
                 sscanf(string, "%*s : %d", &parameters.postprocess);
                 if (mpi_my_rank == IO_RANK && parameters.postprocess) printf("POST PROCESSING TOOL WILL BE LAUNCHED\n");
             }
+            if (strcmp(tmp, "field_c") == 0)
+            {
+                sscanf(string, "%*s : %d", &parameters.field_c);
+                if (mpi_my_rank == IO_RANK && parameters.field_c) printf("computing field with %d flag\n",parameters.field_c);
+            }
         }
     }
     if (mpi_my_rank == 0) printf("=====================================\n");

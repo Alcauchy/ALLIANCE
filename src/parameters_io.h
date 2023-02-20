@@ -35,6 +35,7 @@ struct system_param {
     int dealiasing;
     int electromagnetic;
     int adiabatic;
+    int field_c;
     int postprocess;
     int initial;
     int allow_rescale;

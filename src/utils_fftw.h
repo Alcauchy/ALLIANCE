@@ -43,5 +43,6 @@ extern COMPLEX *fftw_chiBuf;
 extern COMPLEX *fftw_field;
 extern double fftw_norm;
 extern int *global_nkx_index;
+extern int *global_ny_index;
 
 #endif //ALLIANCE_ALPHA_1_0_UTILS_FFTW_H

@@ -58,6 +58,7 @@ COMPLEX* fftw_chiBuf;                             // complex data array buffer f
 COMPLEX *fftw_field;                              //complex data to transform fields
 double fftw_norm;                               //normalization coefficient for backward fft transform
 int *global_nkx_index;                          // array which stores the global position of nkx on the processor. Needed for dealiasing, in order to find Nkx/3 and 2*Nkx/3 and put all modes between those to zeros.
+int *global_ny_index;
 
 /***************************************
  * \fn  fftw_init(MPI_Comm communicator)
@@ -93,8 +94,12 @@ void fftw_init(MPI_Comm communicator){
     if (VERBOSE) printf("[MPI process %d] local size is %td, howmany is %d\n", mpi_my_rank,local_size, howmany);
 
     global_nkx_index = malloc(array_local_size.nkx * sizeof(*global_nkx_index));
+    global_ny_index = malloc(array_local_size.ny * sizeof(*global_ny_index));
     for (size_t i = 0; i < array_local_size.nkx; i++){
-        global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_row_rank + i;
+        global_nkx_index[i] = array_global_size.nkx / mpi_dims[1] * mpi_my_kx_rank + i;
+    }
+    for (size_t i = 0; i < array_local_size.ny; i++){
+        global_ny_index[i] = array_global_size.ny / mpi_dims[1] * mpi_my_kx_rank + i;
     }
 
     fftw_hBuf = fftw_alloc_complex(local_size);

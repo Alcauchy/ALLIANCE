@@ -407,7 +407,7 @@ void equation_getRHS(const COMPLEX *in_g, COMPLEX *in_h, COMPLEX *out) {
     /* boundary exchange */
     mpi_exchangeMBoundaries(in_h, plus_boundary, minus_boundary);
     /* computing linear term */
-    //equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
+    equation_getLinearTerm(in_h, plus_boundary, minus_boundary, out);
     /* computing nonlinear term */
     equation_getNonlinearTerm(in_h, out);
     /* computing dissipation and forcing*/
@@ -452,7 +452,10 @@ void equation_getDissipation(const COMPLEX *h, COMPLEX *rhs) {
  * \brief computes dissipation at a given k and m.
  ***************************************/
 COMPLEX equation_getLocalDissipation(const COMPLEX h, double kPerpSq, double kz, double m) {
-    return (var_var.mu_k * pow(kPerpSq, var_var.lap_k) + var_var.mu_m * pow(m,var_var.pwr_m) + var_var.mu_kz * pow(kz,2.*var_var.lap_kz)) * h;
+    double m_coef = (double) m / (double) array_global_size.nm;
+    double kz_coef = kz / space_kZmax;
+    double kperp_coef = kPerpSq / (space_kPerpMax * space_kPerpMax);
+    return (var_var.mu_k * pow(kperp_coef, var_var.lap_k) + var_var.mu_m * pow(m_coef,var_var.pwr_m) + var_var.mu_kz * pow(kz_coef,2.*var_var.lap_kz)) * h;
 };
 
 
@@ -507,7 +510,7 @@ void equation_init() {
     //getting amounts of forced modes at each processor; needed to store force
     equation_forceKnAr = malloc(mpi_dims[1] * sizeof(*equation_forceKnAr));
     equation_displacements = malloc(mpi_dims[1] * sizeof(*equation_displacements));
-    MPI_Allgather(&equation_forceKn,1,MPI_INT,equation_forceKnAr,1,MPI_INT, mpi_row_comm);
+    MPI_Allgather(&equation_forceKn, 1, MPI_INT, equation_forceKnAr, 1, MPI_INT, mpi_kx_comm);
     //computing displacements
     for(size_t jj = 0; jj < mpi_dims[1]; jj++){
         equation_displacements[jj] = 0;
@@ -517,8 +520,8 @@ void equation_init() {
     }
 
     //getting total number of modes
-    MPI_Allreduce(MPI_IN_PLACE,&equation_forceNorm,1,MPI_INT, MPI_SUM, mpi_row_comm);
-    if (mpi_my_row_rank == 0) printf("total forcing modes = %d\n",equation_forceNorm);
+    MPI_Allreduce(MPI_IN_PLACE, &equation_forceNorm, 1, MPI_INT, MPI_SUM, mpi_kx_comm);
+    if (mpi_my_kx_rank == 0) printf("total forcing modes = %d\n", equation_forceNorm);
 
     // putting list of indices of wave numbers which are excited
     equation_forceKxInd = malloc(equation_forceKn * sizeof(*equation_forceKxInd));
@@ -570,15 +573,15 @@ void equation_init() {
     equation_forceKxIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKxIndGathered));
     equation_forceKyIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKxIndGathered));
     equation_forceKzIndGathered = malloc(equation_forceNorm * sizeof(*equation_forceKzIndGathered));
-    if (mpi_my_row_rank == 0){
-        MPI_Gatherv(equation_forceKyInd, equation_forceKn, MPI_INT, equation_forceKyIndGathered, equation_forceKnAr,equation_displacements,MPI_INT,0,mpi_row_comm);
-        MPI_Gatherv(equation_forceKzInd, equation_forceKn, MPI_INT, equation_forceKzIndGathered, equation_forceKnAr,equation_displacements,MPI_INT,0,mpi_row_comm);
-        MPI_Gatherv(equation_forceKxIndGlobal, equation_forceKn, MPI_INT, equation_forceKxIndGathered, equation_forceKnAr,equation_displacements,MPI_INT,0,mpi_row_comm);
+    if (mpi_my_kx_rank == 0){
+        MPI_Gatherv(equation_forceKyInd, equation_forceKn, MPI_INT, equation_forceKyIndGathered, equation_forceKnAr, equation_displacements, MPI_INT, 0, mpi_kx_comm);
+        MPI_Gatherv(equation_forceKzInd, equation_forceKn, MPI_INT, equation_forceKzIndGathered, equation_forceKnAr, equation_displacements, MPI_INT, 0, mpi_kx_comm);
+        MPI_Gatherv(equation_forceKxIndGlobal, equation_forceKn, MPI_INT, equation_forceKxIndGathered, equation_forceKnAr, equation_displacements, MPI_INT, 0, mpi_kx_comm);
     }
     else{
-        MPI_Gatherv(equation_forceKyInd, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_row_comm);
-        MPI_Gatherv(equation_forceKzInd, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_row_comm);
-        MPI_Gatherv(equation_forceKxIndGlobal, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_row_comm);
+        MPI_Gatherv(equation_forceKyInd, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_kx_comm);
+        MPI_Gatherv(equation_forceKzInd, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_kx_comm);
+        MPI_Gatherv(equation_forceKxIndGlobal, equation_forceKn, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, mpi_kx_comm);
     }
     //forcing coefficient
     equation_forcingCoef = parameters.forcePower / equation_forceNorm / array_global_size.ns;
@@ -600,7 +603,7 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
     forced_proc = mpi_whereIsM[equation_forcedM];
     local_m = mpi_whereIsM[equation_forcedM * 2 + 1];
     // find out how many wave numbers will be forced
-    if (mpi_my_col_rank == forced_proc){
+    if (mpi_my_m_rank == forced_proc){
         for(size_t i = 0; i < equation_forceKn; i++){
             indKx = equation_forceKxInd[i];
             indKy = equation_forceKyInd[i];
@@ -610,7 +613,7 @@ void equation_getForcing(const COMPLEX *h, COMPLEX *rhs) {
                 sumForce +=  cabs(h[ind6D]) * cabs(h[ind6D]) * equation_forcingMM[i];
             }
         }
-        MPI_Allreduce(MPI_IN_PLACE,&sumForce,1,MPI_DOUBLE,MPI_SUM,mpi_row_comm);
+        MPI_Allreduce(MPI_IN_PLACE, &sumForce, 1, MPI_DOUBLE, MPI_SUM, mpi_kx_comm);
         if (fabs(sumForce) <= 1e-16) sumForce = 1.0;
         double powerInjected = 0;
         for(size_t i = 0; i < equation_forceKn; i++){

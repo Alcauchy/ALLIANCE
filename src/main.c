@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
     distrib_getG(g, h);
     fields_sendF(g);
     fields_getFields(f00, f10, f01);
-    hdf_saveData(h, 0);
+    //hdf_saveData(h, 0);
     diag_compute(g, h, 0);
 
     diag_print(h, g, 0);
