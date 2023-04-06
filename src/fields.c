@@ -298,17 +298,21 @@ void fields_getA(const COMPLEX *g) {
             {
                 for(size_t iy = 0; iy < array_local_size.nky; iy++)
                 {
+                    flatInd2D = ix * array_local_size.nky + iy;
                     for(size_t iz = 0; iz < array_local_size.nkz; iz++)
                     {
-                        fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] = 0.;
-                        for(size_t is = 0; is < array_local_size.ns; is++)
-                        {
-                            flatInd = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
-                                      iy * array_local_size.nkz * array_local_size.ns + iz * array_local_size.ns + is;
-                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] += qnvTsJ[var_getJIndex(ix,iy,is)] *
-                                   g[flatInd];
+                        if (fabs(space_kPerp2[flatInd2D]>1e-16)) {
+                            fields_fields.A[get_flatIndexComplex3D(ix, iy, iz)] = 0.;
+
+                            for (size_t is = 0; is < array_local_size.ns; is++) {
+                                flatInd = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                          iy * array_local_size.nkz * array_local_size.ns + iz * array_local_size.ns +
+                                          is;
+                                fields_fields.A[get_flatIndexComplex3D(ix, iy, iz)] +=
+                                        qnvTsJ[var_getJIndex(ix, iy, is)] *
+                                        g[flatInd];
+                            }
                         }
-                        flatInd2D = ix * array_local_size.nky + iy;
                         if (fabs(space_kPerp2[flatInd2D]>1e-16))
                         {
                             fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= A_denom[flatInd2D];
@@ -727,21 +731,27 @@ void fields_getAFromH(const COMPLEX* h){
             {
                 for(size_t iy = 0; iy < array_local_size.nky; iy++)
                 {
+                    flatInd2D = ix * array_local_size.nky + iy;
                     for(size_t iz = 0; iz < array_local_size.nkz; iz++)
                     {
-                        fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] = 0.;
-                        for(size_t is = 0; is < array_local_size.ns; is++)
-                        {
-                            flatInd = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
-                                      iy * array_local_size.nkz * array_local_size.ns + iz * array_local_size.ns + is;
-                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] += var_var.q[is] * var_var.n[is] *
-                                                                                 var_var.vT[is] * var_J0[var_getJIndex(ix,iy,is)] *
-                                                                                 sqrt(0.5) * h[flatInd];
+                        if (fabs(space_kPerp2[flatInd2D]>1e-16)) {
+                            fields_fields.A[get_flatIndexComplex3D(ix, iy, iz)] = 0.;
+
+                            for (size_t is = 0; is < array_local_size.ns; is++) {
+                                flatInd = ix * array_local_size.nky * array_local_size.nkz * array_local_size.ns +
+                                          iy * array_local_size.nkz * array_local_size.ns + iz * array_local_size.ns +
+                                          is;
+                                fields_fields.A[get_flatIndexComplex3D(ix, iy, iz)] += qnvTsJ[var_getJIndex(ix, iy,is)] * h[flatInd];
+                                                                                        //var_var.q[is] * var_var.n[is] *
+                                                                                       //var_var.vT[is] *
+                                                                                       //var_J0[var_getJIndex(ix, iy,
+                                                                                         //                   is)] *
+                                                                                       //sqrt(0.5) * h[flatInd];
+                            }
                         }
-                        flatInd2D = ix * array_local_size.nky + iy;
                         if (fabs(space_kPerp2[flatInd2D]>1e-16))
                         {
-                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= 0.5 * var_var.beta / space_kPerp2[flatInd2D];
+                            fields_fields.A[get_flatIndexComplex3D(ix,iy,iz)] *= 1.0/ space_kPerp2[flatInd2D];//0.5 * var_var.beta / space_kPerp2[flatInd2D];
                         }
                         else
                         {

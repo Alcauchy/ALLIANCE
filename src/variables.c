@@ -113,14 +113,17 @@ void var_varInit(){
     var_var.lap_kz = parameters.lap_kz;
     var_var.pwr_m = parameters.pwr_m;
     var_var.B0 = 1.0;
-    for(size_t i = 0; i < parameters.ns; i++)
-    {
+    for(size_t i = 0; i < parameters.ns; i++){
         var_var.m[i] = parameters.mass[i];
         var_var.q[i] = parameters.charge[i];
         var_var.T[i] = parameters.temperature[i];
         var_var.n[i] = parameters.density[i];
         var_var.vT[i] = sqrt(2.* var_var.T[i]/var_var.m[i]);
-        var_var.rho[i] = 2 * M_PI / var_var.k_rg * sqrt(var_var.m[i]);
+    }
+    for(size_t i = 0; i < parameters.ns; i++)
+    {
+        var_var.rho[i] = 2 * M_PI / var_var.k_rg * sqrt(var_var.T[parameters.ns - 1]/var_var.T[i] * var_var.m[parameters.ns - 1] /var_var.m[i] );
+        //printf("[MPI rank %d] rho = %f\n",mpi_my_rank,var_var.rho[i]);
     }
 
     for(size_t ix = 0; ix < array_local_size.nkx; ix++)
@@ -130,7 +133,7 @@ void var_varInit(){
             for(size_t is = 0; is < array_local_size.ns; is++)
             {
                 var_var.b[var_getJIndex(ix,iy,is)] = 0.5 * space_kPerp2[ix * array_local_size.nky + iy] *
-                                                     var_var.rho[is] * var_var.rho[is];
+                                                     var_var.rho[is] * var_var.rho[is]/(2 * M_PI);
             }
         }
     }

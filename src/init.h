@@ -36,6 +36,10 @@ double init_exp2(double amp, double f, double x, double y, double z, double x0, 
 double init_sinY(double amp, double f, double y);
 double init_cosX(double amp, double f, double x);
 double init_cosZ(double amp, double f, double x);
+double init_cosh(double x, double a);
+double init_tanh(double x);
+double init_shapeFunction(double x);
+void init_reconnection(COMPLEX *out);
 void init_fillSinc(COMPLEX *out);
 void init_fillCosZ(COMPLEX *out);
 void init_localPertirbation(COMPLEX *out);

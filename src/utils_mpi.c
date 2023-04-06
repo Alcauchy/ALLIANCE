@@ -58,7 +58,6 @@ enum DIRECTIONS {
  *  mpi_init
  * *************************/
 void mpi_init() {
-    MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 }

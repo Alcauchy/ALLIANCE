@@ -56,7 +56,7 @@ struct system_param {
     double forceKmin;
     double forceKmax;
     double forcePower;
-    double forceM;
+    int forceM;
 
     int compute_k;
     int compute_m;

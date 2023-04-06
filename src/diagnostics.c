@@ -928,8 +928,8 @@ void diag_computeEnergy(const COMPLEX *h){
                     ind2D = ix * array_local_size.nky  + iy;
                     for (size_t iz = 0; iz < array_local_size.nkz; iz++){
                         ind3D = get_flatIndexComplex3D(ix,iy,iz);
-                        diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) * diag_MM[iz];// / 8. / M_PI
-                        diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D])* diag_MM[iz];// / 8. / M_PI
+                        diag_energyBpar += cabs(fields_fields.B[ind3D]) * cabs(fields_fields.B[ind3D]) * diag_MM[iz] / var_var.beta;// / 8. / M_PI
+                        diag_energyBperp += space_kPerp2[ind2D] * cabs(fields_fields.A[ind3D]) * cabs(fields_fields.A[ind3D]) * diag_MM[iz] / var_var.beta;// / 8. / M_PI
                         for (size_t is = 0; is < array_local_size.ns; is++){
                             diag_energyPhi += 0.5 * var_var.q[is] * var_var.q[is] * var_var.n[is] / var_var.T[is]
                                               * cabs(fields_fields.phi[ind3D]) * cabs(fields_fields.phi[ind3D]) * diag_MM[iz];
@@ -945,6 +945,7 @@ void diag_computeEnergy(const COMPLEX *h){
                     }
                 }
             }
+            if (var_var.beta == 0) diag_energyBperp = 0; diag_energyBpar = 0;
             MPI_Allreduce(MPI_IN_PLACE, diag_energyH, array_local_size.ns,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
             MPI_Allreduce(MPI_IN_PLACE, &diag_energyPhi, 1, MPI_DOUBLE, MPI_SUM, mpi_kx_comm);
             MPI_Allreduce(MPI_IN_PLACE, &diag_energyBpar, 1, MPI_DOUBLE, MPI_SUM, mpi_kx_comm);

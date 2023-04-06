@@ -191,6 +191,68 @@ void fill_rand(COMPLEX *ar1) {
     }
 }
 
+/***************************************
+ * \fn void fill_rand(COMPLEX *data)
+ * \brief fills the initial conditions randomly
+ * \param data: complex 6d array to fill
+ * generates random spectrum in band defined by forcing parameters.
+ * Only initializes ions. Amplitude is taken to be W = eps * t_nonl
+ *
+ * This function is supposed to be used in-module only
+ * and should not be used elsewhere outside init.c file.
+ ***************************************/
+void fill_forceDependant(COMPLEX *ar1) {
+    for (size_t i = 0; i < array_local_size.total_comp; i++) {
+        ar1[i] = 0;
+    }
+    double kf = 0.5 * (parameters.forceKmin + parameters.forceKmax);
+    double tau_nonl = 2.0 * M_PI * M_PI * var_var.m[1] / (kf * kf * parameters.forcePower);
+    tau_nonl = pow(tau_nonl, 1.0 / 3.0);
+    //printf("tau_nonl = %f\n",tau_nonl);
+    double Wi = tau_nonl * parameters.forcePower;
+    //printf("W_i = %f\n",Wi);
+    //amount of z modes to be initialized
+    int zN = 2;
+    double amplitude = sqrt(2 * Wi / equation_forceNorm / zN);
+    //printf("amp = %f\n",amplitude);
+    double tot = 0;
+    for (size_t ix = 0; ix < array_global_size.nkx; ix++){
+        for (size_t iy = 0; iy < array_global_size.nky; iy++){
+            for (size_t iz = 0; iz < array_global_size.nkz; iz++){
+                for (size_t im = 0; im < array_global_size.nm; im++){
+                    for (size_t il = 0; il < array_global_size.nl; il++){
+                        for (size_t is = 0; is < array_global_size.ns; is++){
+                            if (mpi_whereIsX[2 * ix] == mpi_my_kx_rank && mpi_whereIsM[2 * im] == mpi_my_m_rank && (im == (size_t) parameters.forceM) && il == 0 && iz < zN){
+                                size_t ix_local = mpi_whereIsX[2 * ix + 1];
+                                size_t im_local = mpi_whereIsM[2 * im + 1];
+                                size_t ind6D = get_flat_c(is,il,im_local,ix_local,iy,iz);
+                                size_t ind2D = ix_local * array_local_size.nky + iy;
+                                double theta = 2. * M_PI * (double) rand() / (double) (RAND_MAX);
+                                if (is == 1 && (space_kPerp2[ind2D] > parameters.forceKmin * parameters.forceKmin && space_kPerp2[ind2D] < parameters.forceKmax * parameters.forceKmax)){
+                                    ar1[ind6D] = cexp(1.j * theta);
+                                    ar1[ind6D] *= amplitude;
+                                    if (iz != 0) ar1[ind6D] *= 0.5;
+                                }
+                                else{
+                                    ar1[ind6D] = 0.j;
+                                }
+                                if(global_nkx_index[ix_local] == 0 && iy == 0 && iz == 0) ar1[ind6D] = 0;
+                                tot+=ar1[ind6D]*conj(ar1[ind6D]) * 0.5;
+
+                            }
+                            else{
+                                rand();
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+    //printf("tot = %f\n",tot);
+}
+
 
 /***************************************
  * \fn void fill_randM0(COMPLEX *data)
@@ -279,7 +341,9 @@ void init_conditions(COMPLEX *data){
     {
         case RANDOM:
             //fill_rand(data);
-            init_localPertirbation(data);
+            //init_localPertirbation(data);
+            fill_forceDependant(data);
+            //init_reconnection(data);
             //init_fillSinc(data);
             //fill_randM0(data);
             //init_fillCosZ(data);
@@ -490,7 +554,7 @@ void init_localPertirbation(COMPLEX *out){
  * and should not be used elsewhere outside init.c file.
  ***************************************/
 double init_sinY(double amp, double f, double y){
-    return amp * sin( 2 * M_PI * f / space_Ly * y);
+    return amp * cos( 2 * M_PI * f / space_Ly * y);
 }
 
 double init_cosX(double amp, double f, double x){
@@ -499,4 +563,100 @@ double init_cosX(double amp, double f, double x){
 
 double init_cosZ(double amp, double f, double x){
     return amp * cos( 2 * M_PI * f / space_Lz * x);
+}
+
+void init_reconnection(COMPLEX *out){
+    size_t ind6D;
+    double *Apar0 = calloc(array_local_size.total_real, sizeof(*Apar0));
+    double A0 = 1.299;
+    double Aper = 0e-8;
+    int local_m = mpi_whereIsM[3];
+    int proc_m = mpi_whereIsM[2];
+    COMPLEX *Apar0Comp = Apar0;
+    // obtain A_par^0 in real space
+    if (mpi_my_m_rank == proc_m){
+        for (size_t iy = 0; iy < array_local_size.ny; iy ++){
+            for (size_t ix = 0; ix < array_local_size.nx; ix ++){
+                for (size_t iz = 0; iz < array_local_size.nz; iz ++){
+                    // only l=0 m=1 moments are initialized with non-zeros to initialize only A_parallel field. ions are considered to be 0
+                    ind6D = get_flat_r(0, 0, local_m, ix, iy, iz);
+                    double y = space_dy * (iy + array_global_size.ny * mpi_my_kx_rank / mpi_dims[1]);
+                    double cosh = init_cosh(ix, 200.0);
+                    double shape = init_shapeFunction(ix);
+                    Apar0[ind6D] = 0*(A0 / cosh / cosh * shape + Aper * init_exp2(1.0,60.,ix * space_dx,0,0,M_PI,0,0) *
+                                                                      init_sinY(1.0, 1.0, y));
+                }
+            }
+        }
+    }
+    double *fftw_d_field = fftw_field;
+    for (size_t iy = 0; iy < array_local_size.ny; iy ++){
+        for (size_t ix = 0; ix < array_local_size.nx; ix ++){
+            for (size_t iz = 0; iz < array_local_size.nz; iz ++){
+                // only l=0 m=1 moments are initialized with non-zeros to initialize only A_parallel field. ions are considered to be 0
+                ind6D = iy * array_local_size.nx * (array_local_size.nz+2) + ix * (array_local_size.nz+2) + iz;
+                ind6D = get_flat_r(0, 0, local_m, ix, iy, iz);
+                double y = space_dy * (iy + array_global_size.ny * mpi_my_kx_rank / mpi_dims[1]);
+                double cosh = init_cosh(ix, 1.0);
+                double shape = init_shapeFunction(ix);
+                fftw_d_field[ind6D] = A0 / cosh / cosh * shape + Aper * init_exp2(1.0,1.,ix * space_dx,0,0,M_PI,0,0) *
+                                                          init_sinY(1.0, 1.0, y);
+            }
+        }
+    }
+    //hdf_create_file_r("init.h5",Apar0);
+
+    //FFT and filter at kx[30]:
+    //fftw_copy_buffer_r(fftw_hBuf,Apar0);
+    fftw_r2c_field();
+    fftw_copyFieldBuf_c(fields_fields.A,fftw_field);
+    //hdf_saveFieldA("initF.h5");
+    //double cutoff = space_dKx * 5.;
+    //printf("cutoff = %f\n",cutoff);
+    //diag_filterK(fftw_hBuf, Apar0Comp, cutoff);
+    //fftw_copy_buffer_c(fftw_hBuf,Apar0Comp);
+    //fftw_c2r();
+    //hdf_create_file_r("init.h5",fftw_hBuf);
+    free(Apar0);
+    //now initialize h
+    if (mpi_my_m_rank == proc_m){
+        for (size_t ix = 0; ix < array_local_size.nkx; ix++) {
+            for (size_t iy = 0; iy < array_local_size.nky; iy++) {
+                for (size_t iz = 0; iz < array_local_size.nkz; iz++) {
+                    ind6D = get_flat_c(0, 0, local_m, ix, iy, iz);
+                    size_t ind2D = ix * array_local_size.nky + iy;
+                    size_t ind3D = ix * array_local_size.nky * array_local_size.ns +
+                                   iy * array_local_size.ns;
+                    size_t ind3Df = get_flatIndexComplex3D(ix,iy,iz);
+                    double beta_coef = 2. * space_kPerp2[ind2D] / var_var.beta;
+                    double var_coef = sqrt(2.0) / (var_var.q[0] * var_var.n[0] * var_var.vT[0] * var_J0[ind3D]);//sqrt(2.0) / (var_var.q[0] * var_var.n[0] * var_var.vT[0] * var_J0[ind3D]);
+
+                    fftw_hBuf[ind6D] = (beta_coef * var_coef) *fields_fields.A[ind3Df];//(beta_coef * var_coef) * fields_fields.A[ind3Df];
+                }
+            }
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    fftw_copy_buffer_c(out, fftw_hBuf);
+    fftw_c2r(fftw_hBuf);
+    hdf_create_file_r("init.h5",fftw_hBuf);
+}
+
+double init_cosh(double x, double a) {
+    double xN = x * space_dx - space_Lx/2.;
+    return 0.5 * (exp(xN/a) + exp(-xN/a));
+}
+
+double init_tanh(double x){
+    return (exp(x) - exp(-x)) / (exp(-x) + exp(x));
+}
+
+double init_shapeFunction(double x){
+    double xN = x * space_dx;
+    double Sh;
+    Sh = init_tanh(xN * 2. * M_PI / space_Lx) * init_tanh(xN * 2. * M_PI / space_Lx);
+    Sh += init_tanh(xN * 2. * M_PI / space_Lx - 2 * M_PI) * init_tanh(xN * 2. * M_PI / space_Lx - 2 * M_PI);
+    Sh -= init_tanh(2*M_PI) * init_tanh(2*M_PI);
+    Sh /= (2 * init_tanh(M_PI) * init_tanh(M_PI) - init_tanh(2 * M_PI) * init_tanh(2 * M_PI));
+    return Sh;
 }

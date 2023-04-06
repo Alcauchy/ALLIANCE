@@ -163,23 +163,29 @@ void test_fieldComparison(){
     distrib_getG(g, h);
     fields_sendF(g);
     fields_getFields(f00, f10, f01);
-    for(size_t i = 0; i < array_local_size.nkx * array_local_size.nky * array_local_size.nkz; i++)
-    {
-        if(fabs(phi_h[i] - fields_fields.phi[i]) > TOLERANCE)
-        {
-           printf("[MPI process %d] phi[%zu] not equal !!\n",mpi_my_rank, i);
+    for(size_t ix = 0; ix < array_local_size.nkx; ix++){
+        for(size_t iy = 0; iy <  array_local_size.nky ; iy++){
+            for(size_t iz = 0; iz < array_local_size.nkz; iz++){
+                size_t i = get_flatIndexComplex3D(ix,iy,iz);
+                if(fabs(phi_h[i] - fields_fields.phi[i]) > TOLERANCE)
+                {
+                    printf("[MPI process %d] phi[%zu] not equal !!\n",mpi_my_rank, i);
+                }
+
+                if(fabs(A_h[i]-fields_fields.A[i]) > TOLERANCE)
+                {
+                    printf("[MPI process %d] A[%zu] not equal !! A_h[%zu,%zu,%zu] = (%.12f,%.12f), A_g[%zu,%zu,%zu] = (%.12f, %.12f)\n",mpi_my_rank, i,ix,iy,iz,creal(A_h[i]),ix,iy,iz,cimag(A_h[i]), creal(fields_fields.A[i]),cimag(fields_fields.A[i]));
+                }
+
+                if(fabs(B_h[i] - fields_fields.B[i]) > TOLERANCE)
+                {
+                    printf("[MPI process %d] B[%zu] not equal !! B_h = (%f,%f), B_g = (%f, %f)\n",mpi_my_rank, i,creal(B_h[i]),cimag(B_h[i]), creal(fields_fields.B[i]),cimag(fields_fields.B[i]));
+                }
+            }
         }
 
-        if(fabs(A_h[i]-fields_fields.A[i]) > TOLERANCE)
-        {
-            printf("[MPI process %d] A[%zu] not equal !!\n",mpi_my_rank, i);
-        }
-
-        if(fabs(B_h[i] - fields_fields.B[i]) > TOLERANCE)
-        {
-            printf("[MPI process %d] B[%zu] not equal !! B_h = (%f,%f), B_g = (%f, %f)\n",mpi_my_rank, i,creal(B_h[i]),cimag(B_h[i]), creal(fields_fields.B[i]),cimag(fields_fields.B[i]));
-        }
     }
+
 
 }
 
